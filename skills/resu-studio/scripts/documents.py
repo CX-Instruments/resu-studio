@@ -102,6 +102,33 @@ def _migrate(data):
     return out, changed
 
 
+def load_ledger(path):
+    """The ledger stored at one exact file, in the shape this version keys on.
+
+    Named and public because it is not always this person's current ledger that is
+    being read: `paths.py` reads an older one out of the plugin folder to bring it
+    forward, and how a record is shaped and keyed is this file's business, not its.
+    """
+    try:
+        with io.open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (IOError, OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    data, _changed = _migrate(data)
+    return data
+
+
+def save_ledger(data, path):
+    """Write a ledger to one exact file. Silent on failure, deliberately."""
+    try:
+        with io.open(path, "w", encoding="utf-8", newline="") as fh:
+            fh.write(json.dumps(data, indent=2, ensure_ascii=False))
+    except (IOError, OSError):
+        pass          # a record that cannot be written must never stop a render
+
+
 def _load():
     global _MIGRATED
     try:
@@ -119,11 +146,7 @@ def _load():
 
 
 def _save(data):
-    try:
-        with io.open(_ledger_path(), "w", encoding="utf-8", newline="") as fh:
-            fh.write(json.dumps(data, indent=2, ensure_ascii=False))
-    except (IOError, OSError):
-        pass          # a record that cannot be written must never stop a render
+    save_ledger(data, _ledger_path())
 
 
 def _find(data, path):

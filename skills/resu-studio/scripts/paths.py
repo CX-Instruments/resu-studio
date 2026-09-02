@@ -30,7 +30,16 @@ created as one directory with backslashes in its name, in some working directory
 and every finished document would go there and never be found. It is refused, by
 name, with what to write instead.
 
-Nothing here deletes or moves anything. It resolves a folder and creates it.
+Anybody who used this skill before it stopped keeping files inside itself has their
+whole history sitting in `<skill>/data`: their facts ledger, their answers, their
+documents list and every PDF they printed. Resolving to a new folder on its own
+would show them an empty history and quietly rebuild a ledger they already have,
+and a fact they told Claude rather than wrote on a CV has nothing to be rebuilt
+from. So the first time the new folder is used, the old one is copied into it. See
+`_bring_forward`.
+
+Nothing here deletes or moves anything. It resolves a folder, creates it, and
+copies into it.
 
     python3 scripts/paths.py            where everything goes, and why
     python3 scripts/paths.py --facts    just the path, for a command line
@@ -56,13 +65,26 @@ _POINTER = os.path.join(SKILL, "data-location.txt")
 HOME_DIR = os.path.join(os.path.expanduser("~"), ".resu-studio")
 STABLE_POINTER = os.path.join(HOME_DIR, "location")
 
-#: The last resort of all, inside the skill. An update replaces this folder.
+#: The last resort of all, inside the skill. An update replaces this folder, and it
+#: is also where everybody's files used to live, so it is what is copied forward.
 INSIDE = os.path.join(SKILL, "data")
+
+#: Dropped in the person's folder once the old one has been copied into it, so this
+#: happens once. Hidden, because the folder is meant to be opened by somebody who
+#: has never used a terminal and the first thing in it should be their documents.
+MARKER = ".migrated-from-plugin"
+
+#: Set while a copy is running. `documents.py` imports `paths`, and when paths.py is
+#: the script being run that import makes a second, separate copy of this module with
+#: its own idea of what has already happened. A name in the environment is the one
+#: guard both copies can see.
+_BUSY = "RESU_STUDIO_BRINGING_FORWARD"
 
 _WARNED = False
 _RESOLVED = None      # resolve() is asked many times per run and cannot change
                       # inside one; caching it also keeps a complaint about a bad
                       # pointer to one line instead of one per call.
+_BROUGHT_FORWARD = False
 
 
 def _usable(path):
@@ -212,12 +234,17 @@ def resolve(force=False):
     """(folder, where_it_came_from, survives_an_update)."""
     global _RESOLVED
     if _RESOLVED is not None and not force:
-        return _RESOLVED
+        return _RESOLVED[:3]
     _RESOLVED = _resolve_once()
-    return _RESOLVED
+    # Cached before the copy runs, because the copy asks documents.py where the
+    # ledger is and documents.py asks this back. Answering from the cache is what
+    # keeps that from going round in a circle.
+    _bring_forward(_RESOLVED[0], _RESOLVED[3])
+    return _RESOLVED[:3]
 
 
 def _resolve_once():
+    """(folder, where_it_came_from, survives_an_update, which_of_the_four)."""
     env = os.environ.get("CLAUDE_PLUGIN_DATA")
 
     for label, _fp, raw in _pointers():
@@ -232,7 +259,7 @@ def _resolve_once():
             continue
         if label.startswith("data-location.txt"):
             _copy_pointer_out(raw)
-        return path, label, True
+        return path, label, True, "pointer"
 
     if env:
         # The host made this folder up, and may not have created it yet, so its
@@ -243,12 +270,253 @@ def _resolve_once():
         if complaint:
             sys.stderr.write("resu-studio: %s\n" % complaint)
         elif _usable(path):
-            return path, "CLAUDE_PLUGIN_DATA", True
+            return path, "CLAUDE_PLUGIN_DATA", True, "env"
 
     if _usable(HOME_DIR):
-        return HOME_DIR, "~/.resu-studio (nothing else was named)", True
+        return HOME_DIR, "~/.resu-studio (nothing else was named)", True, "home"
 
-    return INSIDE, "inside the skill (nowhere else could be created)", False
+    return INSIDE, "inside the skill (nowhere else could be created)", False, "inside"
+
+
+def _holds_files(root):
+    """True when there is at least one file anywhere under `root`.
+
+    An empty folder left over from an install is not somebody's history, and
+    announcing a copy of nothing is noise in the middle of a render.
+    """
+    try:
+        for _here, _dirs, files in os.walk(root):
+            if files:
+                return True
+    except OSError:
+        pass
+    return False
+
+
+def _copy_tree(old, dest, skip):
+    """Copy every file under `old` into `dest`. Returns (copied, kept, failed).
+
+    Nothing is moved and nothing is deleted: `old` is left exactly as it was, so a
+    copy that goes wrong halfway costs nobody anything. Nothing already in `dest`
+    is written over either, because the file there is the newer one by definition,
+    and the name of every file that was not copied for that reason comes back in
+    `kept` so it can be said out loud rather than guessed at.
+    """
+    import shutil
+    copied, kept, failed = 0, [], []
+    for here, _dirs, files in os.walk(old):
+        rel = os.path.relpath(here, old)
+        target = dest if rel == os.curdir else os.path.join(dest, rel)
+        try:
+            os.makedirs(target, exist_ok=True)
+        except OSError:
+            failed.extend(f if rel == os.curdir else os.path.join(rel, f)
+                          for f in files)
+            continue
+        for name in files:
+            relname = name if rel == os.curdir else os.path.join(rel, name)
+            if relname in skip:
+                continue
+            try:
+                if os.path.exists(os.path.join(target, name)):
+                    kept.append(relname)
+                    continue
+                shutil.copy2(os.path.join(here, name), os.path.join(target, name))
+                copied += 1
+            except (IOError, OSError, shutil.Error):
+                failed.append(relname)
+    return copied, kept, failed
+
+
+def _repoint(records, old, dest):
+    """Point records at the copy of the file rather than at the original. Returns how many.
+
+    Every record keeps the whole path of the document it describes, and every one of
+    those paths is inside the folder an update is about to delete. Left alone, a
+    brought forward history lists every document somebody ever printed as moved or
+    deleted, which is the opposite of what just happened to it.
+    """
+    n = 0
+    old = os.path.abspath(old)
+    for rec in records.values():
+        if not isinstance(rec, dict):
+            continue
+        if not rec.get("path"):
+            continue
+        was = os.path.abspath(rec["path"])
+        if was != old and not was.startswith(old + os.sep):
+            continue
+        now = os.path.join(dest, os.path.relpath(was, old))
+        if os.path.exists(now):
+            rec["path"] = now
+            n += 1
+    return n
+
+
+def _documents():
+    """The documents module, or None when it cannot be loaded.
+
+    None is survivable: the ledger is then copied like any other file, which is
+    right when the destination has none and safe when it has one, and only the
+    merging of two real ledgers is lost.
+    """
+    try:
+        if HERE not in sys.path:
+            sys.path.insert(0, HERE)
+        import documents
+        return documents
+    except Exception:                                         # noqa: BLE001
+        return None
+
+
+def _merge_ledger(documents, old, dest):
+    """Bring the old documents list into the new one. Returns (brought, repointed).
+
+    Both files can hold real history, so neither is chosen over the other: every
+    record from both is kept. Where the same document is in both, the one already in
+    the destination stays, on the same reasoning as every other file here.
+
+    documents.py does the reading and the writing. The shape of a record and the way
+    it is keyed are its business, and a second reader here would be wrong the first
+    time either of them changed.
+    """
+    old_file = os.path.join(old, documents.LEDGER)
+    if not os.path.isfile(old_file):
+        return 0, 0
+    was = documents.load_ledger(old_file)
+    if not was:
+        return 0, 0
+    repointed = _repoint(was, old, dest)
+    here = documents.load_ledger(os.path.join(dest, documents.LEDGER))
+    brought = [k for k in was if k not in here]
+    if not brought:
+        return 0, 0
+    merged = dict(was)
+    merged.update(here)          # a key in both: the destination's record wins
+    documents.save_ledger(merged, os.path.join(dest, documents.LEDGER))
+    return len(brought), repointed
+
+
+def _some(names, limit=6):
+    """A few names, said plainly, with a count for the rest."""
+    shown = ", ".join(sorted(names)[:limit])
+    if len(names) > limit:
+        shown += " and %d more" % (len(names) - limit)
+    return shown
+
+
+def _bring_forward(dest, kind):
+    """Copy the old in-plugin folder into the person's folder, once, and say so.
+
+    This runs for the folder nobody named (`~/.resu-studio`) and for a folder
+    somebody pointed at. It does not run for CLAUDE_PLUGIN_DATA, because that was
+    already preferred over the in-plugin folder before any of this changed, so
+    nobody's files were ever in the old place while that was set.
+
+    It can never stop a render. Everything it does is somebody's history and none of
+    it is this afternoon's document, so any failure at all is one line and carry on.
+    """
+    global _BROUGHT_FORWARD
+    if _BROUGHT_FORWARD or os.environ.get(_BUSY):
+        return
+    _BROUGHT_FORWARD = True
+    try:
+        _bring_forward_once(dest, kind)
+    except Exception as exc:                                  # noqa: BLE001
+        sys.stderr.write(
+            "resu-studio: could not copy your earlier work out of %s (%s). Nothing "
+            "there was changed, and it is all still where it was.\n" % (INSIDE, exc))
+
+
+def _bring_forward_once(dest, kind):
+    if kind not in ("home", "pointer"):
+        return
+    if not os.path.isdir(INSIDE):
+        return
+    # Somebody can point at the old folder, or at a folder inside it. Copying a
+    # folder into itself either does nothing or never stops, and neither is a thing
+    # to do while somebody is waiting for a document.
+    old_at, dest_at = os.path.abspath(INSIDE), os.path.abspath(dest)
+    if dest_at == old_at or dest_at.startswith(old_at + os.sep):
+        return
+    if os.path.exists(os.path.join(dest, MARKER)):
+        return
+    if not _holds_files(INSIDE):
+        return
+
+    os.environ[_BUSY] = "1"
+    try:
+        docs = _documents()
+        skip = {MARKER}
+        if docs is not None:
+            skip.add(docs.LEDGER)   # merged below rather than copied over
+        copied, kept, failed = _copy_tree(INSIDE, dest, skip)
+        records = repointed = 0
+        if docs is not None:
+            try:
+                records, repointed = _merge_ledger(docs, INSIDE, dest)
+            except Exception as exc:                          # noqa: BLE001
+                failed.append("%s (%s)" % (docs.LEDGER, exc))
+    finally:
+        os.environ.pop(_BUSY, None)
+
+    if copied or records:
+        lines = ["resu-studio: your earlier work was inside the plugin, where an "
+                 "update deletes it, so it has been copied out.",
+                 "  from %s" % INSIDE,
+                 "  to   %s" % dest,
+                 "  %d file(s) copied%s."
+                 % (copied, ", and %d entry(s) in your documents list" % records
+                    if records else "")]
+    else:
+        lines = ["resu-studio: there is an old folder inside the plugin at %s, and "
+                 "everything in it is already in %s, so nothing was copied."
+                 % (INSIDE, dest)]
+    if kept:
+        lines.append("  already here, so the copy was not made: %s" % _some(kept))
+    if failed:
+        lines.append("  could not be copied, and is still in the old folder: %s"
+                     % _some(failed))
+    lines.append("  the old folder was left exactly as it was. Nothing was moved or "
+                 "deleted.")
+    sys.stderr.write("\n".join(lines) + "\n")
+
+    _write_marker(dest, copied, kept, failed, records, repointed)
+
+
+def _write_marker(dest, copied, kept, failed, records, repointed):
+    """The note that stops this happening twice. Written last, and readable.
+
+    Last, because until the copy has been made there is nothing to remember, and
+    readable, because somebody who finds two copies of their CV deserves to be able
+    to open one file and see why.
+    """
+    import time
+    try:
+        with io.open(os.path.join(dest, MARKER), "w",
+                     encoding="utf-8", newline="") as fh:
+            fh.write(u"resu-studio copied this person's earlier work into this "
+                     u"folder on %s.\n" % time.strftime("%Y-%m-%d %H:%M"))
+            fh.write(u"It came from %s, inside the plugin, which a plugin update "
+                     u"deletes.\n" % INSIDE)
+            fh.write(u"%d file(s) were copied, and %d entry(s) in the documents "
+                     u"list.\n" % (copied, records))
+            if repointed:
+                fh.write(u"%d of those entries were pointed at the copy of the "
+                         u"document in this folder.\n" % repointed)
+            fh.write(u"Nothing there was moved or deleted.\n")
+            if kept:
+                fh.write(u"Already here, so not copied: %s\n" % _some(kept, 200))
+            if failed:
+                fh.write(u"Could not be copied: %s\n" % _some(failed, 200))
+            fh.write(u"This file is what stops that copy being made a second time. "
+                     u"Deleting it makes it happen again, which is harmless: "
+                     u"nothing here would be written over.\n")
+    except (IOError, OSError) as exc:
+        sys.stderr.write(
+            "resu-studio: the copy was made but the note saying so could not be "
+            "written to %s (%s), so this will be checked again next time. Nothing "
+            "already there will be written over.\n" % (dest, exc))
 
 
 def _warn_once(path):

@@ -84,6 +84,10 @@ def outdir_for(cv_path, asked=None):
                          % (out, fallback))
         return fallback
 
+# Which sections sit in the sidebar when nobody has said. Any skills section joins
+# them whatever it is headed, which is what the studio does with its own default, so a
+# CV headed TECHNICAL SKILLS is previewed and printed in the same column. --order
+# still wins over all of it.
 ASIDE_SECTIONS = ("key skills", "skills", "education", "training and certifications",
                   "training & certifications", "certifications", "eligibility")
 
@@ -196,9 +200,21 @@ def parse(md):
         m = re.match(r"^\*\*(.+?):\*\*\s*(.*)$", line)
         if m and section:
             text, j = m.group(2).strip(), i + 1
-            more, j = prose(j)
-            if more:
-                text = (text + " " + more).strip()
+            # A plain line written under a labelled line is its own line, not more of
+            # that line. Swallowing it read `**Tools:** Excel (Master)` followed by
+            # `Stakeholder engagement; Report writing` as one skills line, and the
+            # first bracket then took the next words into itself: two real skills
+            # disappeared inside `Excel (Master, Stakeholder engagement)`. The count
+            # still balanced, because the lines were counted and then merged, so
+            # nothing said a word had changed.
+            #
+            # The one case where the merge is right is a list that is plainly
+            # unfinished: a long skills line broken over two lines ends the first one
+            # on a semicolon or a comma. That still joins, and nothing else does.
+            if text.endswith((";", ",")):
+                more, j = prose(j)
+                if more:
+                    text = (text + " " + more).strip()
             section["blocks"].append({"kind": "labelled", "label": m.group(1).strip(),
                                       "text": text, "src": j - i})
             role = None
@@ -378,6 +394,21 @@ def mode_for(label):
 
 def slug(t):
     return re.sub(r"[^a-z0-9]+", "-", (t or "").strip().lower()).strip("-")
+
+
+def is_skills(title):
+    """Is this heading the skills section?
+
+    Any heading with the word skill in it, which is exactly what studio.html and
+    build_studio.py both do. Matching only KEY SKILLS and SKILLS meant a CV headed
+    TECHNICAL SKILLS was drawn as skills in the studio and printed here as plain
+    labelled lines, under a different id on each side, so every decision the person
+    took about one of those lines landed on an id this file never built.
+
+    The id prefix the groups themselves carry is unchanged: it is still key-skills,
+    the same one build_studio.py hands the studio, so the two sides still agree.
+    """
+    return "skill" in (title or "").strip().lower()
 
 
 def split_items(text):
@@ -725,21 +756,38 @@ def _legend():
             % ", ".join(LEVEL_ORDER))
 
 
+_LEAD_LABEL = re.compile(r"^\s*[A-Za-z][A-Za-z0-9 &/+.'\-]{0,39}?\s*:\s*")
+
+
 def strip_heading(label, text):
-    """Take the group's own heading off the front of the line it was seeded with.
+    """Take the heading off the front of the line the editor was seeded with.
 
     The studio seeds its editor with `Technical: Python (Advanced)` and strips the
-    heading again before drawing, because it prints the heading itself. This is the
-    same strip, deliberately the same behaviour as `stripHeading` in studio.html, so
-    a line edited there does not come back out of here with its heading printed twice.
+    heading again before drawing, because it prints the heading itself. So does this,
+    so a line edited there does not come back out of here with its heading printed
+    twice.
+
+    The heading that comes off is not always the heading the group carries now. An
+    edit written under Technical is matched back to its skills by fingerprint after
+    --group has regrouped them, and the group it lands in is called something else, so
+    stripping only the current heading printed `Data and analysis: Technical: Python`.
+    Whichever heading the text names comes off: the group's own first, and failing
+    that any leading `Word:` prefix. Only a plain heading qualifies, so a real skill
+    is never eaten: the prefix has to be letters, digits and spaces, at most 40
+    characters, with no bracket, semicolon or comma in it, and what is left has to be
+    something, or the line is handed back exactly as written.
     """
     text = (text or "").strip()
-    if not label:
+    if not text:
         return text
-    m = re.match(r"\s*%s\s*:?\s*" % re.escape(label), text, re.I)
-    if not m:
-        return text
-    return text[m.end():].strip() or text
+    if label:
+        m = re.match(r"\s*%s\s*:?\s*" % re.escape(label), text, re.I)
+        if m:
+            return text[m.end():].strip() or text
+    m = _LEAD_LABEL.match(text)
+    if m:
+        return text[m.end():].strip() or text
+    return text
 
 
 def _level_tail(i):
@@ -827,8 +875,9 @@ def _group_html(g):
     return '<div%s>%s%s%s</div>' % (wrap, head, body, tail)
 
 
-DECIDE = {"marks": {}, "adds": {}, "sections": []}
+DECIDE = {"marks": {}, "adds": {}, "sections": [], "order": {}}
 APPLIED = []      # what the decisions file actually changed, for the report
+REORDERED = {}    # the lists the decisions file put in a different order
 
 
 def d_removed(i):
@@ -870,6 +919,114 @@ def d_text(i, fallback, items=None):
 
 def d_adds(i):
     return [x.get("text", "") for x in DECIDE["adds"].get(i, []) if x.get("text")]
+
+
+def _as_index(x):
+    """One entry of an order list as a line number, or None if it is not one."""
+    if isinstance(x, bool):
+        return None
+    if isinstance(x, int):
+        return x
+    if isinstance(x, str) and re.match(r"^-?\d+$", x.strip()):
+        return int(x.strip())
+    return None
+
+
+def order_lists(doc):
+    """Every list the person can reorder, and how many lines are in each.
+
+    The key is the id the lines themselves carry, which is how the studio writes it:
+    `<section-slug>/<role index>` for the bullets of one role, and the bare
+    `<section-slug>` for a flat list such as education or training. The slug is the one
+    this file derives from the heading, so a CV headed EMPLOYMENT HISTORY is addressed
+    as employment-history and one headed PROFESSIONAL EXPERIENCE as
+    professional-experience, exactly as the ids print.
+    """
+    out = {}
+    for s in doc["sections"]:
+        if s.get("added") or is_skills(s["title"]):
+            continue
+        sid = slug(s["title"]) or "section"
+        ri = flat = 0
+        for b in s["blocks"]:
+            if b["kind"] == "role":
+                out["%s/%d" % (sid, ri)] = len(b["bullets"])
+                ri += 1
+            else:
+                flat += 1
+        if flat:
+            out[sid] = flat
+    return out
+
+
+def order_faults(order, lists):
+    """The one thing wrong with the order in the decisions file, or None.
+
+    An order is a list of the original line numbers, in the order they should print.
+    A number listed twice, or one that names no line, is refused rather than quietly
+    skipped: skipping it would move a different line, or print one line twice and drop
+    another, and the person would have no way of seeing that from the finished page.
+
+    A key naming a list this CV does not have cannot reorder anything, so it is said
+    out loud and the render carries on. Refusing there would mean a CV that will not
+    print because of a section somebody took out of the markdown.
+    """
+    for key in sorted(order):
+        want = order[key]
+        n = lists.get(key)
+        if n is None:
+            sys.stderr.write("the decisions file asks for an order under %r, and this "
+                             "CV has no such list. Nothing was reordered for it.\n"
+                             % key)
+            continue
+        seen = set()
+        for x in want:
+            i = _as_index(x)
+            if i is None:
+                return ('order/"%s" lists %r, and every entry has to be the number of '
+                        'a line.' % (key, x))
+            if not n:
+                return ('order/"%s" asks for line %d, and there are no lines under '
+                        'that heading to put in an order.' % (key, i))
+            if i < 0 or i >= n:
+                return ('order/"%s" asks for line %d, and that list has %d line%s, '
+                        'numbered 0 to %d. There is no such line to move, so the rest '
+                        'would print in an order you did not ask for.'
+                        % (key, i, n, "" if n == 1 else "s", n - 1))
+            if i in seen:
+                return ('order/"%s" names line %d twice. A line cannot print in two '
+                        'places, and printing it once would leave a different line '
+                        'off the page without saying so.' % (key, i))
+            seen.add(i)
+    return None
+
+
+def d_seq(key, n):
+    """The order the lines of one list print in.
+
+    Ids never move: b3 is the fourth bullet of the markdown for as long as the markdown
+    says so, so a mark, a proposal and a rewrite all stay attached to the line the
+    person pointed at. Only the order they are laid out in changes, and that order
+    travels in the decisions file under `order`, written by the studio's arrows.
+
+    Anything the list does not name keeps its own place, in its own order, at the end.
+    A line can never fall off the page by being forgotten, which is why the count in
+    and the count out still balance.
+    """
+    want = (DECIDE.get("order") or {}).get(key)
+    if not want:
+        return list(range(n))
+    out, seen = [], set()
+    for x in want:
+        i = _as_index(x)
+        if i is None or i < 0 or i >= n or i in seen:
+            continue
+        seen.add(i)
+        out.append(i)
+    out += [i for i in range(n) if i not in seen]
+    if out != list(range(n)):
+        REORDERED[key] = out
+    return out
 
 
 def d_class(i):
@@ -929,7 +1086,9 @@ def ordered(doc):
     """[(section, 'side'|'main')] honouring --order, else the document order."""
     secs = [s for s in doc["sections"] if s["title"] or s["blocks"]]
     if not OPTS["order"]:
-        return [(s, "side" if s["title"].strip().lower() in ASIDE_SECTIONS else "main")
+        return [(s, "side" if (is_skills(s["title"])
+                              or s["title"].strip().lower() in ASIDE_SECTIONS)
+                 else "main")
                 for s in secs]
     out, used = [], set()
     for token in OPTS["order"]:
@@ -1006,7 +1165,7 @@ def _head_parts(doc):
 def section_html(s, role_wrap="role", region=None, section_place="main"):
     out = []
     sid = slug(s["title"]) or "section"
-    if slug(s["title"]) in ("key-skills", "skills"):
+    if is_skills(s["title"]):
         body = skills_html(s["blocks"], region, section_place)
         if not body:
             return ""
@@ -1018,7 +1177,7 @@ def section_html(s, role_wrap="role", region=None, section_place="main"):
         return "\n".join(out)
     if s["title"]:
         out.append('<h2 class="sec"><span>%s</span></h2>' % inline(s["title"]))
-    ri = bi = 0
+    ri = 0
     two = slug(s["title"]) in OPTS.get("cols2", set())
     if s.get("added"):
         lis = []
@@ -1033,8 +1192,15 @@ def section_html(s, role_wrap="role", region=None, section_place="main"):
         out.append('<ul class="bul%s">%s</ul>'
                    % (" cols2" if two else "", "".join(lis)))
         return "\n".join(out)
-    for b in s["blocks"]:
-        if b["kind"] == "role":
+    # The flat lines of a section are laid out in the order the person put them in.
+    # The lines themselves are addressed by their original number, so `education/1` is
+    # the second line of the markdown wherever it prints; only the slot it prints in
+    # moves, and every line the order does not name still prints, at the end.
+    flat = [b for b in s["blocks"] if b["kind"] != "role"]
+    fseq, fat = d_seq(sid, len(flat)), 0
+    for blk in s["blocks"]:
+        if blk["kind"] == "role":
+            b = blk
             base = "%s/%d" % (sid, ri)
             ri += 1
             if d_removed(base + "/h"):
@@ -1056,7 +1222,8 @@ def section_html(s, role_wrap="role", region=None, section_place="main"):
                     continue
                 out.append(_tag("p", "scope", k, d_text(k, p)))
             lis = []
-            for j, x in enumerate(b["bullets"]):
+            for j in d_seq(base, len(b["bullets"])):
+                x = b["bullets"][j]
                 k = "%s/b%d" % (base, j)
                 if d_removed(k):
                     d_note("removed", k, x)
@@ -1074,8 +1241,10 @@ def section_html(s, role_wrap="role", region=None, section_place="main"):
                 out.append('<ul class="bul">' + "".join(lis) + "</ul>")
             out.append("</div>")
             continue
+        bi = fseq[fat]
+        b = flat[bi]
+        fat += 1
         k = "%s/%d" % (sid, bi)
-        bi += 1
         if d_removed(k):
             d_note("removed", k, b.get("text", ""))
             continue
@@ -1528,7 +1697,7 @@ def build(doc, layout, palette, typeset, skins, scoped=None, letter=None):
             # panel turns out to be too small to hold the whole of it
             if region == "main" and place == "side":
                 out.append('<div class="spill" data-spill="%s"></div>' % sid)
-            if sid in ("key-skills", "skills"):
+            if is_skills(sec["title"]):
                 h = section_html(sec, "role", region if has_aside else "main", place)
             elif place == region:
                 h = section_html(sec, "role", region, place)
@@ -1563,7 +1732,7 @@ def build(doc, layout, palette, typeset, skins, scoped=None, letter=None):
                 main_src = column("main")
             else:
                 sk = [s2 for s2 in body
-                      if slug(s2["title"]) in ("key-skills", "skills")]
+                      if is_skills(s2["title"])]
                 ot = [s2 for s2 in body if s2 not in sk]
                 inner = "".join(section_html(s2, "role", "main", "main") for s2 in sk)
                 main_src = ('<div class="skcols">%s</div>' % inner) if inner else ""
@@ -1992,6 +2161,15 @@ def _decisions_wrong(d):
                 return ('one entry under adds/"%s" is a %s, and every entry has to be '
                         'an object with a "text" in it.' % (key, type(x).__name__))
 
+    order = d.get("order")
+    if order is not None and not isinstance(order, dict):
+        return ("order has to be an object of list id to the line numbers in the order "
+                "they should print, and it is a %s." % type(order).__name__)
+    for key, want in (order or {}).items():
+        if not isinstance(want, list):
+            return ('order/"%s" has to be a list of line numbers, and it is a %s.'
+                    % (key, type(want).__name__))
+
     sections = d.get("sections")
     if sections is not None and not isinstance(sections, list):
         return "sections has to be a list of added sections, and it is a %s." \
@@ -2027,7 +2205,8 @@ def main():
                          "browser, so the file is the skin rather than a redrawing "
                          "of it. With --letter it writes both PDFs.")
     ap.add_argument("--pdf-dir", default=None, dest="pdf_dir",
-                    help="where the PDFs go. Default: beside the CV markdown")
+                    help="where the PDFs go. Default: the same documents folder the "
+                         "HTML goes to")
     ap.add_argument("--role", default=None,
                     help="the position applied for, used in the PDF filename. "
                          "Read off the cover letter's address block when there is one")
@@ -2062,13 +2241,16 @@ def main():
                          "the CV, on the same skin and with the same name and contact "
                          "block, on one page.")
     ap.add_argument("--columns", default=None,
-                    help="sections to run in two columns, by slug, comma separated. "
-                         "Only flat lists take it: education, training-certifications "
-                         "and any section you added.")
+                    help="sections to run in two columns, by slug, comma separated. A "
+                         "slug is the heading in lower case with every run of other "
+                         "characters turned into one hyphen, so TRAINING AND "
+                         "CERTIFICATIONS is training-and-certifications. Only flat "
+                         "lists take it: education, training and any section you added.")
     ap.add_argument("--decisions", default=None,
                     help="a cv-decisions.json from the workbench. Applies the lines you "
-                         "took off, the wording you rewrote yourself and the lines you "
-                         "added, and reports every one of them")
+                         "took off, the wording you rewrote yourself, the lines you "
+                         "added and the order you moved them into, and reports every "
+                         "one of them")
     ap.add_argument("--marks", action="store_true",
                     help="put the marking toolbar in the rendered page. Off by default, "
                          "so what you print is clean")
@@ -2131,6 +2313,7 @@ def main():
         DECIDE["marks"] = d.get("marks") or {}
         DECIDE["adds"] = d.get("adds") or {}
         DECIDE["sections"] = d.get("sections") or []
+        DECIDE["order"] = d.get("order") or {}
     if a.skills_order:
         OPTS["group_order"] = [x.strip() for x in a.skills_order.split(";") if x.strip()]
     if a.skills_place:
@@ -2191,6 +2374,16 @@ def main():
                          "accounted for. Something would have been dropped.\n"
                          % (src, got))
         return 1
+
+    # The order the person put the lines in, checked against the lines that exist
+    # before anything is drawn. An order that names a line twice, or names one that is
+    # not there, would print one line twice and leave another off, and the count above
+    # would still balance, so it is caught here and said in the same voice.
+    if DECIDE.get("order"):
+        wrong = order_faults(DECIDE["order"], order_lists(doc))
+        if wrong:
+            sys.stderr.write("REFUSING TO WRITE. In %s, %s\n" % (a.decisions, wrong))
+            return 1
 
     if a.gallery:
         outdir = a.outdir or os.path.join(outdir_for(a.cv), "skins-samples")
@@ -2311,6 +2504,15 @@ def main():
                 print("    + [%s] %s" % (i, (t or "")[:96]))
         print("  your markdown was not touched. The archive in the workbench holds the "
               "wording of everything above.")
+    if REORDERED:
+        print("  put in the order you chose: %d list%s"
+              % (len(REORDERED), "" if len(REORDERED) == 1 else "s"))
+        for key in sorted(REORDERED):
+            print("    ~ [%s] now prints as %s"
+                  % (key, ", ".join(str(i) for i in REORDERED[key])))
+        print("  those are the original line numbers, in the order they now print. "
+              "Every line still prints: a line the order did not name kept its own "
+              "place at the end.")
     if HIDDEN:
         print("  left off the page by name: %s"
               % ", ".join("%s (%d skills)" % (n, c) for n, c in HIDDEN))

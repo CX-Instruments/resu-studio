@@ -1338,31 +1338,12 @@ function listOf(id){
 function movableBullet(id){ return !!listOf(id); }
 function anyReorder(){ return Object.keys(S.bOrder||{}).length>0; }
 
-/* Reordering is a preview, and it says so.
-
-   The arrows move a line here and the order travels in the decisions file, but the
-   renderer does not read it yet: the printed PDF still follows the markdown. The Final
-   view claims to be exactly what prints, so a difference it does not mention would be
-   the studio lying about the one thing it promises. Said on the move, said on the
-   status line for as long as an order is held, and said in the block handed over. */
-const REORDER_NOTE = "Reordering shows in this preview. The printed PDF still "
-  + "follows the order in your markdown, so this does not reach it yet. The order is "
-  + "carried in the decisions file, and Claude can put it into the markdown for you.";
-function sayReorder(){
-  const old=document.getElementById("reordernote"); if(old) old.remove();
-  const p=document.createElement("div");
-  p.id="reordernote";
-  p.setAttribute("role","status");
-  p.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:16px;"
-    +"z-index:9998;max-width:520px;background:#12161c;color:#f6f8fa;border-radius:6px;"
-    +"padding:10px 14px;font:13px/1.5 system-ui,'Segoe UI',Arial,sans-serif;"
-    +"box-shadow:0 6px 28px rgba(16,22,32,.32)";
-  p.textContent=REORDER_NOTE;
-  document.body.appendChild(p);
-  clearTimeout(sayReorder.t);
-  sayReorder.t=setTimeout(()=>{ const el=document.getElementById("reordernote");
-                                if(el) el.remove(); }, 9000);
-}
+/* The order the arrows put a list in travels in the decisions file, under `order`,
+   and the renderer reads it: the printed page comes out in the order on screen. So
+   there is nothing to warn anybody about here, and the toast that used to apologise
+   for it is gone along with the caveat it carried. What still has to be true is that
+   the order reaches the command, which is why `settingsCommand` counts a reorder as a
+   reason to pass --decisions. */
 function moveBullet(id, dir){
   const L=listOf(id);
   if(!L || L.n<2) return false;
@@ -1371,7 +1352,7 @@ function moveBullet(id, dir){
   ord.splice(to, 0, ord.splice(at, 1)[0]);
   if(!S.bOrder) S.bOrder={};
   S.bOrder[L.key]=ord;
-  save(); draw(); sayReorder();
+  save(); draw();
   setTimeout(()=>goTo(id), 300);   /* keep the line they moved selected */
   return true;
 }
@@ -1506,12 +1487,35 @@ function skillEdit(gid){
   return found;
 }
 
+/* Any leading heading, for the second pass below. It has to start with a letter, run
+   to at most 40 characters and hold no bracket, semicolon, colon or comma, so a real
+   skills item such as `Python (Advanced); SQL` can never be eaten. The same expression,
+   character for character, as `_LEAD_LABEL` in render_cv.py. */
+const LEAD_LABEL = /^\s*[A-Za-z][A-Za-z0-9 &\/+.'-]{0,39}?\s*:\s*/;
+
+/* Take the heading off the front of the line the editor was seeded with, exactly as
+   render_cv.strip_heading does it, because this page prints the heading itself.
+
+   Two passes: the group's own heading, and failing that any leading `Word:` prefix.
+   The second pass is what a regroup needs. An edit written under Technical is matched
+   back to its skills by fingerprint after --group has moved them, and the group it
+   lands in is called something else, so stripping only the current heading printed
+   `Data and analysis: Technical: Python`. If a strip would leave nothing behind, the
+   line is handed back exactly as it was written. */
 function stripHeading(gid, text){
   const g=skillGroup(gid);
-  if(!g) return text;
-  const re=new RegExp("^\\s*"+g.g.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")
-                      +"\\s*:?\\s*","i");
-  return String(text||"").replace(re,"").trim() || String(text||"").trim();
+  text=String(text==null?"":text).trim();
+  if(!text) return text;
+  const label=g ? String(g.g||"") : "";
+  if(label){
+    const re=new RegExp("^\\s*"+label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")
+                        +"\\s*:?\\s*","i");
+    const m=re.exec(text);
+    if(m) return text.slice(m[0].length).trim() || text;
+  }
+  const m2=LEAD_LABEL.exec(text);
+  if(m2) return text.slice(m2[0].length).trim() || text;
+  return text;
 }
 
 function groupHTML(g){
@@ -1526,18 +1530,21 @@ function groupHTML(g){
      the line is what prints. */
   const extra=adds(gid).map((t,n)=>removed(gid+"/+"+n) ? ""
       : '<p class="lab added" data-id="'+gid+'/+'+n+'">'+esc(t)+'</p>').join("");
+  /* A skills line written without a heading has no heading to print, and the renderer
+     prints none: it draws the label span only where there is a label. Printing it
+     regardless put a bare colon in front of a real skills line. */
+  const labname = g.g ? '<span class="labname">'+esc(g.g)+':</span>' : '';
   const own=skillEdit(gid);
   if(own){
-    return '<div class="sk" data-id="'+gid+'"><p class="lab">'
-      +'<span class="labname">'+esc(g.g)+':</span>'
+    return '<div class="sk" data-id="'+gid+'"><p class="lab">'+labname
       +esc(stripHeading(gid, own.text))+'</p>'+extra+'</div>';
   }
-  const head='<span class="skg">'+esc(g.g)+'</span>';
+  const head=g.g ? '<span class="skg">'+esc(g.g)+'</span>' : '';
   const rated=g.items.filter(i=>lvl(i.l));
   const rest=g.items.filter(i=>!lvl(i.l));
 
   if(m==="list"||m==="columns"){
-    const p='<p class="lab"><span class="labname">'+esc(g.g)+':</span>'
+    const p='<p class="lab">'+labname
       + esc(stripHeading(gid, g.items.map(rawLine).join("; "))) + '</p>';
     return '<div class="sk" data-id="'+gid+'">'
       +(m==="columns"?'<div class="skcols">'+p+'</div>':p)+extra+'</div>';
@@ -2663,8 +2670,7 @@ function fit(){
         +(nHid?" ("+nHid+" group"+(nHid>1?"s":"")+" hidden)":""))
     +" · "+n+(n===1?" page":" pages")
     +(S.doc==="letter"&&n>1 ? " · a cover letter should be one" : "")
-    +(anyReorder() ? " · reordered lines show here only, the printed PDF still "
-                    +"follows your markdown" : "");
+    +(anyReorder() ? " · reordered, and the print follows it" : "");
 }
 
 /* Printing and saving. Each document goes on its own, because they are two documents
@@ -3638,9 +3644,9 @@ function handoffText(){
   if(anyReorder()){
     L.push("Lines you reordered:");
     Object.keys(S.bOrder).forEach(k=>L.push("  "+k+": "+S.bOrder[k].join(", ")));
-    L.push("  "+REORDER_NOTE);
-    L.push("  Claude: put this order into the markdown, because the renderer prints "
-           +"the markdown's order.");
+    L.push("  Those are the original line numbers, in the order they now print. "
+           +"The order travels in the decisions file and the renderer prints it, so "
+           +"the markdown does not have to be resorted.");
     L.push("");
   }
   const fl=atoms().filter(a=>flagOf(a.id));
@@ -3671,9 +3677,10 @@ function decisionsFile(){
     saved:new Date().toISOString(),
     marks:S.marks, adds:S.adds,
     /* The order the person put a role's bullets, or the training and education lines,
-       into. The renderer does not read this yet and prints the markdown's order, so
-       the studio says so wherever the arrows are used. It travels here so that the
-       order is not lost between the preview and whoever finishes the job. */
+       into, keyed the way the ids print: `<section>/<role index>` for a role's bullets
+       and the bare `<section>` for a flat list. Every entry is an original line number,
+       and the renderer lays the list out in that order, so what is on screen is what
+       comes out of the printer. */
     order:S.bOrder||{},
     sections:sections
   }, null, 1);
@@ -3744,9 +3751,11 @@ function settingsCommand(withPdf){
   const CVMD="\"CV - draft.md\"";
   const LTMD="\"Cover letter.md\"";
   /* --role names the PDF, and this skill treats it as mandatory, so the command that
-     is copied out of here carries it. The employer is not a flag the renderer takes;
-     it rides in the comment so whoever runs this knows which application it is. */
+     is copied out of here carries it. The employer goes in the same name, between the
+     role and the date: the renderer takes it as a flag now, and without it two
+     applications for the same job title on the same day write over each other. */
   const role=ROLE ? " --role \""+ROLE.replace(/"/g,"'")+"\"" : "";
+  const emp=EMPLOYER ? " --employer \""+EMPLOYER.replace(/"/g,"'")+"\"" : "";
 
   /* Both documents in one run when a PDF is wanted, because they are posted
      together and a person who has one of them has neither. */
@@ -3755,7 +3764,7 @@ function settingsCommand(withPdf){
     +(EMPLOYER ? "\n# this application: "+(ROLE?ROLE+", ":"")+EMPLOYER : "")
     +"\npython3 scripts/render_cv.py "+CVMD
     +((withPdf||S.doc==="letter") ? " --letter "+LTMD : "")
-    +role
+    +role+emp
     +" --layout "+S.layout+" --palette "+S.palette
     +" --head-font "+S.headFont+" --body-font "+S.bodyFont+" --size "+S.size;
 
@@ -3771,18 +3780,20 @@ function settingsCommand(withPdf){
   }
   const extras=S.order.filter(o=>isExtra(o.id)&&o.show).map(o=>secName(o.id));
 
-  /* Three kinds of decision reach the page: a line taken off this version, a line
-     rewritten in the person's own words, and a line added after another. They live
-     in the decisions file along with any added section, so the file has to be passed
-     whenever any of them exist — not only when a section is showing, which is what
-     this used to test. Getting that wrong put a deleted bullet back on the page
-     silently. Flagging a line or asking for a rewrite changes nothing that prints
-     and does not count. */
+  /* Four kinds of decision reach the page: a line taken off this version, a line
+     rewritten in the person's own words, a line added after another, and a list put
+     in a different order. They live in the decisions file along with any added
+     section, so the file has to be passed whenever any of them exist, not only when
+     a section is showing, which is what this used to test. Getting that wrong put a
+     deleted bullet back on the page silently, and left a reordered list printing in
+     the markdown's order. Flagging a line or asking for a rewrite changes nothing
+     that prints and does not count. */
   const edited=Object.keys(S.marks||{}).filter(function(k){
     const m=S.marks[k]; return m && (m.a==="remove" || m.a==="edit"); }).length;
   const added=Object.keys(S.adds||{}).reduce(function(n,k){
     return n+((S.adds[k]||[]).length); },0);
-  const perLine=edited+added;
+  const moved=Object.keys(S.bOrder||{}).length;
+  const perLine=edited+added+moved;
   if(extras.length || perLine) cmd += " --decisions cv-decisions.json";
   if(withPdf) cmd += " --pdf";
 
@@ -3792,6 +3803,7 @@ function settingsCommand(withPdf){
       +(extras.length>1?"are":"is")+" not in your markdown");
     if(edited) bits.push(edited+" line"+(edited===1?"":"s")+" you changed or took off");
     if(added) bits.push(added+" line"+(added===1?"":"s")+" you added");
+    if(moved) bits.push(moved+" list"+(moved===1?"":"s")+" you put in a different order");
 
     /* The decisions ride along with the command rather than sitting in a file
        somebody has to remember to save. Copied in the same breath as the command,
@@ -3802,7 +3814,6 @@ function settingsCommand(withPdf){
         +  " from the markdown alone and none of that appears."
         +  "\n\n" + decisionsFile();
   }
-  if(anyReorder()) cmd += "\n\n# "+REORDER_NOTE;
   const hidden=S.order.filter(o=>!o.show).map(o=>secName(o.id));
   if(hidden.length) cmd += "\n\n# "+hidden.join(" and ")+" "
     +(hidden.length>1?"are":"is")+" hidden in the preview only. The renderer never drops "

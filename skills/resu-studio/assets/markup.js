@@ -32,11 +32,11 @@
       ["add", "Write a new line after this one",
        '<path d="M8 3.6v8.8M3.6 8h8.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'],
       /* The arrows appear only on a line that says it can move, and only the studio
-         says so. They shuffle the preview: the printed PDF still follows the order in
-         the markdown, which is why the label says so and the studio repeats it. */
-      ["up", "Move it up in the preview (the printed PDF still follows your markdown)",
+         says so. The order they make travels in the decisions file and the renderer
+         prints it, so the label is the plain instruction and nothing else. */
+      ["up", "Move it up",
        '<path d="M8 12.6V3.8M4.4 7.2L8 3.6l3.6 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'],
-      ["down", "Move it down in the preview (the printed PDF still follows your markdown)",
+      ["down", "Move it down",
        '<path d="M8 3.4v8.8M4.4 8.8L8 12.4l3.6-3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>']
     ];
     BUTTONS.forEach(function (b) {

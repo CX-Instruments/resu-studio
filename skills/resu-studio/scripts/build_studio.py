@@ -107,6 +107,36 @@ def cv_block(doc, dropped=None, achievements=None):
         title = (sec["title"] or "").strip().lower()
         blocks = sec["blocks"]
         left = []
+        # The skills test comes first and is the renderer's own: any heading with the
+        # word skill in it. `render_cv.is_skills` decides it that way for every section
+        # before anything else is considered, so deciding it here in any other order
+        # would put a heading in one section on this page and another in the print.
+        if "skill" in title:
+            out["sid"]["skills"] = R.slug(sec["title"]) or DEFAULT_SID["skills"]
+            out["head"]["skills"] = (sec["title"] or "").strip()
+            for b in blocks:
+                if b["kind"] == "labelled":
+                    label, text = b["label"], b["text"]
+                elif b["kind"] in ("item", "para"):
+                    # A plain line in a skills section is a group of its own with no
+                    # heading, which is what the renderer makes of it: it carries an id
+                    # of key-skills/group-N and prints. Leaving it out here made that
+                    # line addressable in the print and nowhere on this page.
+                    label, text = "", b["text"]
+                else:
+                    left.append(b)
+                    continue
+                items = []
+                for it in R.split_items(text):
+                    entry = {"n": it["name"]}
+                    if it["level"]:
+                        entry["l"] = it["level"]
+                    if it["extra"]:
+                        entry["y"] = it["extra"]
+                    items.append(entry)
+                out["skills"].append({"g": label, "items": items})
+            _unheld(sec["title"], left, dropped)
+            continue
         if any(t in title for t in ACHIEVEMENT_TITLES):
             # already on their CV, so it is ticked: the panel is where it is edited
             for b in blocks:
@@ -126,22 +156,6 @@ def cv_block(doc, dropped=None, achievements=None):
                     out["profile"].append(b["text"])
                 else:
                     left.append(b)
-        elif "skill" in title:
-            out["sid"]["skills"] = R.slug(sec["title"]) or DEFAULT_SID["skills"]
-            out["head"]["skills"] = (sec["title"] or "").strip()
-            for b in blocks:
-                if b["kind"] != "labelled":
-                    left.append(b)
-                    continue
-                items = []
-                for it in R.split_items(b["text"]):
-                    entry = {"n": it["name"]}
-                    if it["level"]:
-                        entry["l"] = it["level"]
-                    if it["extra"]:
-                        entry["y"] = it["extra"]
-                    items.append(entry)
-                out["skills"].append({"g": b["label"], "items": items})
         elif "experience" in title or "employment" in title:
             out["sid"]["experience"] = R.slug(sec["title"]) or DEFAULT_SID["experience"]
             out["head"]["experience"] = (sec["title"] or "").strip()
@@ -183,14 +197,6 @@ def cv_block(doc, dropped=None, achievements=None):
             continue
         _unheld(sec["title"], left, dropped)
     return out
-
-
-def doc_skills_title(doc):
-    """The heading this CV puts its skills under, as written."""
-    for sec in doc["sections"]:
-        if "skill" in (sec["title"] or "").strip().lower():
-            return sec["title"].strip()
-    return "KEY SKILLS"
 
 
 def letter_block(path, doc):
@@ -669,13 +675,6 @@ def main():
             "key skills written as `**Group:** item; item` lines, experience written "
             "as `### Role` blocks, education, training and key achievements. Fold the "
             "content into one of those or it does not print.\n" % ", ".join(dropped))
-    if CV["skills"] and CV["sid"]["skills"] not in ("key-skills", "skills"):
-        sys.stderr.write(
-            "the skills section is headed %s. The renderer only draws a skills section "
-            "under KEY SKILLS or SKILLS, so it prints that section as plain lines and "
-            "its line ids will not be the ones this studio marks. Head it KEY SKILLS "
-            "and both agree.\n" % doc_skills_title(doc))
-
     asks = []
     if a.asks and os.path.isfile(a.asks):
         asks = json.load(io.open(a.asks, encoding="utf-8"))
