@@ -41,12 +41,13 @@ ASSETS = os.path.join(ROOT, "assets")
 def outdir_for(cv_path, asked=None):
     """Where rendered files go.
 
-    Inside the skill, in `output/`, not beside whatever markdown happened to be
-    passed in. The skill is installed once per person and the markdown can live
-    anywhere on their disk; defaulting to the markdown's folder means the skill
-    writes to a different, unpredictable place for every person who runs it, and
-    two people running it produce layouts nobody can describe in one sentence.
-    One folder, always in the same place relative to the skill, is portable.
+    The person's own documents folder, resolved by `paths.documents_dir()`, not beside
+    whatever markdown happened to be passed in. The skill is installed once per person
+    and the markdown can live anywhere on their disk; defaulting to the markdown's
+    folder means the skill writes to a different, unpredictable place for every person
+    who runs it, and two people running it produce layouts nobody can describe in one
+    sentence. One folder, in the same place every time, is something a person can be
+    told to open.
 
     `--pdf-dir` or `--outdir` still win: someone who names a folder means it.
     A skill installed somewhere unwritable falls back to the markdown's folder
@@ -155,15 +156,21 @@ def parse(md):
             if "|" in head:
                 title, dates = [p.strip() for p in head.rsplit("|", 1)]
             i += 1
+            # A date line taken off its own line is a content line of the markdown, so
+            # it has to be counted as one. Without this the source count and the
+            # accounted-for count differ by one per role and the guard below refuses to
+            # write a CV whose only sin is putting the dates where most people put them.
+            datesrc = 0
             if not dates:
                 j = i
                 while j < n and not lines[j].strip():
                     j += 1
                 if j < n and _is_date_line(lines[j]):
                     dates = lines[j].strip()
+                    datesrc = 1
                     i = j + 1
             role = {"kind": "role", "title": title, "dates": dates,
-                    "scope": [], "bullets": [], "src": 0}
+                    "scope": [], "bullets": [], "src": datesrc}
             (section or _floating(doc))["blocks"].append(role)
             continue
         if line.startswith("- ") or line.startswith("* "):
@@ -562,8 +569,19 @@ def _font_faces(used):
             continue
         name = _family_name(f)
         for weight, path in files:
-            with open(path, "rb") as fh:
-                blob = base64.b64encode(fh.read()).decode("ascii")
+            # A font file that is there and cannot be read is a permission problem or
+            # a truncated download, and it used to come out as an uncaught error
+            # halfway through building the page. The face is left out and named, and
+            # the rest of the document is still produced.
+            try:
+                with open(path, "rb") as fh:
+                    blob = base64.b64encode(fh.read()).decode("ascii")
+            except OSError as exc:
+                sys.stderr.write("could not read the font file %s (%s), so %s at "
+                                 "weight %s is not carried in the document and the "
+                                 "printing machine will have to find it.\n"
+                                 % (path, exc, name, weight))
+                continue
             ext = path.rsplit(".", 1)[-1].lower()
             css.append("@font-face{font-family:'%s';font-style:normal;"
                        "font-weight:%s;font-display:block;"
@@ -618,6 +636,39 @@ def _reorder(groups):
     return out + left
 
 
+_DUPS_SAID = set()
+
+
+def _ids(groups):
+    """Give every group an id of its own.
+
+    Two `**Tools:**` lines both slugged to `key-skills/tools`, so one decision taken
+    about one of them was applied to both, and every unlabelled line collapsed onto
+    the same empty id. The first group with a heading keeps the id it has always had,
+    so decisions already recorded against it still land; a second one carries its
+    occurrence number.
+    """
+    seen, dup = {}, []
+    for n, g in enumerate(groups):
+        s = slug(g["label"])
+        if not s:
+            g["gid"] = "key-skills/group-%d" % (n + 1)
+            continue
+        seen[s] = seen.get(s, 0) + 1
+        g["gid"] = ("key-skills/" + s if seen[s] == 1
+                    else "key-skills/%s-%d" % (s, seen[s]))
+        if seen[s] == 2:
+            dup.append(g["label"])
+    for label in dup:
+        if label.lower() not in _DUPS_SAID:
+            _DUPS_SAID.add(label.lower())
+            sys.stderr.write("two skills groups are both headed %r. The second one is "
+                             "addressed as %s, so a decision about one is not applied "
+                             "to the other.\n"
+                             % (label, "key-skills/%s-2" % slug(label)))
+    return groups
+
+
 def skill_groups(blocks):
     groups = []
     for b in blocks:
@@ -640,14 +691,14 @@ def skill_groups(blocks):
         if rest:
             out.append({"label": "Also worked with", "items": rest,
                         "orig": "; ".join(x["raw"] for x in rest)})
-        return _reorder(out)
+        return _ids(_reorder(out))
 
     if OPTS["group"] == "discipline":
         m = _regroup_map()
         if not m:
             sys.stderr.write("no assets/regroup.json, so --group discipline "
                              "falls back to the headings in your markdown\n")
-            return _reorder(groups)
+            return _ids(_reorder(groups))
         out, used = [], set()
         for label, srcs in m:
             it = []
@@ -662,9 +713,9 @@ def skill_groups(blocks):
         for g in groups:
             if g["label"].strip().lower() not in used:
                 out.append(g)
-        return _reorder(out)
+        return _ids(_reorder(out))
 
-    return _reorder(groups)
+    return _ids(_reorder(groups))
 
 
 def _legend():
@@ -674,30 +725,65 @@ def _legend():
             % ", ".join(LEVEL_ORDER))
 
 
-def _short(n):
-    return n if len(n) <= 28 else n[:27].rstrip(" ,") + "\u2026"
+def strip_heading(label, text):
+    """Take the group's own heading off the front of the line it was seeded with.
+
+    The studio seeds its editor with `Technical: Python (Advanced)` and strips the
+    heading again before drawing, because it prints the heading itself. This is the
+    same strip, deliberately the same behaviour as `stripHeading` in studio.html, so
+    a line edited there does not come back out of here with its heading printed twice.
+    """
+    text = (text or "").strip()
+    if not label:
+        return text
+    m = re.match(r"\s*%s\s*:?\s*" % re.escape(label), text, re.I)
+    if not m:
+        return text
+    return text[m.end():].strip() or text
+
+
+def _level_tail(i):
+    """The stated level and anything beside it, as text, for a drawn treatment.
+
+    A bar, a dot or a ring means nothing to the software that reads the file, and
+    `references/ats.md` promises the level prints as text beside the drawing. Reading
+    only the skill's name dropped the word: `Python (Advanced, 10+ yrs)` extracted as
+    `Python (10+ yrs)`, which is a claim the person did not make.
+    """
+    bits = [x for x in ((i.get("level") or "").strip(), (i.get("extra") or "").strip())
+            if x]
+    if not bits:
+        return ""
+    return ' <span style="opacity:.75">(%s)</span>' % inline(", ".join(bits))
 
 
 def _group_html(g):
     """One group, drawn the way that group was set. Never invents a level."""
     mode = mode_for(g["label"])
-    gid = "key-skills/" + slug(g["label"])
+    gid = g.get("gid") or ("key-skills/" + slug(g["label"]))
     if d_removed(gid):
         d_note("removed", gid, g["label"])
         return ""
+
+    # Their own wording wins over every treatment, and it is resolved once, here,
+    # before the drawing is chosen. It used to be read only by the list and column
+    # branches, so a group rewritten in the studio printed its original wording under
+    # bars, dots, rings and chips: the tab that claims to be what prints was not what
+    # printed, and the only way to catch it was to read the finished file line by line.
+    # The heading comes off the front for the same reason the studio takes it off:
+    # the heading is printed separately, and leaving it on prints it twice.
+    text = strip_heading(g["label"], d_text(gid, g["orig"], g.get("items")))
+    items = g["items"] = split_items(text)
+
     wrap = ' class="sk%s" data-id="%s"' % (d_class(gid), gid)
     head = '<span class="skg">%s</span>' % inline(g["label"]) if g["label"] else ""
-    rated = [i for i in g["items"] if (i["level"] or "").lower() in LEVELS]
-    rest = [i for i in g["items"] if (i["level"] or "").lower() not in LEVELS]
+    rated = [i for i in items if (i["level"] or "").lower() in LEVELS]
+    rest = [i for i in items if (i["level"] or "").lower() not in LEVELS]
 
     if mode in ("list", "columns"):
-        # d_text, not the raw line. A group rewritten in the person's own words shows
-        # rewritten in the studio's Final tab, which is the tab that claims to be what
-        # prints; without this the PDF quietly printed the original instead, and the
-        # only way to catch that was to read the finished file line by line.
         para = ('<p class="lab">%s%s</p>'
                 % ('<span class="labname">%s</span>' % inline(g["label"] + ":")
-                   if g["label"] else "", inline(d_text(gid, g["orig"]))))
+                   if g["label"] else "", inline(text)))
         inner = '<div class="skcols">%s</div>' % para if mode == "columns" else para
         return '<div%s>%s</div>' % (wrap, inner)
 
@@ -706,18 +792,20 @@ def _group_html(g):
         body = '<div class="chips">%s</div>' % "".join(
             '<b class="l%d">%s</b>' % (LEVELS.get((i["level"] or "").lower(), 0),
                                        inline(i["raw"]))
-            for i in g["items"])
+            for i in items)
         return '<div%s>%s%s</div>' % (wrap, head, body)
 
     if mode == "rings":
+        # The ring carries no digit. A number on its own is the first thing extracted
+        # out of the figure, so a screener read "4" before it read the skill, and the
+        # level itself was nowhere in the text. The arc says it to the eye and the
+        # caption says it in words.
         body = '<div class="skring">%s</div>' % "".join(
-            '<figure><div class="rr" style="background:conic-gradient('
-            'var(--ringfill) %d%%, var(--ringtrack) 0)"><b>%d</b></div>'
+            '<figure><div class="rr" aria-hidden="true" '
+            'style="background:conic-gradient('
+            'var(--ringfill) %d%%, var(--ringtrack) 0)"><b></b></div>'
             '<figcaption>%s%s</figcaption></figure>'
-            % (LEVELS[i["level"].lower()] * 20, LEVELS[i["level"].lower()],
-               inline(i["name"]),
-               ' <span style="opacity:.75">(%s)</span>' % inline(i["extra"])
-               if i["extra"] else "")
+            % (LEVELS[i["level"].lower()] * 20, inline(i["name"]), _level_tail(i))
             for i in rated) if rated else ""
     else:
         rows = []
@@ -729,9 +817,7 @@ def _group_html(g):
                 meter = '<span class="skdots">%s</span>' % "".join(
                     '<u class="%s"></u>' % ("on" if k <= v else "")
                     for k in range(1, 6))
-            lab = inline(i["name"])
-            if i["extra"]:
-                lab += ' <span style="opacity:.75">(%s)</span>' % inline(i["extra"])
+            lab = inline(i["name"]) + _level_tail(i)
             rows.append('<div class="skrow %s"><span>%s</span>%s</div>'
                         % ("bar" if mode == "bars" else "dot", lab, meter))
         body = "".join(rows)
@@ -750,10 +836,35 @@ def d_removed(i):
     return bool(m and m.get("a") == "remove")
 
 
-def d_text(i, fallback):
+def _skill_fingerprint(items):
+    """The skills a group is made of, in a form that survives being regrouped.
+
+    The same as `skillFingerprint` in studio.html: the item names, lowercased and
+    sorted, so the answer does not depend on the heading they happen to sit under.
+    """
+    names = sorted((i.get("name") or "").lower().strip() for i in items or [])
+    return "|".join(n for n in names if n)
+
+
+def d_text(i, fallback, items=None):
     m = DECIDE["marks"].get(i)
     if m and m.get("a") == "edit" and m.get("text"):
         return m["text"]
+    # A skills group's id is built from its heading, and --group changes the heading.
+    # The studio records the skills an edit was written about for exactly this reason,
+    # and follows the fingerprint when the id no longer matches; the copied command
+    # emits --group and --decisions together, so this is the ordinary path rather than
+    # an edge case. Without it a person's own wording is silently dropped on the way
+    # to the PDF.
+    if items and str(i).startswith("key-skills/"):
+        fp = _skill_fingerprint(items)
+        if fp:
+            for key, m2 in DECIDE["marks"].items():
+                if not str(key).startswith("key-skills/"):
+                    continue
+                if (isinstance(m2, dict) and m2.get("a") == "edit"
+                        and m2.get("text") and m2.get("skills") == fp):
+                    return m2["text"]
     return fallback
 
 
@@ -773,9 +884,27 @@ def d_note(kind, i, text):
     APPLIED.append((kind, i, text))
 
 
+_MOVED_SAID = set()
+
+
 def place_of(label, section_place):
-    """The column a group prints in. Unset means wherever the section itself sits."""
-    return OPTS["group_place"].get((label or "").strip().lower(), section_place)
+    """The column a group prints in. Unset means wherever the section itself sits.
+
+    On a layout with no sidebar there is no other column to send a group to. The
+    section's own placement is already clamped to the main column there; the group
+    override was not, so `--skills-place "Domain=side"` on a one-column layout matched
+    no region and the group was filtered off the page altogether, without a word.
+    """
+    want = OPTS["group_place"].get((label or "").strip().lower(), section_place)
+    if want != section_place and not OPTS.get("has_aside", True):
+        key = (label or "").strip().lower()
+        if key not in _MOVED_SAID:
+            _MOVED_SAID.add(key)
+            sys.stderr.write("this layout has no sidebar, so the skills group %r stays "
+                             "in the main column. --skills-place only does something "
+                             "on a layout with a sidebar.\n" % (label or "(unnamed)"))
+        return section_place
+    return want
 
 
 def skills_html(blocks, region=None, section_place="main"):
@@ -1380,6 +1509,7 @@ def build(doc, layout, palette, typeset, skins, scoped=None, letter=None):
     aside_src, main_src = "", ""
     pk, head_out = "plain", ""
     has_aside = (kind == "sidebar")
+    OPTS["has_aside"] = has_aside
 
     def column(region):
         """Every section feeds one column, except skills, which can feed both.
@@ -1481,9 +1611,27 @@ def _asset(name):
         return f.read()
 
 
+PAGINATOR_MISSING = (
+    "REFUSING TO WRITE. assets/paginate.js is missing or empty, and it is what puts "
+    "the document on the page: every line is written into a hidden block and the "
+    "paginator is what moves it onto the sheets. Without it the file opens blank, at "
+    "the right size, with nothing on it. Restore assets/paginate.js and run this "
+    "again."
+)
+
+
+def paginator_ok():
+    """True when there is a paginator to carry. The page is blank without one."""
+    return bool(_asset("paginate.js").strip())
+
+
 def page(css_vars, sheet, title):
+    # Without JavaScript nothing moves out of #src, so the page would be blank. This
+    # shows the document unpaginated instead: one long column, everything readable.
     return ("<!doctype html><html><head><meta charset=\"utf-8\"><title>%s</title>"
-            "<style>%s\n%s</style></head><body>%s</body></html>"
+            "<style>%s\n%s</style>"
+            "<noscript><style>#src{display:block}#src[hidden]{display:block}"
+            "</style></noscript></head><body>%s</body></html>"
             % (html.escape(title), BASE, css_vars, sheet))
 
 
@@ -1550,31 +1698,77 @@ def _datestamp(a):
     return datetime.date.today().strftime("%Y%m%d")
 
 
-def _pdf_names(doc, outdir, tag, role="", stamp=""):
-    """<Name> - <Role> - <YYYYMMDD> - CV.pdf
+def _pdf_names(doc, outdir, tag, role="", stamp="", employer=""):
+    """<Name> - <Role> - <Employer> - <YYYYMMDD> - CV.pdf
 
-    The role and the date are in the name because these files get sent, and a
-    recruiter's inbox is full of documents called Resume.pdf. A segment with nothing
-    in it is left out rather than printed as an empty gap between two hyphens.
+    The role, the employer and the date are in the name because these files get sent,
+    and a recruiter's inbox is full of documents called Resume.pdf. The employer is
+    there because two applications for the same job title, built from the same
+    markdown on the same day, otherwise produce one filename and the second one writes
+    over the first. A segment with nothing in it is left out rather than printed as an
+    empty gap between two hyphens.
     """
     bits = [_safe(doc["name"])]
     if role:
         bits.append(role)
+    if employer:
+        bits.append(employer)
     if stamp:
         bits.append(stamp)
     bits.append("Cover Letter" if tag == "letter" else "CV")
     return os.path.join(outdir, " - ".join(b for b in bits if b) + ".pdf")
 
 
+_GENERIC_FAMILIES = ("serif", "sans-serif", "monospace", "system-ui", "cursive",
+                     "fantasy", "ui-serif", "ui-sans-serif", "ui-monospace",
+                     "ui-rounded", "inherit", "initial", "unset")
+
+
+def _named_families(stack):
+    """The real family names in a CSS stack, with the generic keywords taken out."""
+    out = []
+    for part in (stack or "").split(","):
+        fam = part.strip().strip("'\"").strip()
+        if fam and fam.lower() not in _GENERIC_FAMILIES:
+            out.append(fam)
+    return out
+
+
 def _wanted_faces(a, skins):
-    """The named faces this skin asks for, and whether a file was bundled for each."""
+    """The named faces this skin asks for, and whether a file was bundled for each.
+
+    An empty answer means nothing is checked and nothing is embedded, so the PDF
+    prints in whatever the machine happens to have. That is fine when the skin asks
+    only for a system face, and is a silent failure when it asks for a face nobody
+    can find. The two are told apart here and the second one says so out loud, rather
+    than letting a substituted CV come out looking finished.
+    """
     T = dict(skins["typesets"][a.typeset])
     FN, _sz = _fonts()
     if OPTS.get("head_font") in FN:
         T["head"] = FN[OPTS["head_font"]]["css"]
     if OPTS.get("body_font") in FN:
         T["body"] = FN[OPTS["body_font"]]["css"]
-    return _used_faces(T.get("head"), T.get("body"))
+    used = _used_faces(T.get("head"), T.get("body"))
+    if not used:
+        named = []
+        for stack in (T.get("head"), T.get("body")):
+            for fam in _named_families(stack):
+                if fam not in named:
+                    named.append(fam)
+        if named:
+            sys.stderr.write(
+                "WARNING: this skin asks for %s, and no entry in assets/fonts.json "
+                "matches the stack it asks with, so no typeface is carried in the "
+                "document and none is checked in the PDF. The file will print in "
+                "whatever face the printing machine happens to have.\n"
+                "  stacks that did not resolve: %s\n"
+                "  Fix the typeset in assets/skins.json so its head and body stacks "
+                "are copied exactly from a css value in assets/fonts.json, or pass "
+                "--head-font and --body-font.\n"
+                % (", ".join(named),
+                   "; ".join(s for s in (T.get("head"), T.get("body")) if s)))
+    return used
 
 
 def _documents():
@@ -1588,19 +1782,35 @@ def _documents():
         return None
 
 
-def _keep_earlier(dest, role, source):
+def _keep_earlier(dest, role, source, employer=""):
+    # The employer is part of what makes two documents the same document. It is passed
+    # as a keyword and the call is tried again without it, so this keeps working
+    # against a copy of documents.py that has not been given the argument yet.
     d = _documents()
+    if not d:
+        return None
     try:
-        return d.protect(dest, role, source) if d else None
+        try:
+            return d.protect(dest, role, source, employer=employer)
+        except TypeError:
+            return d.protect(dest, role, source)
     except Exception:
         return None
 
 
-def _record(path, role, tag, source):
+def _record(path, role, tag, source, employer=""):
     d = _documents()
+    if not d:
+        return
+    kind = "letter" if tag == "letter" else "cv"
+    write = getattr(d, "record", None) or getattr(d, "note", None)
+    if not write:
+        return
     try:
-        if d:
-            d.note(path, role, "letter" if tag == "letter" else "cv", source)
+        try:
+            write(path, role, kind, source, employer=employer)
+        except TypeError:
+            write(path, role, kind, source)
     except Exception:
         pass
 
@@ -1647,15 +1857,16 @@ def write_pdfs(a, doc, letter, skins, cv_html):
 
     wanted = _wanted_faces(a, skins)
     role, stamp = _role_from(a, letter), _datestamp(a)
+    employer = _safe(getattr(a, "employer", "") or "")
     written = []
     kept = []
     for tag, src in jobs:
-        dest = _pdf_names(doc, outdir, tag, role, stamp)
+        dest = _pdf_names(doc, outdir, tag, role, stamp, employer)
         # Re-rendering the same document overwrites, which is what somebody trying
         # six skins wants. A different advertisement does not: the old file is moved
         # aside under a dated name first, because the two can share a filename and
         # nothing on screen would otherwise say the earlier one had gone.
-        aside = _keep_earlier(dest, role, a.cv)
+        aside = _keep_earlier(dest, role, a.cv, employer)
         if aside:
             kept.append(aside)
         try:
@@ -1708,13 +1919,18 @@ def write_pdfs(a, doc, letter, skins, cv_html):
             pass
 
     for path, tag in written:
-        _record(path, role, tag, a.cv)
+        _record(path, role, tag, a.cv, employer)
     for path in kept:
         print("  kept your earlier document as %s" % os.path.basename(path))
-    if written and not role:
-        print("  NOTE: no role in the filename, so a second application on the same "
-              "day would share it. Pass --role \"<the job title>\", or render with "
-              "--letter, and each application gets its own file.")
+    if written and not role and not employer:
+        print("  NOTE: no role and no employer in the filename, so a second "
+              "application on the same day would share it. Pass --role \"<the job "
+              "title>\" and --employer \"<who it is for>\", or render with --letter, "
+              "and each application gets its own file.")
+    elif written and role and not employer:
+        print("  NOTE: no employer in the filename, so a second application for the "
+              "same job title on the same day would share it. Pass --employer "
+              "\"<who it is for>\" and each one gets its own file.")
 
     faces = to_pdf.font_names(written[0][0]) if written else []
     if faces:
@@ -1742,13 +1958,70 @@ def _substituted(pdf_path, wanted, to_pdf):
 
 # ---------------------------------------------------------------- main
 
+def _decisions_wrong(d):
+    """The one thing wrong with a decisions file, said in a sentence, or None.
+
+    This file is routinely hand saved out of a pasted block, so a small shape error is
+    likely, and the shape errors all used to arrive as a Python traceback in the middle
+    of a render. Each check names the key it is unhappy with, because the person has to
+    go and find it in a file they did not write by hand.
+    """
+    if not isinstance(d, dict):
+        return ("the file itself has to be an object with marks, adds and sections in "
+                "it, and this one is a %s." % type(d).__name__)
+
+    marks = d.get("marks")
+    if marks is not None and not isinstance(marks, dict):
+        return "marks has to be an object of id to decision, and it is a %s." \
+            % type(marks).__name__
+    for key, m in (marks or {}).items():
+        if not isinstance(m, dict):
+            return ('marks/"%s" has to be an object with an "a" in it, and it is a %s.'
+                    % (key, type(m).__name__))
+
+    adds = d.get("adds")
+    if adds is not None and not isinstance(adds, dict):
+        return "adds has to be an object of id to added lines, and it is a %s." \
+            % type(adds).__name__
+    for key, lst in (adds or {}).items():
+        if not isinstance(lst, list):
+            return ('adds/"%s" has to be a list of objects each with a "text", and it '
+                    'is a %s.' % (key, type(lst).__name__))
+        for x in lst:
+            if not isinstance(x, dict):
+                return ('one entry under adds/"%s" is a %s, and every entry has to be '
+                        'an object with a "text" in it.' % (key, type(x).__name__))
+
+    sections = d.get("sections")
+    if sections is not None and not isinstance(sections, list):
+        return "sections has to be a list of added sections, and it is a %s." \
+            % type(sections).__name__
+    for n, spec in enumerate(sections or []):
+        if not isinstance(spec, dict):
+            return ("sections entry %d is a %s, and every entry has to be an object "
+                    'with a "title" and a "lines".' % (n + 1, type(spec).__name__))
+        lines = spec.get("lines")
+        if lines is not None and not isinstance(lines, list):
+            return ('the "lines" of sections entry %d has to be a list of objects each '
+                    'with a "text", and it is a %s.' % (n + 1, type(lines).__name__))
+        for x in lines or []:
+            if not isinstance(x, dict):
+                return ('one line of sections entry %d is a %s, and every line has to '
+                        'be an object with a "text" in it.'
+                        % (n + 1, type(x).__name__))
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cv", nargs="?")
     ap.add_argument("--layout", default="sidebar-dark")
     ap.add_argument("--palette", default="forest")
     ap.add_argument("--typeset", default="mixed")
-    ap.add_argument("--out")
+    ap.add_argument("--out",
+                    help="the HTML file to write. Default: a name built from the "
+                         "markdown, the layout and the palette, in your documents "
+                         "folder")
     ap.add_argument("--pdf", action="store_true",
                     help="also print the finished documents to PDF, through a real "
                          "browser, so the file is the skin rather than a redrawing "
@@ -1758,8 +2031,12 @@ def main():
     ap.add_argument("--role", default=None,
                     help="the position applied for, used in the PDF filename. "
                          "Read off the cover letter's address block when there is one")
+    ap.add_argument("--employer", default="",
+                    help="the employer this version is for, so two applications for "
+                         "the same job title do not share a filename")
     ap.add_argument("--date", default=None,
-                    help="the date in the PDF filename. Default: today, as YYYYMMDD")
+                    help="the date stamp in the PDF filename, written however you "
+                         "pass it. Default: today, as YYYYMMDD")
     ap.add_argument("--pdf-allow-substitute", action="store_true",
                     dest="pdf_allow_substitute",
                     help="write the PDF even when a typeface the skin asked for "
@@ -1835,11 +2112,25 @@ def main():
         if not os.path.isfile(a.decisions):
             sys.stderr.write("no decisions file at %s\n" % a.decisions)
             return 2
-        with open(a.decisions, encoding="utf-8") as f:
-            d = json.load(f)
-        DECIDE["marks"] = d.get("marks", {}) or {}
-        DECIDE["adds"] = d.get("adds", {}) or {}
-        DECIDE["sections"] = d.get("sections", []) or {}
+        try:
+            with open(a.decisions, encoding="utf-8") as f:
+                d = json.load(f)
+        except ValueError as exc:
+            sys.stderr.write("REFUSING TO WRITE. %s is not valid JSON: %s. It is "
+                             "usually a missing comma, a trailing comma or a quote "
+                             "that did not get pasted.\n" % (a.decisions, exc))
+            return 1
+        except OSError as exc:
+            sys.stderr.write("REFUSING TO WRITE. %s could not be read: %s\n"
+                             % (a.decisions, exc))
+            return 1
+        wrong = _decisions_wrong(d)
+        if wrong:
+            sys.stderr.write("REFUSING TO WRITE. In %s, %s\n" % (a.decisions, wrong))
+            return 1
+        DECIDE["marks"] = d.get("marks") or {}
+        DECIDE["adds"] = d.get("adds") or {}
+        DECIDE["sections"] = d.get("sections") or []
     if a.skills_order:
         OPTS["group_order"] = [x.strip() for x in a.skills_order.split(";") if x.strip()]
     if a.skills_place:
@@ -1880,6 +2171,9 @@ def main():
 
     if not a.cv:
         ap.error("a cv markdown file is required")
+    if not paginator_ok():
+        sys.stderr.write(PAGINATOR_MISSING + "\n")
+        return 1
     for key, grp in (("layout", "layouts"), ("palette", "palettes"),
                      ("typeset", "typesets")):
         if getattr(a, key) not in skins[grp]:
@@ -1959,8 +2253,12 @@ def main():
 
     v, sheet = build(doc, a.layout, a.palette, a.typeset, skins, letter=letter)
     stem = os.path.basename(os.path.splitext(a.letter if a.letter else a.cv)[0])
+    # The employer belongs in this name for the same reason it belongs in the PDF's:
+    # two applications for the same job title otherwise write over each other.
+    emp = slug(getattr(a, "employer", "") or "")
     out = a.out or os.path.join(outdir_for(a.cv),
-                                "%s-%s-%s.html" % (stem, a.layout, a.palette))
+                                "%s-%s-%s.html" % (stem + ("-" + emp if emp else ""),
+                                                   a.layout, a.palette))
     with open(out, "w", encoding="utf-8") as f:
         f.write(page(v, sheet, doc["name"] or "CV"))
 
@@ -1982,12 +2280,25 @@ def main():
               "cannot drift apart." % os.path.basename(a.cv))
         print("  open it and check it is one page. A cover letter that runs to two "
               "is a cover letter nobody finishes.")
-    else:
-        print("  %d content lines in, %d out. Nothing added, nothing dropped."
-              % (src, got))
+    gone = [x for x in APPLIED if x[0] == "removed"]
+    new = [x for x in APPLIED if x[0] == "added"]
+    if not letter:
+        # The count is the parse: what the markdown holds and what was accounted for.
+        # The decisions file then takes lines off and puts lines on, and saying
+        # "nothing added, nothing dropped" one line above a list of exactly that was
+        # the summary contradicting itself.
+        did = []
+        if gone:
+            did.append("took %d line%s off" % (len(gone), "" if len(gone) == 1 else "s"))
+        if new:
+            did.append("added %d line%s" % (len(new), "" if len(new) == 1 else "s"))
+        if did:
+            print("  %d content lines in, %d out, and then your decisions %s. Every "
+                  "one of them is listed below." % (src, got, " and ".join(did)))
+        else:
+            print("  %d content lines in, %d out. Nothing added, nothing dropped."
+                  % (src, got))
     if APPLIED:
-        gone = [x for x in APPLIED if x[0] == "removed"]
-        new = [x for x in APPLIED if x[0] == "added"]
         if gone:
             print("  taken off by your decisions: %d line%s"
                   % (len(gone), "" if len(gone) == 1 else "s"))

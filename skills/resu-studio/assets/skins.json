@@ -259,32 +259,32 @@
  "typesets": {
   "serif": {
    "label": "Serif",
-   "head": "Georgia, 'Times New Roman', serif",
-   "body": "Georgia, 'Times New Roman', serif",
+   "head": "Lora,Georgia,serif",
+   "body": "Lora,Georgia,serif",
    "scale": 1.0
   },
   "sans": {
    "label": "Sans",
-   "head": "'Helvetica Neue', Arial, sans-serif",
-   "body": "'Helvetica Neue', Arial, sans-serif",
+   "head": "Arimo,Arial,sans-serif",
+   "body": "Arimo,Arial,sans-serif",
    "scale": 1.0
   },
   "mixed": {
    "label": "Serif heads",
-   "head": "Georgia, 'Times New Roman', serif",
-   "body": "'Helvetica Neue', Arial, sans-serif",
+   "head": "Lora,Georgia,serif",
+   "body": "'Source Sans 3','Source Sans Pro',Arial,sans-serif",
    "scale": 1.0
   },
   "mixedalt": {
    "label": "Sans heads",
-   "head": "'Helvetica Neue', Arial, sans-serif",
-   "body": "Georgia, 'Times New Roman', serif",
+   "head": "'Source Sans 3','Source Sans Pro',Arial,sans-serif",
+   "body": "Lora,Georgia,serif",
    "scale": 1.0
   },
   "tight": {
    "label": "Tight sans",
-   "head": "'Helvetica Neue', Arial, sans-serif",
-   "body": "'Helvetica Neue', Arial, sans-serif",
+   "head": "'Work Sans',Arial,sans-serif",
+   "body": "'Work Sans',Arial,sans-serif",
    "scale": 0.94
   }
  }

@@ -10,7 +10,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600&family=Arimo:wght@400;700&family=Arvo:wght@400;700&family=Cabin:wght@400;700&family=EB+Garamond:wght@400;700&family=Lato:wght@400;700&family=Lora:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&family=Oswald:wght@400;700&family=Poppins:wght@400;700&family=Quicksand:wght@400;700&family=Raleway:wght@400;700&family=Roboto:wght@400;700&family=Rubik:wght@400;700&family=Source+Sans+3:wght@400;700&family=Work+Sans:wght@400;700&display=swap">
+<!-- The typefaces the CV is set in are carried inside this page, base64, put here by
+     scripts/build_studio.py out of assets/fonts/, which is where the print gets them
+     too. Fetching them from a font server meant the studio measured in whatever the
+     browser substituted whenever the network was slow or absent, so the preview broke
+     its pages in one place and the printed PDF broke them in another. If a font file
+     is missing the build leaves this empty and the link below is put back at runtime. -->
+<style id="cvfaces"></style>
 
 <style>
 :root{
@@ -529,14 +535,36 @@ const CV = {name:"",contact:[],profile:"",skills:[],roles:[],education:[],traini
 const ASKS = [];
 const LEVELS = {"Master":5,"Advanced":4,"Intermediate":3,"working knowledge":2,"exposure":1};
 const LEVEL_ORDER = ["Master","Advanced","Intermediate","working knowledge","exposure"];
+/* The renderer reads a level however it is capitalised, so this page has to as well.
+   A CV writing `SQL (advanced)` rated on the printed page and sat unrated in the
+   preview, which is the preview telling the person something untrue about the file
+   they are about to send. */
+function lvl(name){
+  const want=String(name||"").trim().toLowerCase();
+  if(!want) return 0;
+  const hit=Object.keys(LEVELS).find(k=>k.toLowerCase()===want);
+  return hit ? LEVELS[hit] : 0;
+}
+function sameLevel(a,b){
+  return String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase();
+}
+
+/* `REGROUPMAP` names this person's own skills headings and what they fold into. The
+   build swaps assets/regroup.json in here, which is the same file the renderer reads
+   for --group discipline, so the two group the same way. A heading the map does not
+   name passes through unchanged, exactly as the renderer passes it through. A map
+   that can move nothing on this CV takes the chip off the panel rather than leaving a
+   control that does nothing. */
+const REGROUPMAP = {};
+
+/* The application this studio was built for. The build fills both in, and the command
+   this page copies out carries the role, because the renderer names the PDF from it. */
+const ROLE = "";
+const EMPLOYER = "";
 
 /* regrouping options: same items, different headings. Nothing is reworded. */
 const REGROUP = {
-  /* `map` names this person's own skills headings and what they fold into. It is
-     empty until somebody fills it in for them: an empty map regroups nothing, which
-     is the honest default, whereas one person's headings shipped to everybody else
-     silently matches nothing and looks broken. */
-  discipline:{label:"By discipline", map:{}},
+  discipline:{label:"By discipline", map:REGROUPMAP},
   strength:{label:"By stated level"}
 };
 
@@ -602,15 +630,46 @@ const FONTS = {
  "verdana":       {label:"Verdana",        css:"Verdana,Geneva,sans-serif"},
  "work-sans":     {label:"Work Sans",      css:"'Work Sans',Arial,sans-serif", g:"Work+Sans"}
 };
+/* The font files themselves, base64, one entry per face, put here by
+   scripts/build_studio.py out of assets/fonts/. The print carries the same bytes, so
+   the sheet is measured in the metrics it will be printed in. Empty means the build
+   found no file for that face, and the font server is asked for it instead.
+   Nothing may come between this and the next const: the build replaces everything up
+   to it. */
+const FONTFACE = {};
 const SIZES={small:0.94, normal:1, large:1.06};
 
-function fontLink(){
-  const want=[FONTS[S.headFont], FONTS[S.bodyFont]]
-    .filter(f=>f&&f.g).map(f=>"family="+f.g+":wght@400;700");
+function facesFor(keys){
+  const css=keys.map(k=>FONTFACE[k]).filter(Boolean);
+  return css.length ? "<style>"+css.join("")+"</style>" : "";
+}
+function googleLink(keys){
+  const want=keys.map(k=>FONTS[k]).filter(f=>f&&f.g)
+    .map(f=>"family="+f.g+":wght@400;700");
   if(!want.length) return "";
   return '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?'
     + [...new Set(want)].join("&") + '&display=swap">';
 }
+/* What the sheet is given: the embedded faces where they exist, and the font server
+   only for a face this build had no file for. */
+function fontLink(){
+  const keys=[S.headFont, S.bodyFont];
+  const embedded=keys.filter(k=>FONTFACE[k]);
+  const rest=keys.filter(k=>!FONTFACE[k]);
+  return facesFor(embedded) + googleLink(rest);
+}
+/* The panel draws each typeface chip in its own face, so the studio around the sheet
+   needs every face too. Done once, here, rather than on every redraw. */
+(function(){
+  const el=document.getElementById("cvfaces");
+  if(!el) return;
+  const keys=Object.keys(FONTS);
+  const css=keys.map(k=>FONTFACE[k]).filter(Boolean).join("");
+  if(css) el.textContent=css;
+  const missing=keys.filter(k=>!FONTFACE[k]);
+  const link=googleLink(missing);
+  if(link) el.insertAdjacentHTML("afterend", link);
+})();
 
 const SKILLMODES = {
  list:{label:"Grouped lines",hint:"Exactly what your CV prints today. One heading, one run of skills."},
@@ -633,6 +692,28 @@ const SEC = [
   {id:"education",name:"Education",slug:"education"},
   {id:"training",name:"Training & certifications",slug:"training-certifications"}
 ];
+
+/* Every line id starts with the slug of the heading it sits under, and the renderer
+   builds it the same way from the same heading. These were constants here, so a CV
+   headed `## TRAINING AND CERTIFICATIONS` was `training-certifications` in this page
+   and `training-and-certifications` in the print: every mark, rewrite and removal on
+   those lines was handed over against an id the renderer had never heard of and was
+   dropped without a word. The build now sends the real prefixes in `CV.sid`, and the
+   constants above are only the fallback for a section this CV does not have. */
+SEC.forEach(s=>{ if(CV.sid && CV.sid[s.id]) s.slug=CV.sid[s.id]; });
+const SID={};
+SEC.forEach(s=>{ SID[s.id]=s.slug; });
+/* The skills groups are the one exception: the renderer keys them on `key-skills/`
+   whatever the heading says, so this page does too. */
+SID.skillLine="key-skills";
+function rxEsc(s){ return String(s).replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&"); }
+
+/* The profile is a list of paragraphs: the renderer prints `profile/0`, `profile/1`
+   and so on, and this page addressed only the first. Taking the profile off left
+   paragraph two printing, and rewriting it printed the rewrite and then the original
+   paragraph two underneath. Older builds sent one string; both shapes are read. */
+const PROFILE = Array.isArray(CV.profile) ? CV.profile.slice()
+              : (CV.profile ? [CV.profile] : []);
 
 /* Sections a CV can grow, beyond the five it starts with. Each is off until it is
    added, and adding one never touches the markdown: it is an addition, reported as
@@ -739,10 +820,16 @@ if((DRAFTS.achievements||[]).length &&
   try{ localStorage.setItem("cvwb",JSON.stringify(S)); }catch(e){}
 }
 
-/* ============================================== the page-laying engine */
-const PAGINATE = "/* Lay the CV out on real A4 sheets.\n\n   Nothing here rewrites a word. It moves finished blocks between sheets so that\n   a bullet, a role heading or a skills group is never cut in half by a page\n   edge. If anything goes wrong it puts the document back the way it was, on one\n   long sheet, rather than showing a page with something missing.\n\n   Expects, in the document:\n     <div id=\"src\" hidden>\n       <div data-region=\"aside\">...</div>   (only on layouts with a sidebar)\n       <div data-region=\"main\">...</div>\n     </div>\n     <div id=\"doc\"></div>\n     window.__PAGE__ = {kind, side, ruled, head, headtag, headcls}\n*/\n(function () {\n  \"use strict\";\n\n  function ready(fn) {\n    if (document.readyState !== \"loading\") fn();\n    else document.addEventListener(\"DOMContentLoaded\", fn);\n  }\n\n  ready(function () {\n    var CFG = window.__PAGE__ || {};\n    var SRC = document.getElementById(\"src\");\n    var DOC = document.getElementById(\"doc\");\n    if (!SRC || !DOC) return;\n\n    var kind = CFG.kind || \"plain\";\n    var side = CFG.side || \"left\";\n    var ruled = CFG.ruled ? \" ruled\" : \"\";\n    var headHTML = CFG.head || \"\";\n    var headTag = CFG.headtag || \"div\";\n    var headCls = CFG.headcls || \"headwrap\";\n    var gid = 0;\n\n    /* ---------------------------------------------------------- atomising */\n\n    function el(tag, cls) {\n      var e = document.createElement(tag);\n      if (cls) e.className = cls;\n      return e;\n    }\n\n    /* A role becomes its head plus one atom per remaining bullet, all sharing a\n       group id so the pieces that land on one sheet are stitched back together. */\n    function splitRole(role, g) {\n      var out = [], ul = null, before = [];\n      Array.prototype.slice.call(role.childNodes).forEach(function (n) {\n        if (n.nodeType === 1 && n.tagName === \"UL\" && !ul) ul = n;\n        else before.push(n);\n      });\n      var head = role.cloneNode(false);\n      head.setAttribute(\"data-grp\", g);\n      before.forEach(function (n) { head.appendChild(n); });\n      var lis = ul ? Array.prototype.slice.call(ul.children) : [];\n      if (ul) {\n        var u = ul.cloneNode(false);\n        if (lis.length) u.appendChild(lis.shift());\n        head.appendChild(u);\n      }\n      out.push(head);\n      lis.forEach(function (li) {\n        var w = role.cloneNode(false);\n        w.setAttribute(\"data-grp\", g);\n        var u2 = ul.cloneNode(false);\n        u2.appendChild(li);\n        w.appendChild(u2);\n        out.push(w);\n      });\n      return out;\n    }\n\n    /* A loose bullet list becomes one atom per bullet. */\n    function splitList(ul, g) {\n      var out = [];\n      Array.prototype.slice.call(ul.children).forEach(function (li) {\n        var u = ul.cloneNode(false);\n        u.setAttribute(\"data-grp\", g);\n        u.appendChild(li);\n        out.push(u);\n      });\n      return out;\n    }\n\n    function atomise(container) {\n      var out = [];\n      Array.prototype.slice.call(container.children).forEach(function (k) {\n        var g = \"g\" + (gid++);\n        if (k.classList.contains(\"role\")) {\n          splitRole(k, g).forEach(function (a) { out.push(a); });\n          return;\n        }\n        if (k.tagName === \"UL\") {\n          splitList(k, g).forEach(function (a) { out.push(a); });\n          return;\n        }\n        if (k.classList.contains(\"cols2\")) {\n          /* a section set in two columns: one atom per item, rebuilt into one box\n             on whichever sheet the items land */\n          Array.prototype.slice.call(k.children).forEach(function (c) {\n            var w = k.cloneNode(false);\n            w.setAttribute(\"data-grp\", g);\n            w.appendChild(c);\n            out.push(w);\n          });\n          return;\n        }\n        if (k.classList.contains(\"secwrap\")) {\n          /* slab: the heading floats into the gutter beside its own section, so\n             every piece of the section needs its own wrapper */\n          atomise(k).forEach(function (a) {\n            var w = k.cloneNode(false);\n            w.setAttribute(\"data-grp\", g);\n            w.appendChild(a);\n            out.push(w);\n          });\n          return;\n        }\n        out.push(k);\n      });\n      return out;\n    }\n\n    /* A heading on its own at the foot of a sheet is worse than a shorter\n       sheet, so it travels with whatever follows it. */\n    function markKeeps(atoms) {\n      atoms.forEach(function (a, i) {\n        var isHead = (a.tagName === \"H2\" && a.classList.contains(\"sec\")) ||\n                     a.classList.contains(\"legend\") ||\n                     (a.querySelector && a.querySelector(\":scope > h2.sec\") &&\n                      a.children.length === 1);\n        if (isHead && i < atoms.length - 1) a.setAttribute(\"data-keep\", \"1\");\n        a.setAttribute(\"data-atom\", \"1\");\n      });\n      return atoms;\n    }\n\n    /* Move one atom's contents into the block above it, and remember enough to put\n       them back. Merging has to happen while the sheet is being filled, not after:\n       a role card carries its own padding and margin, so six bullet atoms measured\n       separately are three hundred pixels taller than the one card they become. Fill\n       on the pre-merge measurement and the page stops half empty. */\n    function mergeInto(dst, src) {\n      var moved = [], keep = dst.getAttribute(\"data-keep\");\n      Array.prototype.slice.call(src.children).forEach(function (c) {\n        var last = dst.lastElementChild;\n        if (last && c.tagName === \"UL\" && last.tagName === \"UL\" &&\n            last.className === c.className) {\n          var lis = Array.prototype.slice.call(c.children);\n          lis.forEach(function (li) { last.appendChild(li); });\n          moved.push({ back: c, nodes: lis });\n        } else {\n          dst.appendChild(c);\n          moved.push({ back: src, nodes: [c] });\n        }\n      });\n      /* it is no longer a heading on its own, so it must not be pulled back as one */\n      if (keep) dst.removeAttribute(\"data-keep\");\n      return { moved: moved, dst: dst, keep: keep };\n    }\n\n    function unmerge(m) {\n      m.moved.slice().reverse().forEach(function (x) {\n        x.nodes.forEach(function (n) { x.back.appendChild(n); });\n      });\n      if (m.keep) m.dst.setAttribute(\"data-keep\", m.keep);\n    }\n\n    function sameGroup(a, b) {\n      var ga = a && a.getAttribute && a.getAttribute(\"data-grp\");\n      var gb = b && b.getAttribute && b.getAttribute(\"data-grp\");\n      return !!(ga && ga === gb);\n    }\n\n    /* Two atoms of the same group that land on one sheet become one block. */\n    function stitch(region) {\n      var i = 0;\n      while (i < region.children.length - 1) {\n        var a = region.children[i], b = region.children[i + 1];\n        var ga = a.getAttribute(\"data-grp\"), gb = b.getAttribute(\"data-grp\");\n        if (ga && ga === gb) {\n          Array.prototype.slice.call(b.children).forEach(function (c) {\n            var last = a.lastElementChild;\n            if (last && c.tagName === \"UL\" && last.tagName === \"UL\" &&\n                last.className === c.className) {\n              Array.prototype.slice.call(c.children).forEach(function (li) {\n                last.appendChild(li);\n              });\n            } else {\n              a.appendChild(c);\n            }\n          });\n          b.parentNode.removeChild(b);\n          stitch(a);\n        } else {\n          i++;\n        }\n      }\n    }\n\n    /* ------------------------------------------------------------- sheets */\n\n    function newSheet(index) {\n      var sheet = el(\"div\", \"sheet\" + ruled);\n      var regions = {};\n      var hasAside = (kind === \"sidebar\" || kind === \"sidebartop\");\n\n      function head() {\n        var h = el(headTag, headCls);\n        h.innerHTML = headHTML;\n        return h;\n      }\n\n      if (kind === \"sidebar\") {\n        var grid = el(\"div\", \"grid \" + side);\n        var aside = el(\"div\", \"aside\"), main = el(\"div\", \"main\");\n        if (side === \"left\") { grid.appendChild(aside); grid.appendChild(main); }\n        else { grid.appendChild(main); grid.appendChild(aside); }\n        sheet.appendChild(grid);\n        regions.aside = aside; regions.main = main;\n      } else if (kind === \"sidebartop\") {\n        if (index === 0) {\n          /* page one has a sidebar, floor to ceiling. Page two onwards does not.\n             That is the whole of this layout. */\n          var g2 = el(\"div\", \"grid \" + side);\n          var a2 = el(\"div\", \"aside\"), m2 = el(\"div\", \"main\");\n          if (side === \"right\") { g2.appendChild(m2); g2.appendChild(a2); }\n          else { g2.appendChild(a2); g2.appendChild(m2); }\n          sheet.appendChild(g2);\n          regions.aside = a2; regions.main = m2;\n        } else {\n          var rest = el(\"div\", \"rest\");\n          sheet.appendChild(rest);\n          regions.main = rest;\n        }\n      } else if (kind === \"band\" || kind === \"slab\") {\n        if (index === 0) {\n          var band = el(\"div\", kind === \"band\" ? \"hdr\" : \"slab\");\n          band.innerHTML = headHTML;\n          sheet.appendChild(band);\n        }\n        var pad = el(\"div\", \"pad\");\n        sheet.appendChild(pad);\n        regions.main = pad;\n      } else {\n        var pad2 = el(\"div\", \"pad\");\n        if (index === 0 && headHTML) pad2.appendChild(head());\n        sheet.appendChild(pad2);\n        regions.main = pad2;\n      }\n      sheet.setAttribute(\"data-page\", index + 1);\n      DOC.appendChild(sheet);\n      return { sheet: sheet, regions: regions };\n    }\n\n    function overflowing(r) {\n      return r.scrollHeight > r.clientHeight + 1;\n    }\n\n    /* --------------------------------------------------------------- fill */\n\n    var asideSrc = SRC.querySelector('[data-region=\"aside\"]');\n    var mainSrc = SRC.querySelector('[data-region=\"main\"]');\n\n    /* Take the register before anything is split: every line that has an id in the\n       source has to have one on a sheet at the end. Counting atoms would not do it,\n       because atoms merge back together as the sheet fills. */\n    var wanted = {}, wantedN = 0;\n    Array.prototype.slice.call(SRC.querySelectorAll(\"[data-id]\")).forEach(function (n) {\n      var k = n.getAttribute(\"data-id\");\n      if (!wanted[k]) { wanted[k] = 1; wantedN++; }\n    });\n\n    var asideAtoms = asideSrc ? markKeeps(atomise(asideSrc)) : [];\n    var mainAtoms = mainSrc ? markKeeps(atomise(mainSrc)) : [];\n\n    /* If the sidebar cannot hold everything on page one, the remainder joins the main\n       flow at the marker its section left behind, so the order the person set is the\n       order that prints. The heading travels with it. */\n    var original = DOC.innerHTML;\n    var cursors = { aside: 0, main: 0 };\n\n    function fill(region, atoms, cursor, gauge) {\n      if (!region) return cursor;\n      var box = gauge || region;\n      var placed = 0;\n      while (cursor < atoms.length) {\n        var a = atoms[cursor];\n        var prev = region.lastElementChild;\n        var merged = sameGroup(prev, a) ? mergeInto(prev, a) : null;\n        if (!merged) region.appendChild(a);\n        if (overflowing(box)) {\n          if (merged) unmerge(merged); else region.removeChild(a);\n          /* pull back any heading that would be stranded */\n          while (region.lastElementChild &&\n                 region.lastElementChild.getAttribute(\"data-keep\") === \"1\") {\n            region.removeChild(region.lastElementChild);\n            cursor--; placed--;\n          }\n          if (placed <= 0) {\n            /* one block taller than a whole sheet. Let the sheet grow rather\n               than clip it: a long page is a problem you can see, a clipped\n               one is not. */\n            region.appendChild(a);\n            var sh = region.closest ? region.closest(\".sheet\") : null;\n            if (sh) sh.classList.add(\"grow\");\n            cursor++;\n          }\n          return cursor;\n        }\n        cursor++; placed++;\n      }\n      return cursor;\n    }\n\n    var page = 0, guard = 0;\n    while ((cursors.aside < asideAtoms.length || cursors.main < mainAtoms.length)\n           && guard++ < 60) {\n      var p = newSheet(page);\n      var before = cursors.aside + cursors.main;\n      if (p.regions.aside)\n        cursors.aside = fill(p.regions.aside, asideAtoms, cursors.aside);\n      if (p.regions.main) cursors.main = fill(p.regions.main, mainAtoms, cursors.main);\n\n      /* sidebar-top has no aside after page one, so anything left over there joins the\n         main flow rather than disappearing. Its heading stayed behind in the panel, so\n         the continuation carries a copy of it: a run of groups with no heading over\n         them reads as a section that was cut off. */\n      if (kind === \"sidebartop\" && page === 0 && cursors.aside < asideAtoms.length) {\n        var spill = asideAtoms.slice(cursors.aside);\n        var firstIsHead = spill[0] && spill[0].tagName === \"H2\" &&\n                          spill[0].classList.contains(\"sec\");\n        if (!firstIsHead && p.regions.aside) {\n          var heads = p.regions.aside.querySelectorAll(\"h2.sec\");\n          if (heads.length) {\n            var again = heads[heads.length - 1].cloneNode(true);\n            again.removeAttribute(\"data-id\");\n            again.setAttribute(\"data-atom\", \"1\");\n            again.setAttribute(\"data-keep\", \"1\");\n            spill = [again].concat(spill);\n          }\n        }\n        mainAtoms = mainAtoms.slice(0, cursors.main)\n          .concat(spill)\n          .concat(mainAtoms.slice(cursors.main));\n        cursors.aside = asideAtoms.length;\n      }\n      if (cursors.aside + cursors.main === before) break;   /* no progress */\n      page++;\n    }\n\n    var landed = {}, missing = 0;\n    Array.prototype.slice.call(DOC.querySelectorAll(\"[data-id]\")).forEach(function (n) {\n      landed[n.getAttribute(\"data-id\")] = 1;\n    });\n    for (var want in wanted) { if (!landed[want]) missing++; }\n    if (missing || page === 0) {\n      /* something did not add up, so show everything on one sheet instead of\n         showing a tidy page with a line missing */\n      DOC.innerHTML = original;\n      var one = el(\"div\", \"sheet\" + ruled + \" unpaged\");\n      one.innerHTML = SRC.innerHTML;\n      DOC.appendChild(one);\n      DOC.setAttribute(\"data-paginated\", \"no\");\n    } else {\n      Array.prototype.slice.call(DOC.querySelectorAll(\".aside,.main,.pad,.rest\"))\n        .forEach(stitch);\n      DOC.setAttribute(\"data-paginated\", String(page));\n    }\n    SRC.parentNode.removeChild(SRC);\n    document.documentElement.setAttribute(\"data-pages\", DOC.children.length);\n    if (window.parent && window.parent !== window) {\n      try {\n        window.parent.postMessage({ cvPages: DOC.children.length,\n                                    height: document.body.scrollHeight }, \"*\");\n      } catch (e) {}\n    }\n  });\n})();\n";
+/* ============================================== the page-laying engine
 
-const MARKUP = "/* Selecting a line on the page.\n\n   This runs inside the sheet, after the paginator has finished. It does not change\n   a single word: it lets you point at a line and says what you pointed at. Every\n   button posts an intent outward, and the panel beside the page does the rest,\n   so typing never happens inside a paginated sheet and never reflows one.\n*/\n(function () {\n  \"use strict\";\n  function ready(fn) {\n    if (document.readyState !== \"loading\") fn();\n    else document.addEventListener(\"DOMContentLoaded\", fn);\n  }\n  ready(function () {\n    if (!window.__MARKUP__) return;\n    var sel = null;\n\n    var bar = document.createElement(\"div\");\n    bar.className = \"cvbar\";\n    bar.setAttribute(\"hidden\", \"\");\n    var BUTTONS = [\n      [\"keep\", \"Read it, happy with it\",\n       '<path d=\"M3.4 8.4l3 3 6.2-7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>'],\n      [\"flag\", \"Flag it for later\",\n       '<path d=\"M4 2v13M4 3h9l-2 3 2 3H4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/>'],\n      [\"rewrite\", \"Needs a rewrite\",\n       '<path d=\"M9 2l1.6 4.4L15 8l-4.4 1.6L9 14l-1.6-4.4L3 8l4.4-1.6z\" fill=\"currentColor\"/>'],\n      [\"edit\", \"Edit it myself\",\n       '<path d=\"M3 13l1-3 7-7 2 2-7 7z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>'],\n      [\"remove\", \"Take it off this version\",\n       '<circle cx=\"8\" cy=\"8\" r=\"5.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M5.4 8h5.2\" stroke=\"currentColor\" stroke-width=\"1.5\"/>'],\n      [\"add\", \"Write a new line after this one\",\n       '<path d=\"M8 3.6v8.8M3.6 8h8.8\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/>'],\n      [\"up\", \"Move it up\",\n       '<path d=\"M8 12.6V3.8M4.4 7.2L8 3.6l3.6 3.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>'],\n      [\"down\", \"Move it down\",\n       '<path d=\"M8 3.4v8.8M4.4 8.8L8 12.4l3.6-3.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>']\n    ];\n    BUTTONS.forEach(function (b) {\n      var el = document.createElement(\"button\");\n      el.type = \"button\";\n      el.setAttribute(\"data-act\", b[0]);\n      el.title = b[1];\n      el.setAttribute(\"aria-label\", b[1]);\n      el.innerHTML = '<svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\">'\n        + b[2] + \"</svg>\";\n      bar.appendChild(el);\n    });\n    document.body.appendChild(bar);\n\n    function send(kind, extra) {\n      var msg = { cvwb: kind };\n      for (var k in extra) msg[k] = extra[k];\n      try { window.parent.postMessage(msg, \"*\"); } catch (e) {}\n    }\n\n    function place() {\n      if (!sel) { bar.setAttribute(\"hidden\", \"\"); return; }\n      var r = sel.getBoundingClientRect();\n      bar.removeAttribute(\"hidden\");\n      var w = bar.offsetWidth || 150;\n      var x = Math.min(r.right - w, Math.max(4, r.left));\n      var y = r.top - bar.offsetHeight - 4;\n      if (y < 2) y = r.bottom + 4;\n      bar.style.left = (x + window.scrollX) + \"px\";\n      bar.style.top = (y + window.scrollY) + \"px\";\n    }\n\n    function select(el) {\n      if (sel) sel.classList.remove(\"cvsel\");\n      sel = el;\n      if (!sel) { bar.setAttribute(\"hidden\", \"\"); send(\"deselect\", {}); return; }\n      sel.classList.add(\"cvsel\");\n      var did = sel.getAttribute(\"data-id\") || \"\";\n      var movable = /^professional-experience\\/\\d+\\/b\\d+$/.test(did)\n        || /^training-certifications\\/\\d+$/.test(did)\n        || /^education\\/\\d+$/.test(did);\n      Array.prototype.slice.call(bar.querySelectorAll(\"button\")).forEach(function (b) {\n        var a = b.getAttribute(\"data-act\");\n        if (a === \"up\" || a === \"down\") b.hidden = !movable;\n      });\n      place();\n      send(\"select\", { id: sel.getAttribute(\"data-id\"),\n                       text: (sel.innerText || \"\").trim() });\n    }\n\n    document.addEventListener(\"click\", function (e) {\n      var btn = e.target.closest && e.target.closest(\".cvbar button\");\n      if (btn) {\n        e.preventDefault();\n        if (sel) send(\"act\", { act: btn.getAttribute(\"data-act\"),\n                               id: sel.getAttribute(\"data-id\"),\n                               text: (sel.innerText || \"\").trim() });\n        return;\n      }\n      var hit = e.target.closest && e.target.closest(\"[data-id]\");\n      select(hit && hit !== sel ? hit : null);\n    });\n\n    window.addEventListener(\"scroll\", place, { passive: true });\n    window.addEventListener(\"resize\", place);\n    window.addEventListener(\"message\", function (e) {\n      var d = e.data || {};\n      if (d.cvwb === \"clear\") { select(null); return; }\n      if (d.cvwb === \"goto\" && d.id) {\n        var el = document.querySelector('[data-id=\"' + d.id.replace(/\"/g, '\\\\\"') + '\"]');\n        if (!el) return;\n        el.scrollIntoView({ block: \"center\", behavior: \"smooth\" });\n        setTimeout(function () { select(el); }, 260);\n      }\n    });\n  });\n})();\n";
+   assets/paginate.js and assets/markup.js, put here as text by
+   scripts/build_studio.py and injected into the sheet. They are read off disk at
+   build time and there is no second copy: the copies that used to live here drifted,
+   and the one that drifted was the paginator, which meant the studio broke its pages
+   in one place and the printed PDF broke them in another. Empty here on purpose. */
+const PAGINATE = "";
+
+const MARKUP = "";
 
 /* ================================================================== css */
 const BASE = `
@@ -1083,24 +1170,50 @@ function placeOf(g, sectionPlace){
   return S.groupPlace[g.g] || sectionPlace;
 }
 
+/* Every group gets an id of its own, built exactly as the renderer builds it: two
+   `**Tools:**` lines both slug to key-skills/tools, so one decision about one of them
+   landed on both, and an unlabelled line collapsed onto the same empty id. The first
+   group with a heading keeps the id it has always had; a second one carries its
+   occurrence number. */
+function withGids(list){
+  const seen={};
+  list.forEach((g,n)=>{
+    const sl=slugify(g.g);
+    if(!sl){ g.gid="key-skills/group-"+(n+1); return; }
+    seen[sl]=(seen[sl]||0)+1;
+    g.gid = seen[sl]===1 ? "key-skills/"+sl : "key-skills/"+sl+"-"+seen[sl];
+  });
+  return list;
+}
+
 function naturalGroups(){
-  if(S.group==="own") return CV.skills.map(g=>({g:g.g,items:g.items}));
+  if(S.group==="own") return withGids(CV.skills.map(g=>({g:g.g,items:g.items})));
   if(S.group==="discipline"){
-    const m=REGROUP.discipline.map, out=[];
+    /* The renderer folds the headings the map names and passes every other heading
+       through untouched, so this does the same. Dropping the unnamed ones, which is
+       what this used to do, took skills off the preview that the print still carried. */
+    const m=REGROUP.discipline.map||{}, out=[], used={};
     for(const k in m){
-      let it=[]; m[k].forEach(src=>{ const f=CV.skills.find(x=>x.g===src); if(f) it=it.concat(f.items); });
-      out.push({g:k,items:it});
+      let it=[];
+      (m[k]||[]).forEach(src=>{
+        const f=CV.skills.find(x=>String(x.g).trim().toLowerCase()
+                                  ===String(src).trim().toLowerCase());
+        if(f){ it=it.concat(f.items); used[String(f.g).trim().toLowerCase()]=1; }
+      });
+      if(it.length) out.push({g:k,items:it});
     }
-    return out;
+    CV.skills.forEach(g=>{ if(!used[String(g.g).trim().toLowerCase()])
+      out.push({g:g.g,items:g.items}); });
+    return withGids(out);
   }
   // by stated level
   const all=[]; CV.skills.forEach(g=>g.items.forEach(i=>all.push(i)));
   const out=[];
-  LEVEL_ORDER.forEach(l=>{ const it=all.filter(i=>i.l===l);
+  LEVEL_ORDER.forEach(l=>{ const it=all.filter(i=>sameLevel(i.l,l));
     if(it.length) out.push({g:l.charAt(0).toUpperCase()+l.slice(1),items:it}); });
   const rest=all.filter(i=>!i.l);
   if(rest.length) out.push({g:"Also worked with",items:rest});
-  return out;
+  return withGids(out);
 }
 
 function rawLine(i){
@@ -1129,9 +1242,10 @@ function mark(id){ return S.marks[id]; }
    same sentence twice and a page longer. */
 function cvLines(){
   const out=[];
-  out.push({key:"profile/0", text:CV.profile, where:"your profile"});
+  PROFILE.forEach((t,i)=>out.push({key:SID.profile+"/"+i, text:t,
+                                   where:"your profile"}));
   CV.roles.forEach((r,ri)=>{
-    const rid="professional-experience/"+ri;
+    const rid=SID.experience+"/"+ri;
     const parts=String(r.t).split(",").map(x=>x.trim());
     const org=parts.length>1 ? parts[1] : parts[0];
     r.s.forEach((x,j)=>out.push({key:rid+"/s"+j, text:x, where:org}));
@@ -1212,16 +1326,43 @@ function bOrder(rid, n){
    Training and education are lists a person reorders far more often than bullets —
    the newest certificate belongs at the top — and the arrows were inert there. */
 function listOf(id){
-  let m = /^(professional-experience\/\d+)\/b(\d+)$/.exec(id||"");
+  let m = new RegExp("^("+rxEsc(SID.experience)+"/\\d+)/b(\\d+)$").exec(id||"");
   if(m) { const r=CV.roles[+m[1].split("/")[1]];
           return r && r.b ? {key:m[1], i:+m[2], n:r.b.length} : null; }
-  m = /^(training-certifications)\/(\d+)$/.exec(id||"");
+  m = new RegExp("^("+rxEsc(SID.training)+")/(\\d+)$").exec(id||"");
   if(m) return {key:m[1], i:+m[2], n:(CV.training||[]).length};
-  m = /^(education)\/(\d+)$/.exec(id||"");
+  m = new RegExp("^("+rxEsc(SID.education)+")/(\\d+)$").exec(id||"");
   if(m) return {key:m[1], i:+m[2], n:(CV.education||[]).length};
   return null;
 }
 function movableBullet(id){ return !!listOf(id); }
+function anyReorder(){ return Object.keys(S.bOrder||{}).length>0; }
+
+/* Reordering is a preview, and it says so.
+
+   The arrows move a line here and the order travels in the decisions file, but the
+   renderer does not read it yet: the printed PDF still follows the markdown. The Final
+   view claims to be exactly what prints, so a difference it does not mention would be
+   the studio lying about the one thing it promises. Said on the move, said on the
+   status line for as long as an order is held, and said in the block handed over. */
+const REORDER_NOTE = "Reordering shows in this preview. The printed PDF still "
+  + "follows the order in your markdown, so this does not reach it yet. The order is "
+  + "carried in the decisions file, and Claude can put it into the markdown for you.";
+function sayReorder(){
+  const old=document.getElementById("reordernote"); if(old) old.remove();
+  const p=document.createElement("div");
+  p.id="reordernote";
+  p.setAttribute("role","status");
+  p.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:16px;"
+    +"z-index:9998;max-width:520px;background:#12161c;color:#f6f8fa;border-radius:6px;"
+    +"padding:10px 14px;font:13px/1.5 system-ui,'Segoe UI',Arial,sans-serif;"
+    +"box-shadow:0 6px 28px rgba(16,22,32,.32)";
+  p.textContent=REORDER_NOTE;
+  document.body.appendChild(p);
+  clearTimeout(sayReorder.t);
+  sayReorder.t=setTimeout(()=>{ const el=document.getElementById("reordernote");
+                                if(el) el.remove(); }, 9000);
+}
 function moveBullet(id, dir){
   const L=listOf(id);
   if(!L || L.n<2) return false;
@@ -1230,7 +1371,7 @@ function moveBullet(id, dir){
   ord.splice(to, 0, ord.splice(at, 1)[0]);
   if(!S.bOrder) S.bOrder={};
   S.bOrder[L.key]=ord;
-  save(); draw();
+  save(); draw(); sayReorder();
   setTimeout(()=>goTo(id), 300);   /* keep the line they moved selected */
   return true;
 }
@@ -1261,12 +1402,16 @@ function textOf(id, fallback){
   return (m && m.a==="edit" && m.text) ? m.text : fallback;
 }
 function adds(id){ return (S.adds[id]||[]).map(x=>x.text); }
+/* A line the arrows can move says so on itself, so the toolbar inside the sheet does
+   not have to know what this person's headings are called. */
+function mv(id){ return movableBullet(id) ? ' data-move="1"' : ''; }
 function line(tag, cls, id, text){
   const m=S.marks[id];
   const c=[cls]; if(m && S.view==="working") c.push("mk mk-"+m.a);
   if(id.indexOf("/+")>=0 && S.view==="working") c.push("mk mk-add");
   const a=c.filter(Boolean).join(" ");
-  return '<'+tag+(a?' class="'+a+'"':'')+' data-id="'+id+'">'+esc(text)+'</'+tag+'>';
+  return '<'+tag+(a?' class="'+a+'"':'')+mv(id)+' data-id="'+id+'">'
+    +esc(text)+'</'+tag+'>';
 }
 
 /* every line the page can address, in reading order, for the two queues */
@@ -1296,24 +1441,25 @@ function atoms(){
 
   out.push({id:"name/0", where:"Heading", text:CV.name});
   CV.contact.forEach((c,i)=>out.push({id:"contact/"+i, where:"Heading", text:c}));
-  if(on("profile")) out.push({id:"profile/0", where:"Profile", text:CV.profile});
+  if(on("profile")) PROFILE.forEach((t,i)=>out.push(
+    {id:SID.profile+"/"+i, where:"Profile", text:t}));
   if(on("skills")) naturalGroups().forEach(g=>{
     if(S.hideGroups && S.hideGroups[g.g]) return;
-    out.push({id:"key-skills/"+slugify(g.g), where:"Key skills",
+    out.push({id:g.gid, where:"Key skills",
               text:g.g+": "+g.items.map(rawLine).join("; ")});
   });
   if(on("experience")) CV.roles.forEach((r,ri)=>{
-    const rid="professional-experience/"+ri;
+    const rid=SID.experience+"/"+ri;
     out.push({id:rid+"/h", where:"Experience", text:r.t});
     if(r.d) out.push({id:rid+"/d", where:r.t, text:r.d});
     r.s.forEach((x,j)=>out.push({id:rid+"/s"+j, where:r.t, text:x}));
     bOrder(rid, r.b.length).forEach(j=>out.push({id:rid+"/b"+j, where:r.t, text:r.b[j]}));
   });
-  if(on("education")) bOrder("education", CV.education.length).forEach(i=>out.push(
-    {id:"education/"+i, where:"Education",
+  if(on("education")) bOrder(SID.education, CV.education.length).forEach(i=>out.push(
+    {id:SID.education+"/"+i, where:"Education",
      text:CV.education[i].lab+" "+CV.education[i].txt}));
-  if(on("training")) bOrder("training-certifications", CV.training.length).forEach(i=>out.push(
-    {id:"training-certifications/"+i, where:"Training", text:CV.training[i]}));
+  if(on("training")) bOrder(SID.training, CV.training.length).forEach(i=>out.push(
+    {id:SID.training+"/"+i, where:"Training", text:CV.training[i]}));
   return out;
 }
 function slugify(t){ return String(t).toLowerCase().replace(/[^a-z0-9]+/g,"-")
@@ -1329,7 +1475,7 @@ function modeFor(label){ return S.skillsBy[label] || S.skills; }
    blob to the editor put the heading inside their replacement text, and the renderer
    then printed the heading again in front of it. */
 function skillGroup(gid){
-  return naturalGroups().find(g=>"key-skills/"+slugify(g.g)===gid) || null;
+  return naturalGroups().find(g=>g.gid===gid) || null;
 }
 function skillItemsText(gid){
   const g=skillGroup(gid);
@@ -1370,7 +1516,7 @@ function stripHeading(gid, text){
 
 function groupHTML(g){
   const m=modeFor(g.g);
-  const gid="key-skills/"+slugify(g.g);
+  const gid=g.gid;
   if(removed(gid)) return "";
 
   /* Their own wording wins over every treatment. Only the list and column modes ever
@@ -1387,8 +1533,8 @@ function groupHTML(g){
       +esc(stripHeading(gid, own.text))+'</p>'+extra+'</div>';
   }
   const head='<span class="skg">'+esc(g.g)+'</span>';
-  const rated=g.items.filter(i=>LEVELS[i.l]);
-  const rest=g.items.filter(i=>!LEVELS[i.l]);
+  const rated=g.items.filter(i=>lvl(i.l));
+  const rest=g.items.filter(i=>!lvl(i.l));
 
   if(m==="list"||m==="columns"){
     const p='<p class="lab"><span class="labname">'+esc(g.g)+':</span>'
@@ -1398,12 +1544,12 @@ function groupHTML(g){
   }
   if(m==="chips"){
     // the whole line goes on the chip, so nothing you wrote is left off the page
-    const chips=g.items.map(i=>'<b class="l'+(LEVELS[i.l]||0)+'">'+esc(rawLine(i))+'</b>').join("");
+    const chips=g.items.map(i=>'<b class="l'+lvl(i.l)+'">'+esc(rawLine(i))+'</b>').join("");
     return '<div class="sk" data-id="'+gid+'">'+head+'<div class="chips">'+chips+'</div>'+extra+'</div>';
   }
   if(m==="rings"){
     const rr=rated.map(i=>{
-      const v=LEVELS[i.l], pct=Math.round(v/5*100);
+      const v=lvl(i.l), pct=Math.round(v/5*100);
       const cap=esc(i.n)+(i.y||i.note ? ' <span style="opacity:.75">('
         +esc([i.y,i.note].filter(Boolean).join(", "))+')</span>' : '');
       return '<figure><div class="rr" style="background:conic-gradient(var(--ringfill) '
@@ -1415,7 +1561,7 @@ function groupHTML(g){
       +extra+'</div>';
   }
   const rows=rated.map(i=>{
-    const v=LEVELS[i.l];
+    const v=lvl(i.l);
     const meter = m==="bars"
       ? '<span class="skbar"><i style="width:'+(v*20)+'%"></i></span>'
       : '<span class="skdots">'+[1,2,3,4,5].map(k=>'<u class="'+(k<=v?"on":"")+'"></u>').join("")+'</span>';
@@ -1497,17 +1643,24 @@ function sectionHTML(id, region, sectionPlace){
     return '<h2 class="sec"><span>'+def.head+'</span></h2><ul class="bul'
       +(twoCol(id)?' cols2':'')+'">'+lis+'</ul>';
   }
-  const t={profile:"PROFILE",skills:"KEY SKILLS",experience:"PROFESSIONAL EXPERIENCE",
-           education:"EDUCATION",training:"TRAINING &amp; CERTIFICATIONS"}[id];
+  /* The heading this CV actually uses, because the renderer prints the heading out of
+     the markdown. Printing EMPLOYMENT HISTORY here as PROFESSIONAL EXPERIENCE made the
+     preview a different page from the print in the one place nobody would think to
+     check. The fixed names are the fallback for a CV without that heading. */
+  const t=esc((CV.head||{})[id]
+    || {profile:"PROFILE",skills:"KEY SKILLS",experience:"PROFESSIONAL EXPERIENCE",
+        education:"EDUCATION",training:"TRAINING & CERTIFICATIONS"}[id]);
   let body="";
   if(id==="profile"){
     /* Every other section prints the lines the person added after one of its lines.
        This one did not, so the + on the toolbar accepted a line, filed it, listed it
        in the archive, and printed nothing. */
-    body = removed("profile/0") ? ""
-         : line('p','para','profile/0',textOf("profile/0",CV.profile));
-    adds("profile/0").forEach((t,n)=>{ if(!removed("profile/0/+"+n))
-      body += line('p','para added',"profile/0/+"+n,t); });
+    PROFILE.forEach((p,i)=>{
+      const k=SID.profile+"/"+i;
+      if(!removed(k)) body += line('p','para',k,textOf(k,p));
+      adds(k).forEach((x,n)=>{ if(!removed(k+"/+"+n))
+        body += line('p','para added',k+"/+"+n,x); });
+    });
   }
   else if(id==="skills"){
     body=skillsHTML(region, sectionPlace);
@@ -1517,7 +1670,7 @@ function sectionHTML(id, region, sectionPlace){
     if(region && region!==sectionPlace) return body;
   }
   else if(id==="experience") body=CV.roles.map((r,ri)=>{
-      const rid="professional-experience/"+ri;
+      const rid=SID.experience+"/"+ri;
       if(removed(rid+"/h")) return "";
       let inner='<div class="rolehead"><div class="roletitle" data-id="'+rid+'/h">'
         +esc(textOf(rid+"/h",r.t))+'</div>'
@@ -1537,10 +1690,10 @@ function sectionHTML(id, region, sectionPlace){
       return '<div class="role">'+inner+'</div>';
     }).join("");
   else if(id==="education")
-    body=bOrder("education", CV.education.length).map(i=>{
-      const e=CV.education[i], k="education/"+i;
+    body=bOrder(SID.education, CV.education.length).map(i=>{
+      const e=CV.education[i], k=SID.education+"/"+i;
       let out = removed(k) ? "" :
-        '<p class="lab" data-id="'+k+'"><span class="labname">'
+        '<p class="lab"'+mv(k)+' data-id="'+k+'"><span class="labname">'
         +esc(e.lab)+'</span>'+esc(textOf(k,e.txt))+'</p>';
       adds(k).forEach((t,n)=>{ if(!removed(k+"/+"+n))
         out += '<p class="lab added" data-id="'+k+'/+'+n+'">'+esc(t)+'</p>'; });
@@ -1548,8 +1701,8 @@ function sectionHTML(id, region, sectionPlace){
     }).join("");
   else if(id==="training"){
       const out=[];
-      bOrder("training-certifications", CV.training.length).forEach(i=>{
-        const x=CV.training[i], k="training-certifications/"+i;
+      bOrder(SID.training, CV.training.length).forEach(i=>{
+        const x=CV.training[i], k=SID.training+"/"+i;
         if(!removed(k)) out.push(line('p','item',k,textOf(k,x)));
         adds(k).forEach((t,n)=>{ if(!removed(k+"/+"+n))
           out.push(line('p','item added',k+"/+"+n,t)); });
@@ -1805,7 +1958,7 @@ function paintSkills(){
   if(warn){
     warn.textContent="";
     const orphan=hand.length && S.group!=="own"
-      && !groups().some(g=>skillEdit("key-skills/"+slugify(g.g)));
+      && !groups().some(g=>skillEdit(g.gid));
     if(orphan){
       const n=document.createElement("p"); n.className="hint";
       n.style.cssText="margin:0 0 10px;color:var(--warn)";
@@ -1821,7 +1974,7 @@ function paintSkills(){
   const by=$("#c-bygroup"); by.textContent="";
   const hasAside = LAYOUTS[S.layout].kind==="sidebar";
   gs.forEach((g,gi)=>{
-    const rated=g.items.filter(i=>LEVELS[i.l]).length;
+    const rated=g.items.filter(i=>lvl(i.l)).length;
     const hidden=!!S.hideGroups[g.g];
     const box=document.createElement("div");
     box.className="gset"+(hidden?" off":"");
@@ -1862,7 +2015,7 @@ function paintSkills(){
       b.setAttribute("aria-pressed", here===k ? "true":"false");
       b.disabled=!hasAside;
       b.title = hasAside
-        ? (k===secPlace ? l+" — where the Key skills heading sits" : "Send this group to the "+l.toLowerCase()+" column")
+        ? (k===secPlace ? l+", where the Key skills heading sits" : "Send this group to the "+l.toLowerCase()+" column")
         : "This layout is a single column";
       b.addEventListener("click",()=>{
         if(k===secPlace) delete S.groupPlace[g.g]; else S.groupPlace[g.g]=k;
@@ -1909,9 +2062,17 @@ function paintSkills(){
   }
 
   const g=$("#c-group"); g.textContent="";
+  /* By discipline is only offered when the map it works from names a heading this CV
+     actually has. Shipped as an example nobody filled in, the chip regrouped nothing
+     and looked broken; a control that cannot change the page does not belong on it. */
+  const canDiscipline=Object.keys(REGROUP.discipline.map||{}).some(k=>
+    (REGROUP.discipline.map[k]||[]).some(src=>CV.skills.some(x=>
+      String(x.g).trim().toLowerCase()===String(src).trim().toLowerCase())));
+  if(!canDiscipline && S.group==="discipline") S.group="own";
   [["own","Your own headings"],["discipline","By discipline"],
-   ["strength","By stated level"]].forEach(([k,l])=>
-    g.appendChild(chip(l,S.group===k,()=>{S.group=k;draw();})));
+   ["strength","By stated level"]].forEach(([k,l])=>{
+    if(k==="discipline" && !canDiscipline) return;
+    g.appendChild(chip(l,S.group===k,()=>{S.group=k;draw();}));});
 
   const gp=$("#c-gap"); gp.textContent="";
   [["tight","Tight"],["normal","Normal"],["airy","Airy"]].forEach(([k,l])=>
@@ -2056,7 +2217,7 @@ function paintExtra(){
         if(e.picks[d.id]){
           const dup=dupOf(d.t);
           const thin=(d.roles||[]).length<2;
-          const inProfile = dup && dup.key==="profile/0";
+          const inProfile = dup && dup.key.indexOf(SID.profile+"/")===0;
           if(dup && (thin || inProfile)){
             const warn=document.createElement("div"); warn.className="dupe";
             const wt=document.createElement("p"); wt.className="dt";
@@ -2134,8 +2295,22 @@ const STATES={
 };
 const ORDER=["missing","off","near","buried","page","unscored","none"];
 
-/* How deep this advertisement was scored, chosen before any of it was read. */
-const LEDGER={depth:"all"};
+/* All five words the scorecard uses for necessity, each with its own label. Three of
+   them used to be folded into "implied" on the way in, so a citizenship requirement or
+   a driver's licence, which is a condition of being employed at all, was shown as a
+   soft item lifted off the role description. */
+const NECESSITY={
+  must:"Essential",
+  nice:"Desirable",
+  implied:"From the role description",
+  condition:"A condition of the job",
+  "not a cv question":"Not a CV question"
+};
+
+/* How deep this advertisement was scored, put here by the build out of the
+   scorecard's own frontmatter. "unknown" means the scorecard did not say, and
+   nothing is claimed about it. */
+const LEDGER={depth:"unknown"};
 
 function derive(a){
   if(S.states[a.id]) return S.states[a.id];
@@ -2164,29 +2339,49 @@ function tally(){
 /* Said once, at the top, before any number. Never tucked under a control. */
 function paintDepth(t){
   const el=$("#depth"); if(!el) return;
-  const musts=ASKS.filter(a=>a.n==="must").length;
-  const rest=ASKS.length-musts;
+  /* Counted, not assumed. This used to say "the N essential criteria were scored
+     against your record" with N counting every must, including the ones nobody had
+     looked at yet, and it opened by telling the person they had chosen the depth,
+     which the build never recorded and nothing here could know. Both are gone: what
+     is printed is what has actually been counted. */
+  const musts=ASKS.filter(a=>a.n==="must");
+  const mUn=musts.filter(a=>derive(a)==="unscored").length;
+  const mOk=musts.length-mUn;
+  const rest=ASKS.length-musts.length;
+  const restUn=t.unscored-mUn;
   el.className="depth"+(t.unscored?" part":"");
   el.textContent="";
   const b=document.createElement("b");
   const p1=document.createElement("p"), p2=document.createElement("p");
   if(t.unscored){
-    b.textContent="Scored: essential criteria only";
-    p1.textContent="You chose this before I read the advertisement. All "+ASKS.length
-      +" asks were pulled out of it, and the "+musts+" essential criteria were scored "
-      +"against your record. "+t.unscored+(t.unscored===1?" is":" are")
-      +" marked not checked yet, and they "
-      +"count for nothing above.";
+    b.textContent = mUn
+      ? "Scored: part of this advertisement"
+      : "Scored: essential criteria only";
+    p1.textContent="All "+ASKS.length+" asks were pulled out of the advertisement. "
+      +mOk+" of the "+musts.length+" essential criteria "
+      +(mOk===1?"has":"have")+" been scored against your record"
+      +(mUn ? ", "+mUn+" of them "+(mUn===1?"has":"have")+" not" : "")
+      +(restUn>0 ? ", and "+restUn+" of the "+rest+" other ask"
+                  +(rest===1?"":"s")+" "+(restUn===1?"is":"are")+" not checked yet"
+                : "")
+      +". Anything not checked counts for nothing above.";
     p2.textContent="Ask me to score the rest and I will. It is the longest job in this "
       +"skill and costs about what the essentials cost again, twice over. Doing it now "
       +"costs exactly what doing it later costs, so there is nothing lost by waiting.";
     el.append(b,p1,p2);
   } else {
     b.textContent="Scored: every ask";
-    p1.textContent="You chose this before I read the advertisement. All "+ASKS.length
-      +" asks were scored against your record: the "+musts+" essential criteria and the "
-      +rest+" desirables and role-description items. Nothing is outstanding.";
+    p1.textContent="All "+ASKS.length
+      +" asks were scored against your record: the "+musts.length
+      +" essential criteria and the "
+      +rest+" desirables, conditions and role-description items. Nothing is "
+      +"outstanding.";
     el.append(b,p1);
+  }
+  if(LEDGER.depth && LEDGER.depth!=="unknown"){
+    const p3=document.createElement("p");
+    p3.textContent="The scorecard records the depth you asked for as: "+LEDGER.depth+".";
+    el.appendChild(p3);
   }
 }
 
@@ -2244,7 +2439,7 @@ function paintScore(){
   const says=t.page;
   $("#g1").innerHTML=gauge(total?have/total*100:0,"You have it","var(--ok)")
     +'<div class="gnum">'+have+' of '+total+'</div>';
-  $("#g2").innerHTML=gauge(total?says/total*100:0,"On your CV","var(--warn)")
+  $("#g2").innerHTML=gauge(total?says/total*100:0,"On your CV, in their words","var(--warn)")
     +'<div class="gnum">'+says+' of '+total+'</div>';
   $("#stack").innerHTML=ORDER.slice().reverse().filter(k=>t[k])
     .map(k=>'<span style="background:'+STATES[k].colour+';flex:'+t[k]+'"></span>').join("");
@@ -2298,8 +2493,8 @@ function askRow(a){
   const tx=document.createElement("div"); tx.className="asktext";
   tx.textContent=a.t;
   const em=document.createElement("em");
-  em.textContent=(a.n==="must"?"Essential":a.n==="nice"?"Desirable":"From the role description")
-    +" · "+a.w;
+  em.textContent=NECESSITY[a.n]||NECESSITY.implied;
+  if(a.w) em.textContent+=" · "+a.w;
   tx.appendChild(em);
   const tag=document.createElement("span"); tag.className="tag";
   tag.textContent=meta.label; tag.style.color=meta.colour;
@@ -2332,6 +2527,8 @@ function askRow(a){
       const ln=document.createElement("p"); ln.className="none";
       ln.textContent = r.s==="missing"
         ? "Nothing in your record answers this."
+        : r.s==="near"
+        ? "Half of this is on your CV. Nothing on the page claims the rest: “"+r.c+"”"
         : "Your record has this. No line on your CV carries it: “"+r.c+"”";
       ev.appendChild(ln);
     }
@@ -2465,7 +2662,9 @@ function fit(){
       : " · skills "+(ms.size>1?"mixed":SHORT[[...ms][0]||S.skills].toLowerCase())
         +(nHid?" ("+nHid+" group"+(nHid>1?"s":"")+" hidden)":""))
     +" · "+n+(n===1?" page":" pages")
-    +(S.doc==="letter"&&n>1 ? " · a cover letter should be one" : "");
+    +(S.doc==="letter"&&n>1 ? " · a cover letter should be one" : "")
+    +(anyReorder() ? " · reordered lines show here only, the printed PDF still "
+                    +"follows your markdown" : "");
 }
 
 /* Printing and saving. Each document goes on its own, because they are two documents
@@ -2881,7 +3080,7 @@ function paintDrawer(){
       const m=S.askMarks[a.id];
       const box=document.createElement("div"); box.className="item";
       const w=document.createElement("button"); w.type="button"; w.className="w go";
-      w.textContent=(a.n==="must"?"Essential":a.n==="nice"?"Desirable":"Role description")
+      w.textContent=(NECESSITY[a.n]||NECESSITY.implied)
         +" \u00b7 "+a.w;
       box.appendChild(w);
       const p=document.createElement("span"); p.className="pill";
@@ -2954,7 +3153,7 @@ function paintDrawer(){
   const confirmed=Object.keys(S.checked||{}).length;
   sub.textContent = S.turnView==="all"
     ? (nprop
-      ? "The page as it stands — and "+nprop+" suggestion"+(nprop===1?" is":"s are")
+      ? "The page as it stands, and "+nprop+" suggestion"+(nprop===1?" is":"s are")
         +" still undecided, so this is not the finished version yet. Decide those "
         +"first, under Waiting on you."
       : "The finished page, line by line. Nothing here needs doing: anything you leave "
@@ -2990,7 +3189,7 @@ function paintDrawer(){
     const t=document.createElement("p"); t.className="t";
     t.textContent="This studio has been updated since you last worked in it.";
     const n=document.createElement("p"); n.className="note";
-    n.textContent="Everything that changed a line is still here — rewrites you "
+    n.textContent="Everything that changed a line is still here: rewrites you "
       +"accepted, wording you edited, lines you took off or added, and anything you "
       +"flagged."
       +(S.updated.ticks ? "  "+S.updated.ticks+" plain tick"
@@ -3419,6 +3618,31 @@ function handoffText(){
       L.push("  - ["+a.id+"]"+(m.p?" "+m.p:"")); L.push("    now: "+m.text); });
     L.push("");
   }
+  /* The lines the person typed themselves. The drawer above promises "what you added"
+     and the badge counts them, and this block never carried one of them: anybody who
+     copied the block instead of saving the JSON handed over an evening's work with
+     every line they had written missing from it. */
+  const written=[];
+  Object.keys(S.adds||{}).forEach(id=>{
+    (S.adds[id]||[]).forEach((x,n)=>{
+      if(!removed(id+"/+"+n))
+        written.push({id:id+"/+"+n, after:id, text:x.text});
+    });
+  });
+  if(written.length){
+    L.push("Lines you wrote and added (each prints after the line it sits under):");
+    written.forEach(x=>{ L.push("  - ["+x.id+"] after "+x.after);
+                         L.push("    "+x.text); });
+    L.push("");
+  }
+  if(anyReorder()){
+    L.push("Lines you reordered:");
+    Object.keys(S.bOrder).forEach(k=>L.push("  "+k+": "+S.bOrder[k].join(", ")));
+    L.push("  "+REORDER_NOTE);
+    L.push("  Claude: put this order into the markdown, because the renderer prints "
+           +"the markdown's order.");
+    L.push("");
+  }
   const fl=atoms().filter(a=>flagOf(a.id));
   if(fl.length){
     L.push("Flagged, no action asked for:");
@@ -3446,6 +3670,11 @@ function decisionsFile(){
     document:S.doc,
     saved:new Date().toISOString(),
     marks:S.marks, adds:S.adds,
+    /* The order the person put a role's bullets, or the training and education lines,
+       into. The renderer does not read this yet and prints the markdown's order, so
+       the studio says so wherever the arrows are used. It travels here so that the
+       order is not lost between the preview and whoever finishes the job. */
+    order:S.bOrder||{},
     sections:sections
   }, null, 1);
 }
@@ -3514,13 +3743,19 @@ function settingsCommand(withPdf){
     .map(g=>g.g+"="+S.groupPlace[g.g]).join(";");
   const CVMD="\"CV - draft.md\"";
   const LTMD="\"Cover letter.md\"";
+  /* --role names the PDF, and this skill treats it as mandatory, so the command that
+     is copied out of here carries it. The employer is not a flag the renderer takes;
+     it rides in the comment so whoever runs this knows which application it is. */
+  const role=ROLE ? " --role \""+ROLE.replace(/"/g,"'")+"\"" : "";
 
   /* Both documents in one run when a PDF is wanted, because they are posted
      together and a person who has one of them has neither. */
   const letterOnly = (S.doc==="letter" && !withPdf);
-  let cmd="# run this from the folder that holds your CV markdown and the resu-studio folder\n"
-    +"python resu-studio/scripts/render_cv.py "+CVMD
+  let cmd="# run this from the resu-studio folder, with your markdown files beside it"
+    +(EMPLOYER ? "\n# this application: "+(ROLE?ROLE+", ":"")+EMPLOYER : "")
+    +"\npython3 scripts/render_cv.py "+CVMD
     +((withPdf||S.doc==="letter") ? " --letter "+LTMD : "")
+    +role
     +" --layout "+S.layout+" --palette "+S.palette
     +" --head-font "+S.headFont+" --body-font "+S.bodyFont+" --size "+S.size;
 
@@ -3567,6 +3802,7 @@ function settingsCommand(withPdf){
         +  " from the markdown alone and none of that appears."
         +  "\n\n" + decisionsFile();
   }
+  if(anyReorder()) cmd += "\n\n# "+REORDER_NOTE;
   const hidden=S.order.filter(o=>!o.show).map(o=>secName(o.id));
   if(hidden.length) cmd += "\n\n# "+hidden.join(" and ")+" "
     +(hidden.length>1?"are":"is")+" hidden in the preview only. The renderer never drops "

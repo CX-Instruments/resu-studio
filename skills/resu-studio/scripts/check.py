@@ -1,18 +1,35 @@
 #!/usr/bin/env python3
 """Refuse the faults that are silent otherwise.
 
-    python3 check.py <workbench-folder> [variant]
+    python3 check.py                    the person's own folder, from paths.py
+    python3 check.py <folder>           somewhere else
+    python3 check.py <folder> tight     only cv-tight.md, not every variant
 
 Checks the things that look fine on screen and are wrong on the page: a proposal
 that traces to nothing, a claim printed twice, a budget quietly exceeded, a role
 left in present tense after its end date, a banned construction, an invented figure.
 
-Standard library only. Exit code 0 means nothing was found.
+The folder is the one holding `facts.md`, `asks.md`, `proposals.md` and the
+`cv-*.md` drafts. With no argument that is the folder `scripts/paths.py` resolves,
+which is where the ledgers actually live, so the documented command needs nothing
+typed after it.
+
+Standard library only.
+
+    0   nothing found
+    1   faults found
+    2   the command line was wrong
+    3   the folder is not there
 """
 
 import os
 import re
 import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+NO_FOLDER = 3
 
 BANNED_CHARS = {"—": "em dash", "–": "en dash"}
 
@@ -47,8 +64,21 @@ PRESENT_VERBS = ("deliver ", "develop ", "build ", "perform ", "apply ", "automa
 
 
 def read(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
+    """The text of one file, whatever it was saved as.
+
+    A CV that has been through Word on a Windows machine is often cp1252, and one
+    curly apostrophe in it used to end the whole run with a UnicodeDecodeError
+    partway through, having reported nothing about the files it had already read.
+    Reading a CV is not the place to be strict about encodings.
+    """
+    with open(path, "rb") as f:
+        raw = f.read()
+    for enc in ("utf-8-sig", "utf-8", "cp1252"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("latin-1", "replace")
 
 
 def norm(s):
@@ -229,11 +259,59 @@ def check_proposals(path, facts_ids, ask_ids, faults, notes):
     return text
 
 
+def _default_root():
+    """The person's own folder, or None when paths.py cannot be asked."""
+    try:
+        import paths
+        return paths.data_dir()
+    except Exception:
+        return None
+
+
+def _cv_files(root, variant):
+    """The drafts to check. With a variant, only that one."""
+    out = []
+    for fn in sorted(os.listdir(root)):
+        if not (fn.startswith("cv-") and fn.endswith(".md")):
+            continue
+        if variant:
+            stem = fn[3:-3].lower()
+            v = variant.lower()
+            if stem != v and v not in stem:
+                continue
+        out.append(fn)
+    return out
+
+
 def main():
-    if len(sys.argv) < 2:
-        sys.stderr.write("usage: check.py <workbench-folder> [variant]\n")
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    if [a for a in sys.argv[1:] if a in ("-h", "--help")]:
+        sys.stdout.write(__doc__.split("Checks the things")[0])
+        return 0
+    if len(args) > 2:
+        sys.stderr.write("usage: check.py [folder] [variant]\n")
         return 2
-    root = os.path.abspath(os.path.expanduser(sys.argv[1]))
+
+    if args:
+        root = os.path.abspath(os.path.expanduser(args[0]))
+    else:
+        root = _default_root()
+        if root is None:
+            sys.stderr.write(
+                "check.py: no folder given and paths.py could not say where this "
+                "person's folder is. Pass the folder holding facts.md.\n")
+            return 2
+    variant = args[1] if len(args) > 1 else ""
+
+    if not os.path.isdir(root):
+        sys.stderr.write(
+            "check.py: %s is not a folder, so there is nothing to check. This "
+            "should be the folder holding facts.md, asks.md, proposals.md and the "
+            "cv-*.md drafts. Run python3 scripts/paths.py to see where that is.\n"
+            % root)
+        return NO_FOLDER
+
+    print("Checking %s%s" % (root, (", variant %s" % variant) if variant else ""))
     faults, notes = [], []
 
     facts_ids, ask_ids = set(), set()
@@ -261,14 +339,20 @@ def main():
     if os.path.isfile(pp):
         check_proposals(pp, facts_ids, ask_ids, faults, notes)
 
-    for fn in sorted(os.listdir(root)):
-        if fn.startswith("cv-") and fn.endswith(".md"):
-            check_cv(os.path.join(root, fn), faults, notes)
+    cvs = _cv_files(root, variant)
+    for fn in cvs:
+        check_cv(os.path.join(root, fn), faults, notes)
+    if variant and not cvs:
+        notes.append("No cv-*.md matching %r in this folder." % variant)
 
     for fn in sorted(os.listdir(root)):
-        if fn.endswith(".md") and fn not in ("facts.md",):
-            t = read(os.path.join(root, fn))
-            check_dashes(fn, t, faults)
+        if not fn.endswith(".md") or fn == "facts.md":
+            continue
+        # A variant means this one draft, so the other drafts are not read at all.
+        if variant and fn.startswith("cv-") and fn not in cvs:
+            continue
+        t = read(os.path.join(root, fn))
+        check_dashes(fn, t, faults)
 
     print("facts: %d   asks: %d" % (len(facts_ids), len(ask_ids)))
     if notes:

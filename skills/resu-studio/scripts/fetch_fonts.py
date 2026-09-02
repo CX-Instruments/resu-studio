@@ -7,6 +7,12 @@ a face that only works sometimes is a face that does not work.
     python3 scripts/fetch_fonts.py            # all of them. The normal thing to run
     python3 scripts/fetch_fonts.py --check    # what is covered. No network needed
     python3 scripts/fetch_fonts.py lora       # one family, if you know why
+    python3 scripts/fetch_fonts.py --force lora   # fetch it again even if it is here
+
+A family already on disk is skipped. What counts as on disk is whatever the
+renderer will actually embed, read by the renderer's own code, so a face downloaded
+under any of the names these files come with is recognised rather than fetched a
+second time under another name.
 
 After it runs, every render carries its own faces: the studio preview, the HTML and
 the PDF all draw the same letters on a machine with no network at all.
@@ -81,8 +87,8 @@ def pick(faces):
 
     Two traps live here.
 
-    One: a family is served as several subsets per weight — cyrillic, greek,
-    vietnamese, latin-ext, latin — and latin is usually **last**. Taking the first
+    One: a family is served as several subsets per weight (cyrillic, greek,
+    vietnamese, latin-ext, latin) and latin is usually **last**. Taking the first
     block that matches a weight gets Cyrillic, which has no Latin glyphs in it at
     all, so the browser silently falls back for every letter on the page and the
     embedding was worthless. So the subset is chosen by its unicode-range, never by
@@ -110,18 +116,63 @@ def pick(faces):
     return out
 
 
+def _loose_matcher():
+    """The renderer's own reader of the fonts folder.
+
+    This has to be the renderer's answer, not a second opinion. Fonts arrive named
+    however the person who downloaded them was given them: `lora-v37-latin-regular
+    .woff2` from the helper site, `Lora-Regular.ttf` from Google's own zip. The
+    renderer reads all of those and embeds them. This script used to look only for
+    `lora-400.woff2`, so it reported all eighteen families missing and told people
+    to go and fetch what was already on disk, sitting in the same folder the
+    renderer was quietly embedding from.
+
+    So it is imported. If that ever fails, the fallback below has to keep agreeing
+    with `_font_files_loose` in render_cv.py: the two must not drift.
+    """
+    try:
+        sys.path.insert(0, HERE)
+        from render_cv import _font_files_loose
+        return _font_files_loose
+    except Exception:
+        def _fallback(key, folder):
+            # Same rule, much less careful about weights: any non-italic file whose
+            # name starts with the key counts. Keep this in step with render_cv.py.
+            if not os.path.isdir(folder):
+                return []
+            hits = []
+            for name in sorted(os.listdir(folder)):
+                stem, _dot, ext = name.rpartition(".")
+                if ext.lower() not in ("woff2", "woff", "ttf", "otf"):
+                    continue
+                if not stem.lower().startswith(key.lower() + "-"):
+                    continue
+                rest = stem[len(key) + 1:].lower()
+                if "italic" in rest or "oblique" in rest:
+                    continue
+                hits.append((400 if not hits else 700, os.path.join(folder, name)))
+            return hits[:2]
+        return _fallback
+
+
+_loose = _loose_matcher()
+
+
 def covered(key):
-    """What is already on disk for one family: 'variable', '400+700', or None."""
-    for ext in ("woff2", "woff", "ttf", "otf"):
-        if os.path.isfile(os.path.join(OUT, "%s-variable.%s" % (key, ext))):
-            return "variable"
-    got = []
-    for weight in (400, 700):
-        for ext in ("woff2", "woff", "ttf", "otf"):
-            if os.path.isfile(os.path.join(OUT, "%s-%d.%s" % (key, weight, ext))):
-                got.append(weight)
-                break
-    return "400+700" if len(got) == 2 else None
+    """What is already on disk for one family: 'variable', '400+700', or None.
+
+    Answered exactly as the renderer answers it, because the only question worth
+    asking is whether the PDF will carry the face, and the renderer is what puts it
+    there.
+    """
+    found = _loose(key, OUT)
+    if not found:
+        return None
+    if len(found) == 1 and isinstance(found[0][0], str) and " " in str(found[0][0]):
+        return "variable"          # one variable file covering the whole range
+    if len(found) == 1:
+        return "one weight only"   # readable, but the bold will be faked
+    return "400+700"
 
 
 def fetch(key, entry):
@@ -151,24 +202,33 @@ def report(fonts):
     can a person pick any face in the studio and get that face in the PDF."""
     web = [k for k, f in sorted(fonts.items()) if f.get("g")]
     system = [k for k, f in sorted(fonts.items()) if not f.get("g")]
-    missing = []
+    missing, thin = [], []
     print("Webfont families in assets/fonts.json: %d" % len(web))
     for key in web:
         state = covered(key)
         print("  %-16s %s" % (key, state or "NOT COVERED"))
         if not state:
             missing.append(key)
+        elif state == "one weight only":
+            thin.append(key)
     if system:
         print("System faces, nothing to fetch: %s" % ", ".join(system))
     print("")
+
+    have = len(web) - len(missing)
+    print("%d of %d covered." % (have, len(web)))
+    if thin:
+        print("%d of those carry one weight, so the bold is synthesised: %s"
+              % (len(thin), " ".join(thin)))
     if missing:
-        print("%d of %d covered. These would fall back to the font server, and "
-              "--pdf will refuse where it cannot be reached:" % (len(web) - len(missing), len(web)))
+        print("%d not covered. %s would fall back to the font server, and --pdf "
+              "will refuse where it cannot be reached:"
+              % (len(missing), "This family" if len(missing) == 1 else "These families"))
         print("  %s" % " ".join(missing))
         print("Run: python3 scripts/fetch_fonts.py")
         return 1
-    print("All %d covered. Every face the studio offers will print, on any machine, "
-          "with or without a network." % len(web))
+    print("Every face the studio offers will print, on any machine, with or "
+          "without a network.")
     return 0
 
 
@@ -184,9 +244,19 @@ def main(argv):
                          % (", ".join(unknown), ", ".join(sorted(fonts))))
         return 2
 
+    force = "--force" in argv or "--again" in argv
+
     total = 0
     failed = []
+    skipped = []
     for key in keys:
+        # A family already on disk is left alone. Its files are usually named the
+        # way whoever downloaded them was given them, and fetching again would put
+        # a second copy of the same face beside the first under a different name:
+        # two files, same letters, and nothing saying which one prints.
+        if not force and covered(key):
+            skipped.append(key)
+            continue
         try:
             n, note = fetch(key, fonts[key])
         except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
@@ -198,7 +268,11 @@ def main(argv):
         total += n
 
     print("")
-    print("%d font file%s in %s" % (total, "" if total == 1 else "s", OUT))
+    if skipped:
+        print("%d famil%s already on disk and left alone: %s"
+              % (len(skipped), "y" if len(skipped) == 1 else "ies", " ".join(skipped)))
+        print("To fetch one again anyway: python3 scripts/fetch_fonts.py --force <family>")
+    print("%d new font file%s in %s" % (total, "" if total == 1 else "s", OUT))
     if failed:
         print("")
         print("%d famil%s could not be reached: %s"

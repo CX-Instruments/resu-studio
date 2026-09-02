@@ -29,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 # Where a browser hides, in the order worth trying. Anything on PATH wins, because a
@@ -128,9 +129,11 @@ def html_to_pdf(html_path, pdf_path, browser=None, timeout=180, wait_ms=12000):
     html_path = os.path.abspath(html_path)
     pdf_path = os.path.abspath(pdf_path)
     profile = tempfile.mkdtemp(prefix="cvpdf-")
-    url = "file://" + html_path.replace(os.sep, "/")
-    if not url.startswith("file:///"):
-        url = "file:///" + html_path.replace(os.sep, "/").lstrip("/")
+    # Built as a URL rather than pasted together as a string. A person's documents
+    # folder can hold a "#" or a "?" anywhere in its name, and in a URL those start
+    # the fragment and the query: the path was cut off at that character and the
+    # browser printed a different file, or nothing, without saying so.
+    url = Path(html_path).as_uri()
 
     argv = [
         exe,
@@ -194,21 +197,6 @@ def html_to_pdf(html_path, pdf_path, browser=None, timeout=180, wait_ms=12000):
             raise RuntimeError("what the browser wrote is not a PDF")
 
     return _page_count(pdf_path)
-
-
-def has_real_fonts(pdf_path):
-    """True when the PDF carries embedded font programs rather than substitutes.
-
-    A missing webfont is the one failure that looks fine and is not: the layout
-    survives, the letters are somebody else's. Worth reporting, never worth silently
-    accepting.
-    """
-    try:
-        with open(pdf_path, "rb") as f:
-            blob = f.read()
-    except OSError:
-        return False
-    return b"/FontFile" in blob
 
 
 def font_names(pdf_path):

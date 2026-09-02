@@ -30,7 +30,14 @@
       ["remove", "Take it off this version",
        '<circle cx="8" cy="8" r="5.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.4 8h5.2" stroke="currentColor" stroke-width="1.5"/>'],
       ["add", "Write a new line after this one",
-       '<path d="M8 3.6v8.8M3.6 8h8.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>']
+       '<path d="M8 3.6v8.8M3.6 8h8.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'],
+      /* The arrows appear only on a line that says it can move, and only the studio
+         says so. They shuffle the preview: the printed PDF still follows the order in
+         the markdown, which is why the label says so and the studio repeats it. */
+      ["up", "Move it up in the preview (the printed PDF still follows your markdown)",
+       '<path d="M8 12.6V3.8M4.4 7.2L8 3.6l3.6 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'],
+      ["down", "Move it down in the preview (the printed PDF still follows your markdown)",
+       '<path d="M8 3.4v8.8M4.4 8.8L8 12.4l3.6-3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>']
     ];
     BUTTONS.forEach(function (b) {
       var el = document.createElement("button");
@@ -67,6 +74,14 @@
       sel = el;
       if (!sel) { bar.setAttribute("hidden", ""); send("deselect", {}); return; }
       sel.classList.add("cvsel");
+      /* Which lines the arrows work on is a question about this person's CV, and the
+         page around it is the only thing that knows the answer. It marks them, so
+         nothing in here has to guess at heading names. */
+      var movable = sel.hasAttribute("data-move");
+      Array.prototype.slice.call(bar.querySelectorAll("button")).forEach(function (b) {
+        var a = b.getAttribute("data-act");
+        if (a === "up" || a === "down") b.hidden = !movable;
+      });
       place();
       send("select", { id: sel.getAttribute("data-id"),
                        text: (sel.innerText || "").trim() });

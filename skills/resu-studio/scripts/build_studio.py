@@ -19,6 +19,7 @@ window is not built; this makes one, well.
 """
 
 import argparse
+import base64
 import datetime
 import io
 import json
@@ -54,6 +55,36 @@ def _lead_bold(text):
 ACHIEVEMENT_TITLES = ("key achievement", "achievement", "career highlight",
                       "selected achievement", "highlights")
 
+#: What each section's line ids start with when the CV has no such heading. The
+#: renderer builds every id from the heading it actually finds, so these are only
+#: the fallbacks for a section that is not in this person's markdown at all.
+DEFAULT_SID = {"profile": "profile", "skills": "key-skills",
+               "experience": "professional-experience", "education": "education",
+               "training": "training-certifications"}
+
+BLOCK_NAME = {"para": "paragraph", "item": "bullet line",
+              "labelled": "labelled line", "role": "role"}
+
+
+def _unheld(section_title, blocks, dropped):
+    """Name the blocks of a recognised section the studio has nowhere to put.
+
+    A whole unrecognised section was always reported. Content inside a section the
+    studio does know was not, so a profile written as bullets, or an intro paragraph
+    above the roles, left the markdown, missed the studio and still printed from the
+    renderer. Nothing may leave the page without being named.
+    """
+    if dropped is None or not blocks:
+        return
+    counts = {}
+    for b in blocks:
+        k = BLOCK_NAME.get(b["kind"], b["kind"])
+        counts[k] = counts.get(k, 0) + 1
+    for kind in sorted(counts):
+        n = counts[kind]
+        dropped.append("%d %s%s inside %s"
+                       % (n, kind, "" if n == 1 else "s", section_title.strip()))
+
 
 def cv_block(doc, dropped=None, achievements=None):
     """The CV as the studio wants it, built from the parsed markdown.
@@ -61,13 +92,21 @@ def cv_block(doc, dropped=None, achievements=None):
     Anything this does not recognise used to fall on the floor without a word. A CV
     with a `## Key Achievements` section opened in a studio that had no such section,
     which reads to the person as the work never having been done. Unrecognised
-    sections are now collected in `dropped` and named on the way past.
+    sections, and now any block inside a recognised one that the studio cannot hold,
+    are collected in `dropped` and named on the way past.
+
+    `sid` carries the prefix each section's line ids are built from, taken from the
+    heading with the renderer's own slug. The studio used to hold constants for these,
+    so a CV headed `## TRAINING AND CERTIFICATIONS` marked lines the renderer had
+    never heard of and every decision on them was dropped in silence.
     """
-    out = {"name": doc["name"], "contact": doc["contact"], "profile": "",
-           "skills": [], "roles": [], "education": [], "training": []}
+    out = {"name": doc["name"], "contact": doc["contact"], "profile": [],
+           "skills": [], "roles": [], "education": [], "training": [],
+           "sid": dict(DEFAULT_SID), "head": {}}
     for sec in doc["sections"]:
         title = (sec["title"] or "").strip().lower()
         blocks = sec["blocks"]
+        left = []
         if any(t in title for t in ACHIEVEMENT_TITLES):
             # already on their CV, so it is ticked: the panel is where it is edited
             for b in blocks:
@@ -75,12 +114,24 @@ def cv_block(doc, dropped=None, achievements=None):
                     achievements.append(b["text"].strip())
                 elif b["kind"] == "labelled":
                     achievements.append("%s: %s" % (b["label"], b["text"]))
+                else:
+                    left.append(b)
+            _unheld(sec["title"], left, dropped)
             continue
         if title.startswith("profile"):
-            out["profile"] = " ".join(b["text"] for b in blocks if b["kind"] == "para")
+            out["sid"]["profile"] = R.slug(sec["title"]) or DEFAULT_SID["profile"]
+            out["head"]["profile"] = (sec["title"] or "").strip()
+            for b in blocks:
+                if b["kind"] == "para":
+                    out["profile"].append(b["text"])
+                else:
+                    left.append(b)
         elif "skill" in title:
+            out["sid"]["skills"] = R.slug(sec["title"]) or DEFAULT_SID["skills"]
+            out["head"]["skills"] = (sec["title"] or "").strip()
             for b in blocks:
                 if b["kind"] != "labelled":
+                    left.append(b)
                     continue
                 items = []
                 for it in R.split_items(b["text"]):
@@ -92,26 +143,54 @@ def cv_block(doc, dropped=None, achievements=None):
                     items.append(entry)
                 out["skills"].append({"g": b["label"], "items": items})
         elif "experience" in title or "employment" in title:
+            out["sid"]["experience"] = R.slug(sec["title"]) or DEFAULT_SID["experience"]
+            out["head"]["experience"] = (sec["title"] or "").strip()
             for b in blocks:
                 if b["kind"] == "role":
                     out["roles"].append({"t": b["title"], "d": b["dates"],
                                          "s": b.get("scope", []),
                                          "b": b.get("bullets", [])})
+                else:
+                    left.append(b)
         elif title.startswith("education"):
+            out["sid"]["education"] = R.slug(sec["title"]) or DEFAULT_SID["education"]
+            out["head"]["education"] = (sec["title"] or "").strip()
             for b in blocks:
                 if b["kind"] == "labelled":
                     out["education"].append({"lab": b["label"], "txt": b["text"]})
                 elif b["kind"] in ("para", "item"):
                     out["education"].append(_lead_bold(b["text"]))
+                else:
+                    left.append(b)
         elif "training" in title or "certification" in title:
+            out["sid"]["training"] = R.slug(sec["title"]) or DEFAULT_SID["training"]
+            out["head"]["training"] = (sec["title"] or "").strip()
             for b in blocks:
                 if b["kind"] in ("item", "para"):
                     out["training"].append(b["text"])
                 elif b["kind"] == "labelled":
                     out["training"].append("%s: %s" % (b["label"], b["text"]))
-        elif title and dropped is not None:
-            dropped.append(sec["title"].strip())
+                else:
+                    left.append(b)
+        elif dropped is not None:
+            if title:
+                dropped.append(sec["title"].strip())
+            else:
+                # content above the first heading. The renderer prints it under a
+                # section of its own, so it cannot go unmentioned here either.
+                _unheld("the top of the file, above the first heading",
+                        blocks, dropped)
+            continue
+        _unheld(sec["title"], left, dropped)
     return out
+
+
+def doc_skills_title(doc):
+    """The heading this CV puts its skills under, as written."""
+    for sec in doc["sections"]:
+        if "skill" in (sec["title"] or "").strip().lower():
+            return sec["title"].strip()
+    return "KEY SKILLS"
 
 
 def letter_block(path, doc):
@@ -132,8 +211,8 @@ def letter_block(path, doc):
 
 # ---------------------------------------------------------------- the swap
 
-def swap_const(text, name, value):
-    """Replace one top-level `const NAME = ...;` with new JSON.
+def _const_span(text, name):
+    """Where one top-level `const NAME = ...;` starts and ends.
 
     Bounded by the next top-level const rather than by counting brackets: the blocks
     contain braces inside strings and a counter gets them wrong.
@@ -144,10 +223,139 @@ def swap_const(text, name, value):
     m = re.search(r"\nconst [A-Z_]+\s*=", text[i + 10:])
     if not m:
         raise SystemExit("could not find the end of `const %s`" % name)
-    j = i + 10 + m.start()
+    return i, i + 10 + m.start()
+
+
+def swap_const(text, name, value):
+    """Replace one top-level `const NAME = ...;` with new JSON."""
+    i, j = _const_span(text, name)
     return (text[:i] + "const %s = " % name
             + json.dumps(value, ensure_ascii=False, separators=(",", ":")) + ";"
             + text[j:])
+
+
+def swap_source(text, name, code):
+    """Replace one top-level const with a JavaScript file, as a string literal.
+
+    The studio injects paginate.js and markup.js into the sheet as text, so each one
+    lived in the template as a second copy of a file that is also on disk. Two copies
+    drift, and the one that drifted was the paginator: the sheet broke its pages in
+    one place and the print broke them in another. The files are read at build time
+    now, so there is one of each.
+    """
+    i, j = _const_span(text, name)
+    lit = json.dumps(code, ensure_ascii=False).replace("</", "<\\/")
+    return text[:i] + "const %s = " % name + lit + ";" + text[j:]
+
+
+def _asset_text(name):
+    path = os.path.join(ROOT, "assets", name)
+    if not os.path.isfile(path):
+        return None
+    return io.open(path, encoding="utf-8").read()
+
+
+def font_faces():
+    """The bundled typefaces as @font-face rules, base64, one entry per face.
+
+    The same files the print embeds, read the same way: `render_cv._font_files` finds
+    them and `render_cv._family_name` names them, so a face is spelled identically in
+    the studio and in the PDF. A studio that fetched its faces from a font server
+    measured its page breaks in whatever the browser substituted whenever the network
+    was slow, and then printed from different metrics. A face with no file bundled is
+    simply absent here, and the page asks the font server for that one.
+    """
+    faces, missing = {}, []
+    try:
+        fonts, _sizes = R._fonts()
+    except Exception:
+        return {}, []
+    for key in sorted(fonts):
+        f = fonts[key]
+        try:
+            files = R._font_files(key)
+        except Exception:
+            files = []
+        if not files:
+            if f.get("g"):
+                missing.append(key)
+            continue
+        name = R._family_name(f)
+        css = []
+        for weight, path in files:
+            with open(path, "rb") as fh:
+                blob = base64.b64encode(fh.read()).decode("ascii")
+            ext = path.rsplit(".", 1)[-1].lower()
+            css.append("@font-face{font-family:'%s';font-style:normal;font-weight:%s;"
+                       "font-display:block;src:url(data:%s;base64,%s) format('%s')}"
+                       % (name, weight, R._MIME.get(ext, "font/woff2"), blob,
+                          "truetype" if ext in ("ttf", "otf") else ext))
+        faces[key] = "".join(css)
+    return faces, missing
+
+
+def regroup_map():
+    """assets/regroup.json's discipline map, as the renderer reads it.
+
+    The studio shipped an empty map, so its By discipline chip regrouped nothing at
+    all. Reading the same file the renderer reads is the only way the chip can show
+    what --group discipline would print.
+    """
+    out = {}
+    try:
+        items = R._regroup_map() or []
+    except Exception:
+        return {}
+    for label, srcs in items:
+        names = [str(x) for x in (srcs or []) if str(x).strip()]
+        if names:
+            out[label] = names
+    return out
+
+
+def cv_ids(cv, letter=None):
+    """Every line id this studio can address, which is every id the renderer builds.
+
+    Used to check a proposal's `Line:` against something real. A `Line:` that matches
+    nothing was loaded, counted and drawn against an empty stub, and its Use this
+    wrote a mark keyed to an id the renderer would never meet.
+    """
+    sid = cv.get("sid") or DEFAULT_SID
+    ids = {"name/0"}
+    for i, _c in enumerate(cv.get("contact") or []):
+        ids.add("contact/%d" % i)
+    for i, _p in enumerate(cv.get("profile") or []):
+        ids.add("%s/%d" % (sid["profile"], i))
+    seen = {}
+    for n, g in enumerate(cv.get("skills") or []):
+        # the renderer's own numbering for two groups under the same heading
+        sl = R.slug(g["g"])
+        if not sl:
+            ids.add("key-skills/group-%d" % (n + 1))
+            continue
+        seen[sl] = seen.get(sl, 0) + 1
+        ids.add("key-skills/%s" % sl if seen[sl] == 1
+                else "key-skills/%s-%d" % (sl, seen[sl]))
+    for i, r in enumerate(cv.get("roles") or []):
+        base = "%s/%d" % (sid["experience"], i)
+        ids.add(base + "/h")
+        ids.add(base + "/d")
+        for j, _x in enumerate(r.get("s") or []):
+            ids.add("%s/s%d" % (base, j))
+        for j, _x in enumerate(r.get("b") or []):
+            ids.add("%s/b%d" % (base, j))
+    for i, _e in enumerate(cv.get("education") or []):
+        ids.add("%s/%d" % (sid["education"], i))
+    for i, _t in enumerate(cv.get("training") or []):
+        ids.add("%s/%d" % (sid["training"], i))
+    if letter:
+        ids.update({"cover-letter/date", "cover-letter/ref", "cover-letter/sal",
+                    "cover-letter/close", "cover-letter/sign"})
+        for i, _x in enumerate(letter.get("to") or []):
+            ids.add("cover-letter/to%d" % i)
+        for i, _x in enumerate(letter.get("paras") or []):
+            ids.add("cover-letter/p%d" % i)
+    return ids
 
 
 def slug(text):
@@ -203,6 +411,26 @@ STATE_ALIAS = {"have": "page", "under another name": "buried", "partial": "near"
 ROWKIND = {"page": "met", "buried": "buried", "off": "off",
            "near": "near", "missing": "missing"}
 
+#: All five words templates/scorecard.md allows for necessity. `condition` and
+#: `not a cv question` used to be folded into `implied` on the way in, which showed a
+#: citizenship or licence condition as a soft item lifted off the role description.
+NECESSITY_WORDS = ("must", "nice", "implied", "condition", "not a cv question")
+
+
+def scorecard_depth(path):
+    """How deep the scorecard says it was scored, out of its frontmatter, or None."""
+    if not path or not os.path.isfile(path):
+        return None
+    text = io.open(path, encoding="utf-8").read()
+    m = re.match(r"^﻿?---\s*\n(.*?)\n---\s*(\n|$)", text, re.S)
+    if not m:
+        return None
+    for line in m.group(1).split("\n"):
+        hit = re.match(r"^\s*depth:\s*(.+?)\s*$", line)
+        if hit:
+            return hit.group(1).strip().strip('"').strip("'") or None
+    return None
+
 
 def score_rows(path):
     """The five-cell table out of scorecard.md, one dict per row."""
@@ -238,13 +466,19 @@ def asks_block(scorecard, asks_md, facts_md):
     ads, facts = _blocks(asks_md), _blocks(facts_md)
     out = []
     for r in rows:
+        # The first word is only an id when asks.md actually holds one by that name.
+        # Treating it as an id regardless ate the first word of every row written
+        # without one, so `SQL across large datasets` became the ask `across large
+        # datasets` and nobody could see where the SQL had gone.
         m = ID_RE.match(r["ask"])
-        aid = m.group(1) if m else r["ask"][:12]
-        rest = (m.group(2).strip() if m else "")
+        if m and m.group(1) in ads:
+            aid, rest = m.group(1), m.group(2).strip()
+        else:
+            aid, rest = (m.group(1) if m else r["ask"][:12]), r["ask"].strip()
         ad = ads.get(aid, {})
         text = ad.get("text") or rest or r["ask"]
         a = {"id": aid, "t": text,
-             "n": r["nec"] if r["nec"] in ("must", "nice", "implied") else "implied",
+             "n": r["nec"] if r["nec"] in NECESSITY_WORDS else "implied",
              "w": ad.get("where", ""), "st": r["state"], "r": []}
         if r["state"] == "unscored":
             a["u"] = True
@@ -274,18 +508,23 @@ def asks_block(scorecard, asks_md, facts_md):
 PROP_RE = re.compile(r"^##\s+(P\d+)[.:]?\s*(.*)$")
 
 
-def proposals_block(path):
+def proposals_block(path, known=None):
     """proposals.md to what the studio's review queue needs.
 
     Keyed by the line id the change lands on, because the studio decides about
     lines and not about list items. A proposal with no `Line:` cannot be shown
     against anything on the page, so it is left out and named on the way past
     rather than silently dropped.
+
+    A `Line:` that names an id this CV does not have is the same failure wearing a
+    disguise, and it used to pass: it was loaded, counted in the total, drawn against
+    an empty stub, and Use this wrote a mark against an id the renderer would never
+    meet. It is checked against the ids the CV actually produced and reported by id.
     """
     if not path or not os.path.isfile(path):
-        return {}, []
+        return {}, [], []
     text = io.open(path, encoding="utf-8").read()
-    out, skipped, cur = {}, [], None
+    out, skipped, unmatched, cur = {}, [], [], None
 
     def flush(c):
         if not c:
@@ -293,6 +532,12 @@ def proposals_block(path):
         if not c.get("line"):
             skipped.append(c["p"])
             return
+        if known is not None:
+            # an addition sits after a line, so `<id>/+0` is real when `<id>` is
+            base = c["line"].split("/+")[0]
+            if c["line"] not in known and base not in known:
+                unmatched.append("%s (%s)" % (c["p"], c["line"]))
+                return
         cur_txt = (c.get("cur") or "").strip()
         sug = (c.get("sug") or "").strip()
         kind = "edit"
@@ -342,7 +587,7 @@ def proposals_block(path):
             buf.append(raw)
     stash()
     flush(cur)
-    return out, skipped
+    return out, skipped, unmatched
 
 
 def achievements_block(path):
@@ -385,10 +630,23 @@ def main():
                     help="achievements.md, the drafted key achievements to pick from")
     ap.add_argument("--proposals", default=None,
                     help="proposals.md, so the suggestions are reviewed on the page")
-    ap.add_argument("--role", default="", help="the job title, for the filename and header")
+    ap.add_argument("--role", default="",
+                    help="the job title. Required: it names the file and keys this "
+                         "application's own browser storage")
     ap.add_argument("--employer", default="", help="named in the header beside the role")
+    ap.add_argument("--depth", default=None,
+                    help="how deep the advertisement was scored, when scorecard.md "
+                         "does not say so in its frontmatter")
     ap.add_argument("--out", default=None, help="where to write. Default: their documents folder")
     a = ap.parse_args()
+
+    if not (a.role or "").strip():
+        sys.stderr.write(
+            "--role is required and was not given. It names the studio's file and keys "
+            "this application's own browser storage, so without it every application "
+            "for this person shares one store and a line marked in one shows up in "
+            "another.\n")
+        return 2
 
     if not os.path.isfile(a.cv):
         sys.stderr.write("no CV markdown at %s\n" % a.cv)
@@ -406,10 +664,17 @@ def main():
     s = swap_const(s, "CV", CV)
     if dropped:
         sys.stderr.write(
-            "these sections are in the markdown and the studio has nowhere to put "
-            "them, so they are NOT on the page: %s. The studio knows profile, key "
-            "skills, experience, education, training and key achievements. Fold the "
+            "this is in the markdown and the studio has nowhere to put it, so it is "
+            "NOT on the page: %s. The studio knows a profile written as paragraphs, "
+            "key skills written as `**Group:** item; item` lines, experience written "
+            "as `### Role` blocks, education, training and key achievements. Fold the "
             "content into one of those or it does not print.\n" % ", ".join(dropped))
+    if CV["skills"] and CV["sid"]["skills"] not in ("key-skills", "skills"):
+        sys.stderr.write(
+            "the skills section is headed %s. The renderer only draws a skills section "
+            "under KEY SKILLS or SKILLS, so it prints that section as plain lines and "
+            "its line ids will not be the ones this studio marks. Head it KEY SKILLS "
+            "and both agree.\n" % doc_skills_title(doc))
 
     asks = []
     if a.asks and os.path.isfile(a.asks):
@@ -442,7 +707,7 @@ def main():
                          "Each one needs a fenced block with id: and text:.\n"
                          % a.achievements)
 
-    proposed, skipped = proposals_block(a.proposals)
+    proposed, skipped, unmatched = proposals_block(a.proposals, cv_ids(CV, L))
     s = swap_const(s, "PROPOSED", proposed)
     if a.proposals:
         n = sum(len(v) for v in proposed.values())
@@ -454,6 +719,47 @@ def main():
                 "these proposals have no `Line:` so they cannot be shown against "
                 "anything on the page, and are not in the studio: %s\n"
                 % ", ".join(skipped))
+        if unmatched:
+            sys.stderr.write(
+                "these proposals name a `Line:` that is not on this CV, so there is "
+                "nothing on the page for them to change, and they are not in the "
+                "studio: %s. The ids are built from the headings in the markdown, so "
+                "check the id against the CV this studio was built from.\n"
+                % ", ".join(unmatched))
+
+    # The two scripts that run inside the sheet, read off disk. There is no second
+    # copy of either in the template: see swap_source.
+    for const, asset in (("PAGINATE", "paginate.js"), ("MARKUP", "markup.js")):
+        code = _asset_text(asset)
+        if code is None:
+            sys.stderr.write(
+                "assets/%s is missing, so the studio is built without it. The preview "
+                "will not lay itself out on pages.\n" % asset)
+            continue
+        s = swap_source(s, const, code)
+
+    # The typefaces, carried the way the print carries them.
+    faces, no_file = font_faces()
+    s = swap_const(s, "FONTFACE", faces)
+    if no_file:
+        sys.stderr.write(
+            "no font file in assets/fonts for %s, so the studio fetches %s from the "
+            "font server and measures in whatever the browser substitutes until it "
+            "arrives. Run scripts/fetch_fonts.py to bundle them.\n"
+            % (", ".join(no_file), "them" if len(no_file) > 1 else "it"))
+
+    # The same regrouping the renderer would do for --group discipline.
+    s = swap_const(s, "REGROUPMAP", regroup_map())
+
+    # Which application this is, for the command the page copies out.
+    s = swap_const(s, "ROLE", a.role)
+    s = swap_const(s, "EMPLOYER", a.employer)
+
+    # How deep the advertisement was scored. The studio used to assert that the person
+    # had chosen this before the advertisement was read, which nothing recorded.
+    depth = (a.depth or scorecard_depth(a.scorecard) or "unknown").strip()
+    s = s.replace('const LEDGER={depth:"unknown"};',
+                  'const LEDGER={depth:%s};' % json.dumps(depth, ensure_ascii=False), 1)
 
     # Which build made this page. A studio is a file on disk: updating the plugin
     # does not change one that already exists, so without a stamp there is no way to
@@ -483,13 +789,16 @@ def main():
     # One browser store per application. Without this, marking a line in one
     # application shows up in another, which is the ghost every tool of this shape
     # grows when nobody keys the storage.
-    key = slug(a.role or doc["name"])
+    key = slug(". ".join(x for x in (a.role, a.employer) if x) or doc["name"])
     s = s.replace('localStorage.getItem("cvwb")', 'localStorage.getItem("cvwb:%s")' % key)
     s = s.replace('localStorage.setItem("cvwb"', 'localStorage.setItem("cvwb:%s"' % key)
 
     out = a.out or os.path.join(paths.documents_dir(),
                                 "%s - Studio.html" % safe_filename(a.role or doc["name"]))
-    os.makedirs(os.path.dirname(out), exist_ok=True)
+    # `--out studio.html` gives a bare filename, whose dirname is "", and makedirs
+    # of "" raises. Writing beside the working directory is what was asked for.
+    if os.path.dirname(out):
+        os.makedirs(os.path.dirname(out), exist_ok=True)
     kept = documents.protect(out, a.role, a.cv)
     io.open(out, "w", encoding="utf-8", newline="").write(s)
     documents.note(out, a.role, "studio", a.cv)
