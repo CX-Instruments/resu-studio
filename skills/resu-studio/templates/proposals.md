@@ -12,10 +12,24 @@ budget:
 
 Full current text and full replacement text on every entry.
 
-**Every entry carries a `Line:`** — the studio's id for the line it lands on, from
+**Every entry carries a `Line:`**, the studio's id for the line it lands on, from
 `references/marking.md`. That id is what puts the suggestion on the right line of
 the page when the studio is built with `--proposals`. An entry without one never
-reaches the person.
+reaches the person, and so does an entry naming an id this CV does not have:
+`build_studio.py` names both on the way past.
+
+The `## P1.` heading carries the location, in words. Everything else is a bold field:
+
+```
+Line          the studio's id for the line this lands on
+Currently     the full existing text, verbatim, or `Not on the CV.`
+Suggested     the full replacement text, or `Delete this bullet.`
+Why           one or two sentences
+Answers       which ask ids this serves
+Draws on      which fact ids this rests on
+Costs         on an addition, which line comes out or how the budget rises
+Decision      left blank for the person
+```
 
 ---
 

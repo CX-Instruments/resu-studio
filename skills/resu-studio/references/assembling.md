@@ -94,8 +94,10 @@ levels for the same skill is drift.
 
 ## Rendering, if the person wants a designed version at all
 
-Rendering is the last phase, it is optional, and the markdown is finished before it
-starts.
+Rendering is the last step of Phase 6, it is optional, and the markdown is finished
+before it starts. Phase 7 is the cover letter, so rendering is not the end of the
+work, and a cover letter written afterwards gets rendered on the same skin with
+`--letter`.
 
 **The rendering contract:**
 
@@ -121,9 +123,10 @@ facts ledger, against the asks ledger, in the person's voice, to the word limit 
 advertisement sets.
 
 **The advertisement's format instruction always wins over any default in this skill.**
-If the pack asks for an 800 word statement, write 800 words even though a cover letter
-would normally be 350. If it asks for no cover letter, do not produce one unless the
-person asks.
+If the pack asks for an 800 word statement, write 800 words. If it asks for no cover
+letter, do not produce one unless the person asks. The length a cover letter runs to
+when nothing says otherwise is set in `references/cover-letter.md`, which is one page
+and four to six paragraphs, and that file is the only place a figure for it belongs.
 
 **A companion document must not restate the CV.** Its job is to say the thing the CV
 cannot: that a thing the employer asked for and a thing the person did are the same

@@ -14,8 +14,9 @@ panel under Sections. Nothing prints until they tick it.
 role bullet says the same thing twice on one page, and if that bullet is later removed
 the achievement is left with no job behind it. Full rules: `references/achievements.md`.
 
-**Six, not four and not ten.** Six is a real choice. Ticking four is the common
-landing, and picking for them is never the job.
+**Draft six and let them pick.** Six is a real choice where ten is a chore. They tick
+four to six, and ticking four is the common landing. If a sixth line only exists to
+reach six, it comes off. Picking for them is never the job.
 
 ```
 id: k1

@@ -10,6 +10,7 @@ Every entry, without exception:
 ```
 ## P12. Current employer, Key Responsibilities, bullet 5
 
+**Line:** professional-experience/0/b4
 **Currently:**
 Performed root cause analysis on complex data quality issues, translating findings into actionable remediation plans for business and technical teams
 
@@ -26,9 +27,34 @@ repeat.
 **Decision:**
 ```
 
+The fields, in the order `templates/proposals.md` sets them out:
+
+| Field | When it appears |
+|---|---|
+| `Line:` | every entry, without exception. The studio's id for the line it lands on, from `references/marking.md` |
+| `Currently:` | every entry. The complete existing text, or `Not on the CV.` for an addition |
+| `Suggested:` | every entry. The complete replacement text, or `Delete this bullet.` for a removal |
+| `Why:` | every entry. One or two sentences |
+| `Costs:` | an addition. Which existing line comes out, or "budget rises from 8 to 9, confirm" |
+| `Answers:` | every entry that adds or changes text. Ask ids, and never empty |
+| `Draws on:` | every entry that adds or changes text. Fact ids from `facts.md` |
+| `Decision:` | every entry, left blank. It is the person's to fill in |
+
+A removal carries `Line:`, `Currently:`, `Suggested:`, `Why:` and `Decision:` and needs
+no `Answers:` or `Draws on:`, because it rests on the claim already being somewhere
+else on the page and `Why:` is where that other place is named.
+
+**An entry without a `Line:` never reaches the person.** `build_studio.py` drops it,
+silently as far as the page is concerned, because there is no line to draw it against.
+An entry whose `Line:` matches no id on the CV is worse: it is loaded and counted and
+drawn against an empty stub, and its "Use this" writes a mark the renderer will never
+match. Build the id from `references/marking.md` and check it against the render.
+
 **Read `references/rewriting.md` before drafting any Suggested text.** It carries the
-shape of a bullet, which verbs to distrust, and eight worked before-and-after pairs,
-including the two cases where the correct output is a question rather than a rewrite.
+shape of a bullet, which verbs to distrust, and the named patterns to look for, which
+are demonstrated on the person's own lines rather than on invented ones. Two of those
+patterns end in a question rather than a rewrite, and the question is the correct
+output.
 
 **Currently and Suggested are always the complete text.** Never a fragment, never a
 description of the change, never "add something about X". The person copies and
@@ -120,10 +146,16 @@ is usually yes.
 
 **Read `answers.md` before putting any of these to them, and write the answer into it
 the moment it arrives.** It sits beside `facts.md` in their own folder and carries
-across job advertisements. A question already in that file has been answered — use
+across job advertisements. A question already in that file has been answered, so use
 the answer. A "no", a "not sure" and a "that was AI-written" are answers too, and are
 never asked again. `SKILL.md`, *Never ask the same question twice*, has the shape and
 the rules.
+
+`answers.md` lives in the person's own folder, so pass it by absolute path:
+
+```bash
+python3 scripts/paths.py --answers
+```
 
 ## The person decides on the page, not in the chat
 

@@ -5,8 +5,8 @@ updated: YYYY-MM-DD
 # Answers
 
 Every question put to the person, and what they said. Read this before asking
-anything. A question already in this file is never asked again — including a "no",
-a "not sure", and a "rather not say".
+anything. A question already in this file is never asked again, including one answered
+with a "no", a "not sure", or a "rather not say".
 
 This file lives beside `facts.md` in the person's own folder, so it carries from one
 job advertisement to the next. `answers.md` records that the question was asked;
@@ -34,7 +34,7 @@ led to: role-example
 
 ```
 q: The ad asks for Python. Is there any Python on the record I have missed?
-a: Not really — what there is was AI-written and I would not claim it.
+a: Not really. What there is was AI-written and I would not claim it.
 on: 2026-08-29
 phase: 3
 led to: nothing

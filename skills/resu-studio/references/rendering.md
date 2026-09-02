@@ -6,8 +6,12 @@ Two renderers, both optional, both last. Neither can change what a document says
 python3 scripts/render_cv.py cv-data-reporting.md --layout sidebar-dark --palette forest
 python3 scripts/render_cv.py cv-data-reporting.md --gallery --outdir skins-samples
 python3 scripts/render_cv.py --list
-python3 scripts/render_report.py scorecard-after.md --before scorecard-before.md
+python3 scripts/render_report.py scorecard.md --before scorecard-before.md
 ```
+
+`render_report.py` takes the scorecard, an optional `--before` and an optional `--out`.
+It has no `--palette`. Its own docstring used to advertise one, which is why it turns
+up in older command blocks; passing it now is an error.
 
 ## Do not choose a skin by reading this file
 
@@ -17,8 +21,26 @@ as a control, and it prints the exact command line for whatever they land on. Se
 there and render what they choose. Guessing on their behalf and showing them one render
 is how the last version of this wasted an evening.
 
-The studio is an HTML page holding the CV as data. Rebuild it from the current CV when
-the wording changes, publish it, and give them the link.
+The studio is one HTML file holding the CV as data. There is nothing to publish and no
+link to send: `build_studio.py` writes the file into the person's own documents folder
+and it is handed over as a file, which is why it carries everything it needs inside
+itself and works with no network. Rebuild it from the current CV when the wording
+changes, and hand over the rebuilt file.
+
+`--role` is required. It names the file and it keys this application's own browser
+storage, so a line marked in one application does not turn up in another.
+
+```bash
+python3 scripts/build_studio.py --cv "cv-<variant>.md" --role "<the job title>" \
+    --employer "<the employer>" \
+    --facts "$(python3 scripts/paths.py --facts)"
+```
+
+**Pass a ledger with command substitution.** A bare relative path resolves against
+whatever directory the session happens to be in, and that directory does not outlive
+the session. `scripts/paths.py` prints the real one:
+`--data`, `--facts`, `--answers`, `--documents` and `--cv-source` each print one bare
+path and nothing else.
 
 ## The faces
 
@@ -29,18 +51,43 @@ text are chosen separately:
 --head-font oswald --body-font work-sans --size normal
 ```
 
-Eighteen come from Google Fonts and are fetched by the rendered page itself, which adds
-a `<link>` for **only the two families that page is actually set in**. Arial, Times New
-Roman and Verdana are already on every machine and fetch nothing. A page rendered with
-a Google face needs the network the first time it is opened; the fallbacks in each
-stack keep it readable offline.
+**The faces are carried inside the document, as base64, from `assets/fonts/`.** That is
+the only account of how a font reaches the page, and it is what makes the PDF
+trustworthy: the page draws the same letters on a machine with no network at all, which
+is where PDFs usually get made. A page that names its typefaces and fetches them from a
+font server prints correctly only where that server is reachable; everywhere else the
+browser substitutes quietly, the metrics change, the page breaks move, and the file
+still looks finished.
 
-`--size small|normal|large` scales the whole document by 0.94, 1 or 1.06. The old
-`--typeset` pairs still work and still set both faces at once; `--head-font` and
-`--body-font` override them.
+Eighteen of the twenty-one families are bundled, both weights each, and the renderer's
+matcher resolves every one. The other three, Arial, Times New Roman and Verdana, are
+the machine's own and are never fetched or carried. They are the one case where the
+file depends on what is installed, so a skin built on them prints exactly only where
+those faces exist.
+
+A `<link>` to a font server is emitted only for a family that has no file bundled, so
+on the shipped skill it is emitted for nothing at all.
+
+**The five typesets name real bundled families**, so a default render actually embeds
+its fonts and the substitution refusal has something to check. This is the change that
+makes every promise below hold on the default path rather than only when
+`--head-font` and `--body-font` are passed:
+
+| Typeset | Label | Headings | Body | Scale |
+|---|---|---|---|---|
+| `serif` | Serif | Lora | Lora | 1.0 |
+| `sans` | Sans | Arimo | Arimo | 1.0 |
+| `mixed` | Serif heads | Lora | Source Sans 3 | 1.0 |
+| `mixedalt` | Sans heads | Source Sans 3 | Lora | 1.0 |
+| `tight` | Tight sans | Work Sans | Work Sans | 0.94 |
+
+`mixed` is the default. All four families are in `assets/fonts/` at 400 and 700.
+
+`--size small|normal|large` scales the whole document by 0.94, 1 or 1.06. `--typeset`
+sets both faces at once; `--head-font` and `--body-font` override it.
 
 **In the studio every face is labelled in itself.** A list of font names set in one font
-tells you nothing, which is the whole reason for showing them this way.
+tells you nothing, which is the whole reason for showing them that way.
 
 ## Choosing how the skills read
 
@@ -68,8 +115,8 @@ so a partial list is a promotion rather than a rewrite.
 other column. **The skills section does not have to sit in one column.** The Key skills
 heading stays where the section itself is placed by `--order`, and a group sent across
 prints in the other column under its own bold heading rather than repeating the section
-heading. On a single-column layout the flag is accepted and ignored, because there is
-nowhere to send anything.
+heading. On a layout with no sidebar the flag keeps the group in the main column and
+says so on stderr, because there is nowhere to send anything.
 
 `--hide-groups "Domain;AI and emerging tools"` leaves named groups off this version,
 matched on their exact headings. **It is never silent.** The run prints what it took off
@@ -82,6 +129,27 @@ markdown.
 that says what the five steps are, which should only be dropped when no group is drawn
 on a scale.
 
+### Which heading is the skills section
+
+**Any heading with the word "skill" in it.** `KEY SKILLS`, `SKILLS`, `TECHNICAL SKILLS
+AND TOOLS` are all drawn as skills, by the renderer, by `build_studio.py` and by the
+studio, using the same test in all three. A CV headed `TECHNICAL SKILLS` used to be
+drawn as skills in the studio and printed as plain labelled lines here, under a
+different id on each side, so every decision the person took about one of those lines
+landed on an id the renderer never built.
+
+The id prefix does not follow the heading. Skills groups are addressed as
+`key-skills/<slug of the group heading>` whatever the section is called, so a decision
+survives the section heading being renamed. Every other section takes its prefix from
+its own heading.
+
+**A second group sharing a heading carries an occurrence number.** Two `**Tools:**`
+lines used to share `key-skills/tools`, so one removal took both off. The first keeps
+the plain id, the second is `key-skills/tools-2`, and the run says so on stderr. **A
+skills line with no heading gets a positional id**, `key-skills/group-<n>`, `<n>` being
+its place among the groups counted from 1, rather than every unlabelled line collapsing
+onto one empty id.
+
 ### The rule the drawings are built on
 
 **A bar, a dot or a ring is drawn only where the markdown states a level.** There is no
@@ -90,14 +158,26 @@ line of text under the graphic, in their own words, so nothing is lost and no nu
 appears on the page that its owner did not put there. Anything in brackets that is not
 a level, "10+ yrs", "personal development projects", travels with the skill.
 
+**Every treatment prints the level as text.** Bars, dots, rings and chips all put
+`A skill (Advanced, 10+ yrs)` on the page as characters beside the drawing, so a
+screener extracting the PDF gets the level whether or not the graphic means anything to
+it. Checked by extracting the text out of a printed PDF in each of the six treatments.
+
 ## Section order and which column
 
 `--order` takes the section headings as slugs, in the order they should print, each
 optionally with `:side` to send it to the sidebar:
 
 ```
---order profile,key-skills:side,professional-experience,education,training-certifications
+--order profile,key-skills:side,professional-experience,education,training-and-certifications
 ```
+
+A slug is the heading lower-cased with every run of other characters turned into one
+hyphen, so `## TRAINING AND CERTIFICATIONS` is `training-and-certifications`.
+
+With no `--order`, skills, education, training and certifications, certifications and
+eligibility go to the sidebar by their titles and everything else stays in the main
+column. Rename a section in the markdown and it moves.
 
 `:side` only does anything on a layout that has a sidebar. A section the flag forgets
 still prints, last, in the main column, and the run says so. **The renderer never drops
@@ -108,6 +188,40 @@ for the same reason the line count is enforced.
 keeps the headings as written. `strength` regroups by the level each skill states.
 `discipline` reads `assets/regroup.json`, which maps new headings to the ones in the
 markdown; with no such file it falls back to `own` and says so.
+
+## The order the person put the lines in
+
+`--decisions` carries a top level `order` key, written by the studio's up and down
+arrows, and the renderer lays each list out in it, so a bullet the person moved on
+screen prints where they moved it.
+
+```json
+"order": {
+  "professional-experience/0": [2, 0, 1, 3],
+  "training-and-certifications": [1, 0]
+}
+```
+
+The key is the id the lines themselves carry: `<section-slug>/<role index>` for the
+bullets of one role, and the bare `<section-slug>` for a flat list such as education or
+training. Every entry is the line's original number, so `[2, 0, 1, 3]` prints the third
+bullet of the markdown first.
+
+**Ids never move.** Only the slot a line prints in moves, which is what keeps a mark, a
+proposal and a rewrite attached to the line the person pointed at. A line the order does
+not name keeps its own place at the end, so nothing falls off the page by being
+forgotten and the in and out count still balances.
+
+**Several kinds of decision on one list compose in this order:** reorder, then remove,
+then edit, then add. The list is laid out in the order given; a removed line drops out
+of that order without moving the rest; an edited line prints its new wording in the slot
+the order gave it; an added line prints immediately after the line it was written under,
+wherever that line ended up.
+
+An order naming a line twice, or naming one that does not exist, is refused rather than
+skipped, because skipping it would print one line twice and leave another off while the
+count still balanced. An `order` key naming a list this CV does not have is said on
+stderr and the render carries on.
 
 ## The contract, and how it is enforced rather than promised
 
@@ -120,11 +234,30 @@ and the source lines the parsed document accounts for. **If the two differ it re
 to write the file** and says so. Not a warning, not a note in the output, a refusal.
 Every run prints the pair, for example "78 content lines in, 78 out".
 
-**Never clips.** No fixed heights, no `overflow:hidden`, no absolute positioning
-anywhere in the CSS. Long content makes the document taller. This is structural, not a
-setting: a skills column with fifty lines produces a longer page, never a shorter one
-with the end missing. Verified by measuring every element in a headless browser and
-confirming no element has content taller than its box.
+**Never loses a line off the bottom of a page, and the guarantee is a runtime one.**
+There is `overflow:hidden` in this stylesheet, there are fixed heights in it, and there
+is absolute positioning in it: a sheet is 297mm tall and clips, the sidebar and the main
+column are `height:100%`, and `rail` and `spine` hang dates in the margin absolutely.
+Those are what make an A4 sheet an A4 sheet. What protects the content is not the
+absence of those rules but the paginator's check on the way out: before laying out, it
+takes the set of `data-id`s in the source, and at the end every one of them has to be on
+a sheet. If any is missing it throws the whole pagination away and prints the document
+on one long sheet instead, because a visibly long page is a problem somebody can see and
+a silently dropped line is not. Nothing is ever both hidden and gone.
+
+**A missing paginator is a refusal rather than a blank page.** All the content is
+written into a hidden block and the paginator is what moves it onto the sheets, so
+without `assets/paginate.js` the file would open at the right size with nothing on it.
+`render_cv.py` checks for it before writing anything and says what is missing and what
+to restore. The page also carries a `<noscript>` rule that shows the unpaginated
+document as one long column, so a browser with JavaScript off shows the CV rather than
+white paper.
+
+**A malformed decisions file is refused in plain words.** Broken JSON names the
+character and says it is usually a missing comma, a trailing comma or a quote that did
+not get pasted. A key holding the wrong kind of thing is named as well: "marks has to
+be an object of id to decision, and it is a list." That file is routinely hand saved
+out of a pasted block, so a small shape error is likely.
 
 **Preserves levels and figures.** Levels live in brackets inside the text, so nothing
 can drop them by expecting a number and finding the word Advanced. That happened
@@ -154,13 +287,6 @@ What it will not split:
 A block taller than a whole sheet is not clipped. That sheet grows instead, because a
 long page is a problem you can see and a clipped one is not.
 
-**It counts itself.** Before laying out it counts the blocks it is about to place, and
-after laying out it counts what is on the sheets. If the two differ it throws the
-pagination away and prints everything on one long sheet rather than showing a tidy page
-with a line missing. Regions are `overflow:hidden` only while pagination is running, so
-nothing can hide behind a page edge; there are no scrollbars inside the document, in
-either direction.
-
 Sheets sit on a grey ground with a gutter between them on screen, and `break-after:page`
 sends each one to its own sheet when printed.
 
@@ -168,8 +294,8 @@ sends each one to its own sheet when printed.
 
 The renderer does not enforce a page limit and does not try. It cannot know the
 reader's paper size or margins, and a renderer that trims to fit is a renderer that
-edits. Open the HTML and use the browser's print preview: it gives the true page count
-and saves the PDF.
+edits. `--pdf` prints the file and reports the page count of the finished PDF, which is
+the true one.
 
 If the CV runs past the limit, that is a content decision, so it goes back to phase 4
 as proposals with reasons, where the person can accept or refuse each cut.
@@ -186,14 +312,23 @@ as proposals with reasons, where the person can accept or refuse each cut.
 | `sidebar-top` / `sidebar-top-right` | sidebar on page one only, then a tint edge |
 | `band` | dark header band across the top of page one |
 | `slab` | dark slab, section headings floated into the gutter |
+| `panel` | the header inside a ruled box, headings with an accent bar |
 | `spine` | timeline down the left with a dot per role |
 | `cards` | each role in its own tinted card |
-| `classic` | centred, ruled, conservative |
-| `compact` | two-up header, tighter leading, skills in two columns |
 | `rail` | dates and section headings in a left gutter |
 | `bands` | each section heading a full-bleed tint band |
+| `classic` | centred, ruled, conservative |
+| `compact` | two-up header, tighter leading, skills in two columns |
 | `hairline` | wide margins, thin rules, quiet |
-| `panel` | the header inside a ruled box, headings with an accent bar |
+
+Palettes: ink, forest, navy, slate, oxblood, teal, plum, sand, copper, mono.
+Typesets: serif, sans, mixed, mixedalt, tight.
+
+`--layout sidebar-dark --palette forest --typeset mixed` is the default skin.
+
+**`--gallery` renders the person's own CV in every layout and palette on one page**,
+scaled down, so the choice is made by looking rather than by reading names. Pick one,
+then render it properly.
 
 **Every layout carries through past page one.** A layout that only styles the first
 sheet is a bug, not a design: check the top margin, the left margin and the treatment
@@ -222,32 +357,14 @@ Every sidebar layout shares one block for this, `ASIDE_SK`, so a new sidebar lay
 cannot quietly miss out: `sidebar-top` did miss out, and drew the wide row in a narrow
 column until it was noticed.
 
-| Layout | Shape |
-|---|---|
-| `plain` | One column, no rules |
-| `rule` | One column, a coloured rule under each heading |
-| `band` | Coloured header band, then one column |
-| `aside-left` | Skills, education and certifications beside the profile, then experience full width |
-| `aside-right` | The same, mirrored |
-| `bandaside` | Header band plus the aside arrangement |
-| `compact` | One column, tighter type, for fitting more |
+## Group the studio by what the layout does
 
-Palettes: ink, forest, navy, slate, oxblood, teal, plum, sand, copper, mono.
-Typesets: serif, sans, mixed (serif headings), mixedalt (sans headings), tight.
-
-**`--gallery` renders the person's own CV in every layout and palette on one page**,
-scaled down, so the choice is made by looking rather than by reading names. Pick one,
-then render it properly.
-
-**Which sections go in the aside** is decided by section title: key skills, skills,
-education, training and certifications, certifications, eligibility. Everything else
-flows below at full width. Rename a section in the markdown and it moves.
-
-**A note on the aside layouts.** The aside sits beside the profile, and the row is as
-tall as whichever column is taller. A long skills column beside a short profile leaves
-white space to the right of the profile. That is the honest trade for never clipping:
-the alternative is a fixed-height column, which is exactly the bug this replaces. If
-the white space bothers you, `plain`, `rule` and `band` have none.
+Eighteen layouts in one long list is a wall. They sort into four families by the shape
+of the page rather than by name, and each family gets a plain-English line: a column
+beside the page, a block across the top, something down the side of the roles, nothing
+but type. Pairs that differ only in which hand they sit on stay next to each other, so
+`Sidebar, page one` and `Sidebar, page one, right` are side by side rather than three
+rows apart.
 
 ## The report
 
@@ -256,20 +373,28 @@ the white space bothers you, `plain`, `rule` and `band` have none.
 - **Two gauges.** What you have, measured against the facts ledger. What a reader
   would find, measured against the page as it stands. They are separate because they
   are different questions, and showing one number instead of two is the mistake this
-  workflow exists to avoid.
+  workflow exists to avoid. Which states feed which gauge is in `references/scoring.md`.
 - **The gap between them** in one sentence, which is the case for doing the work.
-- **A bar for each state**, with "not yet worked out" drawn separately from "do not
-  have", because one means nobody has checked and the other means the answer is no.
+- **A bar for each state**, with "Not checked yet" drawn separately from "Nothing to say
+  yet", because one means nobody has looked and the other means the answer is no.
 - **The ask by ask table**, with evidence ids, so any row can be traced.
+
+```bash
+python3 scripts/render_report.py scorecard.md --before scorecard-before.md
+```
 
 `--before <earlier scorecard>` puts a hollow marker on each gauge showing where it
 stood before the person's decisions. That is the movement, and it is the honest way to
 show it: the left gauge barely moves, because rewriting does not change what somebody
 has done. The right gauge is the one that moves.
 
-The report computes nothing of its own. It reports the numbers in the scorecard, and
-if the counts are missing it derives them from the table and says so by showing the
-same numbers back.
+The report computes nothing of its own where the scorecard has already said it. It
+prints the frontmatter counts when they are there, and tallies the ask table only when
+they are missing, which is why the frontmatter counts have to be the tally of the table.
+
+**A row that does not line up is refused rather than drawn.** Every row needs all five
+cells, because the columns are read by position and one missing cell shifts every later
+cell one to the left. The refusal names the line and shows the shape.
 
 ## If you use a different renderer
 
@@ -328,8 +453,7 @@ one atom tall. Anything much larger is this bug coming back.
 **The safety check counts lines, not atoms.** Atoms merge as the sheet fills, so their
 count means nothing by the end. Before anything is split, the paginator takes the set of
 `data-id`s in the source; at the end every one of them has to be on a sheet. If any is
-missing it throws the pagination away and prints the whole CV on one long sheet, because
-a visibly long page is a problem someone can see and a silently dropped line is not.
+missing it throws the pagination away and prints the whole CV on one long sheet.
 
 ## Absolute gutters need a width the content fits
 
@@ -341,85 +465,11 @@ Any layout putting text in a fixed-width gutter has to set `white-space:normal` 
 width the longest real value fits, and be checked against a date range rather than a
 bare year pair.
 
-
-## The sidebar that is only on page one
-
-`sidebar-top` and `sidebar-top-right` put the sidebar on the first sheet and nowhere
-else. That is the layout, not a bug: the skills column earns its place beside the
-profile, and by page two the reader is in the roles and the width is worth more than
-the panel. The following sheets keep an 8mm tint edge so they still read as the same
-document.
-
-**What was a bug is the hole it used to leave.** When the sidebar ran out of content
-part-way down page one, the rest of that page stayed in a narrow column beside an empty
-tinted panel.
-
-**The fix is a float, not a second region.** The panel is a floated block inside page
-one's own text flow, so the text runs beside it and then wraps underneath it with no
-break and no hole. The first attempt used a separate region below the grid, and it was
-worse than the problem: the column above stopped wherever its last whole block fitted,
-so a bullet appeared alone at the foot of the page with a hand's width of white above
-it. A column break is a hole with extra steps. Let the text wrap.
-
-Two things the float needs. The panel must size to its own content, so `.aside.float`
-overrides the `height:100%` that stretches a grid column. And it has no height of its
-own to measure against while it is being filled, so `fill` takes a gauge element: the
-sheet region, which has a fixed height and `overflow:hidden`, and therefore contains the
-float and says truthfully when the page is full.
-
-Its width comes from the page, `calc(35% + 13mm)` against the region's own padding, not
-a figure in millimetres, so it holds if the paper changes.
-
 ## Two columns for a flat list
 
-`--columns education,training-certifications` runs those sections in two columns. Only
-flat lists take it: a set of short lines, one per item. A paragraph cannot, roles cannot,
-and skills has its own treatment.
-
-The paginator splits a `.cols2` box the way it splits a list, one atom per item, and
-rebuilds the box on whichever sheet the items land on. So a nine-item list can print six
-items in two columns at the foot of one page and three at the top of the next, and each
-sheet's box lays itself out.
-
-In the studio the same thing is the 1 col / 2 col button on the section's row, and it
-writes `--columns` into the copied command.
-
-## A block beside a float still spans the full width
-
-Only the line boxes inside a block avoid a float. The block's own box does not: it runs
-the full column width, straight under the panel. Nobody notices until the block has a
-background, a border, or a selection outline, and then the outline for one bullet draws
-a rectangle across the sidebar and it looks broken.
-
-`display:flow-root` on each block beside the float fixes it: the block gets its own
-formatting context, shrinks to the space left, and its outline stops where the panel
-starts. Blocks below the float take the full width as before.
-
-## Sidebar, page one
-
-Page one has a sidebar, floor to ceiling, 35% of the width. Page two onwards does not.
-That is the whole of the layout and there is nothing conditional about it: the column is
-there whether its content fills it or not, exactly like the full-height sidebars, and it
-simply stops after page one. Later sheets carry an 8mm tint edge so they read as the
-same document.
-
-If the sidebar cannot hold everything on page one, the remainder joins the main flow at
-the top of page two with its heading cloned onto it, so it arrives as a headed section
-rather than a run of orphan blocks.
-
-**Two attempts at being clever here were both worse than the plain thing.** Cutting the
-panel to the height of its content and flowing the rest of page one underneath produced
-a column break, and a column break strands a bullet at the foot of the page. Making it a
-float fixed the break but meant the panel stopped wherever its content did, which reads
-as a sidebar that got cut off. Trying the panel whole and falling back to a name plate
-avoided both and gave a layout called "sidebar, page one" with no sidebar on it. The
-column is a column. Leave it alone.
-
-## Two columns for a flat list
-
-`--columns education,training-certifications` runs those sections in two columns. Only
-flat lists take it: a set of short lines, one per item. A paragraph cannot, roles cannot,
-and skills has its own treatment.
+`--columns education,training-and-certifications` runs those sections in two columns.
+Only flat lists take it: a set of short lines, one per item. A paragraph cannot, roles
+cannot, and skills has its own treatment.
 
 The paginator splits a `.cols2` box the way it splits a list, one atom per item, and
 rebuilds the box on whichever sheet the items land on. So a nine-item list can print six
@@ -442,6 +492,12 @@ starts. Blocks below the float take the full width as before.
 
 ## The panel takes a whole section or none of it
 
+`sidebar-top` and `sidebar-top-right` put the sidebar on the first sheet and nowhere
+else. That is the layout rather than a bug: the skills column earns its place beside the
+profile, and by page two the reader is in the roles and the width is worth more than the
+panel. The following sheets keep an 8mm tint edge so they still read as the same
+document.
+
 `sidebar-top` has one page of panel and no more. The first attempt let the panel hold
 what fitted and pushed the rest into the document, and it looked exactly like what it
 was: a list chopped in half, with no way for a reader to know the two halves are one
@@ -461,15 +517,6 @@ them all at the first marker instead and education lands ahead of the roles.
 
 The full-height sidebars are a different case and still carry a section across pages,
 because there the sidebar continues on the next sheet and the reader can see it does.
-
-## Group the studio by what the layout does
-
-Eighteen layouts in one long list is a wall. They sort into four families by the shape
-of the page rather than by name, and each family gets a plain-English line: a column
-beside the page, a block across the top, something down the side of the roles, nothing
-but type. Pairs that differ only in which hand they sit on stay next to each other, so
-`Sidebar, page one` and `Sidebar, page one, right` are side by side rather than three
-rows apart.
 
 ## The cover letter wears the same skin
 
@@ -491,12 +538,11 @@ headings that a letter does not have; `LETTER_FIX` returns it, which is what tak
 All eighteen layouts print this letter on one page. That is the bar: if a layout cannot,
 the layout is wrong for a letter, not the letter.
 
-## Save as PDF
+## Save as PDF from inside the studio
 
-One button, at the top. It prints each document in turn, straight from the studio page,
-and the browser's own Save as PDF writes the file. The browser's own print, from the
-menu or the keyboard, does the same thing: whichever way a print starts, what comes out
-is the sheets.
+One button, at the top of the page beside the zoom. It prints each document in turn,
+straight from the studio page, and the browser's own Save as PDF writes the file. The
+browser's own print, from the menu or the keyboard, does the same thing.
 
 **The sheets have to be moved into the studio document first.** They are laid out inside
 a frame, and a browser prints a frame as one box and clips whatever does not fit. So a
@@ -521,57 +567,11 @@ file, and a rasterised one has no text in it at all, which is useless to a keywo
 screener. Printing the document itself keeps the real faces, the real colours and
 selectable text.
 
-**When the browser will not print at all,** the studio saves each document as a
-standalone page that opens its own print dialog. Below that there is a third route which
-is the most reliable of the three: Copy settings on the Working tab, handed to Claude,
-who runs `render_cv.py` and writes both PDFs into the person's folder.
-
-## PDFs rendered outside the browser
-
-Claude can produce the finished PDFs directly, which is what to do when the person's
-browser is fighting the print dialog or they simply want the files.
-
-    python resu-studio/scripts/render_cv.py "<cv>.md" --layout ... --palette ... \
-        --head-font ... --body-font ... --size ...          -> the CV page
-    same, plus --letter "<cover letter>.md"                  -> the letter page
-
-then print each page to A4 with a headless browser, zero margins, backgrounds on.
-
-**The faces have to be installed, not fetched.** `fonts.googleapis.com` is not reachable
-from the places this runs. The same families are in the `google/fonts` repository, which
-is, so clone it sparsely for the families in `assets/fonts.json` and install them.
-
-**Install static instances, not the variable files.** A variable font makes Chromium
-write every glyph as a Type 3 drawing procedure, and some keyword screeners cannot pull
-text out of that. `fontTools.varLib.instancer` pins each family at weight 400 and 700 and
-writes plain static faces; the PDF then carries CID TrueType subsets, which read cleanly.
-Check with `pdffonts`: the type column should say TrueType, not Type 3.
-
-**Name the files for the person, the role and the date**, because that is what a panel
-sees in a folder of applications:
-
-    <full name> - <role> - <date> - CV.pdf
-    <full name> - <role> - <date> - Cover letter.pdf
-
-**The trailing blank page.** `#doc` carries a 1px bottom padding on screen so the last
-sheet's shadow is not clipped. In print that 1px is a whole extra sheet of paper, and it
-came out of every printer until someone counted the pages in a PDF rather than looking
-at the preview. `@media print` now zeroes `#doc` padding, margin and line-height, and
-restores `line-height:normal` on the sheet.
-
-**Colour has to be forced.** Save as PDF leaves background graphics off by default in
-most browsers, which prints a dark sidebar as white paper and a tinted panel as nothing.
-`print-color-adjust:exact` on everything, inside `@media print`, is the instruction not
-to. Without it the skin the person chose is not the skin that arrives.
-
-**Check prints by counting pages in a real PDF**, not by eye in a print preview. Render
-the page headless, print to A4 with zero margins, and count the pages in the file. All
-eighteen layouts, both documents, print exactly the number of sheets the studio says they
-will. Check the colour the same way: render page one of the PDF to an image with
-background graphics off, and sample a pixel inside the sidebar. Check the text the same
-way: extract it and read it, because that is what a screener gets.
-
----
+**When the browser will not print at all,** the third route is the most reliable of the
+three: **Copy settings**, the button next to Save as PDF on the bar above the page,
+handed to Claude, who runs `render_cv.py` and writes both PDFs into the person's folder.
+The button is on the bar rather than on a tab, so it is there whichever tab is open and
+whether the view is Working or Final.
 
 ## Printing to PDF
 
@@ -580,12 +580,42 @@ that file to a real browser and asks the browser to print it.
 
 ```bash
 python3 scripts/render_cv.py cv.md --letter cover-letter.md \
-    --layout sidebar-dark --palette forest --pdf
+    --layout sidebar-dark --palette forest \
+    --role "<the job title>" --employer "<the employer>" --pdf
 python3 scripts/render_cv.py cv.md --pdf --pdf-dir "<the folder they asked for>"
 ```
 
-One run writes every document it was given: `<Name> - Resume.pdf` and
-`<Name> - Cover letter.pdf`. They are posted together, so they are printed together.
+One run writes every document it was given. They are posted together, so they are
+printed together.
+
+### What the files are called
+
+`_pdf_names` builds the name out of five parts, joined with " - ", and leaves out any
+part with nothing in it:
+
+```
+<Full name> - <role> - <employer> - <date> - CV.pdf
+<Full name> - <role> - <employer> - <date> - Cover Letter.pdf
+```
+
+The role is `--role`, the employer is `--employer`, and the date is `--date` or today
+as `YYYYMMDD`. So a run with all of them gives:
+
+```
+Alex Morgan Taylor - Records Officer - Redgate Council - 20260902 - CV.pdf
+```
+
+and a run with only a role gives `Alex Morgan Taylor - Records Officer - 20260902 -
+CV.pdf`, with no empty gap between two hyphens where the employer would have been.
+
+**`--employer` is why it is there.** Two applications for the same job title, built from
+the same markdown on the same day, otherwise produce one filename and the second run
+writes over the first. Pass it whenever the employer is known, which is always by the
+time a PDF is being printed.
+
+Re-rendering the same skin replaces the file, which is what somebody trying six skins
+wants. A different advertisement does not: the earlier PDF is moved aside under a dated
+name first and the run says so.
 
 ### Why a browser and not a library
 
@@ -618,31 +648,34 @@ compares them with the faces the skin asked for. If one is missing it deletes th
 file and says which face and why. `--pdf-allow-substitute` writes it anyway, and is
 for the case where a near miss is genuinely fine.
 
-### Carrying the fonts, so the check always passes
+This check only means something because the typesets name real bundled families. When
+they named Georgia and Helvetica Neue, no face resolved, nothing was embedded, and the
+check short-circuited to "nothing missing" while the PDF came out in whatever the
+machine had.
+
+### Carrying the fonts
 
 ```bash
 python3 scripts/fetch_fonts.py             # every family in assets/fonts.json
 python3 scripts/fetch_fonts.py lora source-sans
 ```
 
-This writes `assets/fonts/<key>-400.woff2` and `-700.woff2`. From then on the
-renderer embeds those files in the document as base64, and the page draws the same
-letters on a machine with no network at all, which is where PDFs usually get made.
-A single variable file can go in by hand as `<key>-variable.ttf` and is declared
-across the whole weight range rather than as two fixed weights, so bold is real bold
-rather than a smear.
+This writes into `assets/fonts/`, and everything the skill ships with is already there.
+The renderer embeds those files in the document as base64, which is the one mechanism
+described under **The faces** above. A single variable file can go in by hand as
+`<key>-variable.ttf` and is declared across the whole weight range rather than as two
+fixed weights, so bold is real bold rather than a smear.
 
-Faces with no `g` entry in `fonts.json` — Arial, Times New Roman, Verdana — are the
-machine's own and are never fetched. They are also the one case where the file
-depends on what is installed, so a skin built on them prints exactly only where those
-faces exist.
+The renderer's matcher reads the whole folder rather than insisting on one filename, so
+a family downloaded from Google's own zip drops straight in under whatever name it
+arrived with.
 
 ### Pagination waits for the fonts
 
 `paginate.js` measures text to decide where a sheet ends, so it waits for
 `document.fonts.ready` before reading a single height. Measured in the fallback face
 and repainted in the real one, every measurement is wrong by a little and a bullet
-that fitted moves to the next page — and wrong differently in the preview than in the
+that fitted moves to the next page, and wrong differently in the preview than in the
 print, which is exactly the drift this whole file exists to prevent. A font server
 that never answers costs three seconds, not the document.
 
@@ -657,3 +690,18 @@ prints both documents where the files are.
 It does not save the pages as HTML. That was the old fallback, and it left people
 holding two files they still had to print themselves, which is the job they pressed
 the button to avoid.
+
+### Checking a print
+
+Count the pages in the finished PDF rather than looking at a print preview. `--pdf`
+prints the count it got. Check the colour by rendering page one to an image and
+sampling a pixel inside the sidebar, because Save as PDF leaves background graphics off
+by default in most browsers and `print-color-adjust:exact` inside `@media print` is the
+instruction not to. Check the text by extracting it and reading it, because that is what
+a screener gets. `references/ats.md` has that check and what has to be true in it.
+
+**The trailing blank page.** `#doc` carries a 1px bottom padding on screen so the last
+sheet's shadow is not clipped. In print that 1px is a whole extra sheet of paper, and it
+came out of every printer until someone counted the pages in a PDF rather than looking
+at the preview. `@media print` now zeroes `#doc` padding, margin and line-height, and
+restores `line-height:normal` on the sheet.

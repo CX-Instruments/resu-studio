@@ -3,6 +3,7 @@ job: employer-role-title
 variant: cv-data-reporting
 scored: YYYY-MM-DD
 stage: before
+depth: essentials
 verdict: worth it
 counts:
   asks_total: 0
@@ -11,8 +12,12 @@ counts:
   implied: 0
   you_have: 0
   a_reader_would_find: 0
-  not_yet_worked_out: 0
+  unscored: 0
 ---
+
+`depth:` is `essentials` or `all`, copied out of `answers.md` from the question put in
+Phase 1. `build_studio.py` reads it straight from this frontmatter, so the studio can
+say how deep the advertisement was scored without being told again.
 
 The honest answer in one sentence, written to them, no heading above it.
 
@@ -55,7 +60,7 @@ Score tab and the skill both use, so all three describe an ask the same way:
 
 The **Ask** cell starts with the id from `asks.md`, so the studio can put the
 advertisement's own wording and the line that answers it side by side. The
-**Evidence** cell is fact ids from `facts.md`, comma separated — that is where the
+**Evidence** cell is fact ids from `facts.md`, comma separated, and that is where the
 studio reads the verbatim line from.
 
 | Ask | Necessity | State | Evidence | Note |
@@ -64,4 +69,4 @@ studio reads the verbatim line from.
 | a2 Stakeholder engagement | must | buried | fact-brief-1 | their word, your word |
 | a3 Data governance | must | near | fact-gov-3 | what you have, what was asked |
 | a4 Machine learning | nice | missing | | plainly |
-| a5 | must | not yet worked out | | not a gap, nobody has checked |
+| a5 | must | unscored | | not a gap, nobody has checked |

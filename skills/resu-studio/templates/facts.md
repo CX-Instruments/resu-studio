@@ -47,7 +47,7 @@ confirmed: false
 conflict: false
 ```
 
-## example-conflict
+## skill-example
 
 ```
 id: skill-example

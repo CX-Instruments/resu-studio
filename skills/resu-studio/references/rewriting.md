@@ -1,12 +1,16 @@
 # Rewriting a line
 
-`voice.md` says what a line must not be. This says what a good one looks like, by
-showing the same line before and after. Read it before drafting any `Suggested:` text.
+`voice.md` says what a line must not be. This says what a good one looks like. Read it
+before drafting any `Suggested:` text.
 
-Every "after" below is built only from what the "before" already contained, or from an
-answer the person gave. Nothing is added. Where the stronger line needs a fact that is
-not on the record, the entry shows the question instead of the rewrite, because that
-is the correct output.
+There are no worked before-and-after pairs in this file, and that is deliberate. The
+patterns are named instead, at *The patterns to look for*, and the before and after
+gets shown on one of the person's own lines. See *Show it on their lines* below for
+why.
+
+Whatever the rewrite is, it is built only from what the original already contained or
+from an answer the person gave. Nothing is added. Where the stronger line needs a fact
+that is not on the record, the correct output is the question rather than the rewrite.
 
 ## What a rewrite is for
 
@@ -59,13 +63,13 @@ somewhere else, and then the cut is a duplication cut and says so.
 
 **These are content, not padding, and they survive the cut:**
 
-- **the conditions the work ran under** — a compliance regime, a fixed window, a
+- **the conditions the work ran under**: a compliance regime, a fixed window, a
   regulated environment, volume, a legacy system, a deadline someone else set
-- **the standard it was held to** — auditability, legal accuracy, reconciliation to
+- **the standard it was held to**: auditability, legal accuracy, reconciliation to
   the cent, a regulator's rule
-- **who it was for** — the executive, a regulator, a vendor, the public
-- **the scale** — how many, how much, how long, across how many systems
-- **what it was part of** — the programme, the upgrade, the migration
+- **who it was for**: the executive, a regulator, a vendor, the public
+- **the scale**: how many, how much, how long, across how many systems
+- **what it was part of**: the programme, the upgrade, the migration
 
 Strip these and every job in every industry reduces to the same four verbs. They are
 the difference between a hard job and an easy one with identical duties, and a reader
@@ -83,7 +87,7 @@ The rule is not "cut adjectives". It is **who the adjective is about**.
 **An adjective about the person needs evidence.** High-performing, proven,
 exceptional, trusted, highly skilled, seasoned. These are the person marking their own
 work, a reader discounts them on sight, and they are what the trait rules exist to
-remove. If somebody else said it — an award, a rating, a citation — it is a fact and
+remove. If somebody else said it, in an award, a rating or a citation, it is a fact and
 it stays, attributed.
 
 **An adjective about the work does not.** Fast-paced, compliance-driven, high-volume,
@@ -100,7 +104,7 @@ matters. Cutting both halves is the mistake this section exists to stop.
 **A rewrite is their sentence made stronger. It is not a new sentence.**
 
 - **Keep the person.** If the CV is written in the first person, the rewrite is in the
-  first person. Verbless third person — "Writes", "Defines", "Manages" — is the
+  first person. Verbless third person, "Writes", "Defines", "Manages", is the
   grammar of a position description, and a page written in it reads as though the
   advertisement was pasted back at the employer.
 - **Keep the tense.** A current role stays present. Putting a role they still hold
@@ -119,8 +123,8 @@ there is no reason, it is not a change, it is a habit.
 Removing what cannot be verified is not the same as removing all confidence. The
 finished page is still a professional document written by somebody who is good at
 their job, and it should read that way: assured, specific, and in full sentences that
-someone chose. A line can be certain without being inflated — certainty comes from the
-detail being exact, not from the adjectives.
+someone chose. A line can be certain without being inflated, because certainty comes
+from the detail being exact rather than from the adjectives.
 
 The failure mode this file has to guard against runs in both directions. On one side,
 a line claiming more than the record holds. On the other, a line so stripped it reads
@@ -176,6 +180,10 @@ about some kind of work, and whichever kind you choose tells the next person thi
 built for somebody else. Somebody whose work looks nothing like the examples concludes
 the tool is not for them, and they are reading the very file meant to teach their voice.
 
+This rule governs what is shown to the person: the proposals, the studio, the chat and
+anything else they read. The occupational examples inside these reference files are
+internal working notes, nobody applying for a job ever sees them, and they stay.
+
 Their CV is the example. It arrived in Phase 1 and it is full of their own weakest
 lines, in their own field, about work they can actually talk about. When a rule needs
 demonstrating, take one of their lines and show the before and after. That is more
@@ -195,7 +203,7 @@ two abstract verbs standing where one concrete one goes, and the reader infers t
 reason anyway.
 
 This rule is about a stated motive, and it stops there. **A clause describing the
-conditions the work ran under is not scene-setting** — it is the hardest information
+conditions the work ran under is not scene-setting**. It is the hardest information
 in the sentence, and cutting it is the single most common way a rewrite ends up
 flatter than the line it replaced. See *Shorten by cutting repetition* above.
 
@@ -239,7 +247,7 @@ the page:
 3. **You would not want the follow-up question.** If "tell me more about that one"
    would be uncomfortable, the line has drifted past the record. Take it back.
 
-And one more, read the other way round — against the line it replaces:
+And one more, read the other way round, against the line it replaces:
 
 4. **Something in the original is no longer there.** Read the current line, then the
    suggestion, and name every piece of information in the first that is missing from

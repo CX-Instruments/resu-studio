@@ -19,13 +19,22 @@ them on the page spends room that a criterion could have used.
 
 ## Drafting key achievements
 
-The section is a culmination. It says, in four to six lines, what this person would
-bring to this job, drawn out of what they have already written. It is the first thing
-under the profile and it is often the only part of the CV a busy reader finishes.
+The section is a culmination. It says what this person would bring to this job, drawn
+out of what they have already written. It is the first thing under the profile and it
+is often the only part of the CV a busy reader finishes.
 
-**Draft six. Let them pick.** Six gives a real choice; ten is a chore. Ticking four is
-the common landing. Never pick for them and never print an achievement they have not
-ticked.
+**The count, and it is one rule in three parts.**
+
+**Draft six candidate lines.** Always six. `templates/achievements.md` has six slots
+and `build_studio.py --achievements` loads whatever is there into the Key achievements
+panel. Six gives a real choice; ten is a chore; four leaves them nothing to reject.
+
+**The person ticks four to six.** Ticking four is the common landing and it is a good
+outcome. Nothing prints until they tick it, and never pick for them.
+
+**A padded sixth comes off.** If the record does not carry a sixth line at career
+level, say so and let the section print five. Five real lines beat six with one
+padded, and the padded one is the line a panel asks about.
 
 ### Write them at career level, not role level
 
@@ -93,8 +102,8 @@ one line at each of the essentials that carry the most weight, typically:
 - a problem they find repeatedly, and fix
 - a habit with a real figure behind it
 
-If their record does not support one of these, leave it out. Five real lines beat six
-with one padded.
+If their record does not support one of these, leave it out. That is the padded sixth
+coming off before anybody sees it.
 
 ### Numbers
 
@@ -134,7 +143,8 @@ name what a candidate doubles up on, and rewrite the candidate.
 
 ## What the section costs
 
-Four achievements is roughly a third of a page, and nothing is taken off to pay for it.
+Four ticked achievements is roughly a third of a page, and nothing is taken off to pay
+for it.
 Say the page count out loud when the section goes on, so the person is choosing with
 the cost in front of them rather than finding it later.
 

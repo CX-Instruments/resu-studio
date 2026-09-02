@@ -3,6 +3,22 @@
 Read this before writing anything: a CV line, a statement of claims, a cover letter,
 a proposal, or a sentence of chat.
 
+## What these rules govern
+
+**Everything written for the person.** The CV, the statement of claims, the cover
+letter, every proposal, every template the person is shown or handed, and every
+sentence Claude says to them in chat. If a person can read it, these rules hold, and
+`scripts/check.py` fails the dash rule on the drafts in their folder.
+
+**Not the reference files in this folder.** `references/*.md` are internal working
+notes, written for whoever is doing the work rather than for the person applying for a
+job. They are exempt, and they are not examples of what to write for anybody. The rules
+below are not weakened by that: nothing exempt ever reaches a reader, so nothing exempt
+can cost the person anything.
+
+Where a reference file quotes a block that gets shown to the person, that block is not
+exempt and follows every rule here.
+
 ## The hard bans
 
 These are not preferences. A single one of them undoes the credibility of everything

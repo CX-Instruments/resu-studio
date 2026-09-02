@@ -90,14 +90,57 @@ know that happened until they go looking. So:
 - write it into a folder on their own computer when one is connected, and say which
   folder and what it is called, in plain words.
 
-**If they have a folder connected, that folder is where their record lives.** Point
-`data-location.txt` at it, or pass the folder to `--pdf-dir`, so that `facts.md`, the
-CV as it arrived, and every finished PDF sit on their disk and survive both the end of
-this session and any update to this plugin. This is the whole point of `paths.py`, and
-it only works if somebody does it.
+**Their folder is `~/.resu-studio`, unless somebody named another one.** That is
+outside the plugin, so a plugin update cannot delete it, and it is where `facts.md`,
+`answers.md`, `cv-source/` and `_Your Documents Are Here/` all live. Run
+`python3 scripts/paths.py` to see the folder and why it was chosen. Nothing about this
+needs setting up: the default already survives an update.
+
+**If they have a folder connected, point at it, so their record sits on their own
+disk.** One line, the folder, in either pointer file:
+
+- `~/.resu-studio/location` is the stable one, outside the plugin.
+- `data-location.txt` beside `SKILL.md` still works and is copied out to the stable
+  one the first time it is used, so the next update cannot lose the pointer.
+
+A pointer beats the `CLAUDE_PLUGIN_DATA` environment variable, because a person
+writing a path has said what they want and a host guessing one has not.
+
+**Write the path as this session sees it.** A Windows path like `D:\Users\Jane\CVs`,
+or any path with a backslash in it, or a relative path, is refused with a plain
+message rather than quietly building a folder whose name contains the backslashes.
+A person on Windows has their folders mounted somewhere under a session path that
+starts with `/` and has no drive letter, usually something like
+`/home/<you>/mnt/<folder>`. `paths.py` looks for a mounted folder with the same name
+and says which one it found, so read the message rather than guessing at a path.
+
+**`--pdf-dir` moves rendered output and nothing else.** It does not relocate
+`facts.md`, `answers.md` or the CV as it arrived. Those follow the pointer.
+
+**Anything left in the old in-plugin folder is copied out on the first run.** The old
+folder is left exactly as it was. Nothing already in the new folder is written over,
+and the run says on screen what it did and what it left alone. It happens once. If the
+person sees that message, it is their own history being brought somewhere an update
+cannot reach.
 
 **Never send them a command to run.** The studio prints one for the design they land
 on, and that is for you to execute, not for them.
+
+**Every command that names a ledger uses `paths.py` to name it.** A bare relative
+`facts.md` resolves against the session's working directory, which is thrown away at
+the end of the session, so the file the next advertisement needs is gone. Write it as
+command substitution, every time:
+
+```bash
+python3 scripts/paths.py --facts       # one bare path, nothing else
+python3 scripts/paths.py --data        # the folder the ledgers live in
+python3 scripts/paths.py --answers
+python3 scripts/paths.py --cv-source
+python3 scripts/paths.py --documents
+```
+
+Every command block below is written that way, and so is every command you write that
+is not in this file.
 
 ## Never ask the same question twice
 
@@ -105,9 +148,10 @@ Asking a person something they already told you is the fastest way to lose their
 trust in the whole exercise, and it happens because the answer was used and then
 dropped. Every answer gets written down, in a file, the moment it arrives.
 
-**The file is `answers.md`, in the same folder as `facts.md`** — the resolved data
-folder from `scripts/paths.py`, so it survives this session and every later job ad.
-Create it on the first question. Its shape is `templates/answers.md`.
+**The file is `answers.md`, in the same folder as `facts.md`**, the resolved data
+folder that `python3 scripts/paths.py --answers` names, so it survives this session
+and every later job ad. Create it on the first question. Its shape is
+`templates/answers.md`.
 
 One block per question, appended in the order asked:
 
@@ -122,7 +166,7 @@ led to: fact-team-size          # or: nothing
 The rules, and none of them are optional:
 
 - **Read `answers.md` before you ask anything.** Before every question, in every
-  phase. If the question is already in the file, you have your answer — use it and
+  phase. If the question is already in the file, you have your answer. Use it and
   move on.
 - **Write the answer before you use it.** Not at the end of the phase, not when the
   file is next touched. The moment they answer.
@@ -169,8 +213,9 @@ Before copying anything in, run `python3 scripts/documents.py`. It lists what th
 person has produced and which advertisement each file was for.
 
 **If it lists an advertisement other than this one, stop and say so before doing any
-work.** Name what survives and what does not — a warning that only lists losses reads
-as "you are about to lose everything", and people click through those. Something like:
+work.** Name what survives as well as what does not. A warning that only lists losses
+reads as "you are about to lose everything", and people click through those. Something
+like:
 
 > Starting **<the new advertisement>** will change what is in the studio.
 >
@@ -184,19 +229,30 @@ as "you are about to lose everything", and people click through those. Something
 Then wait. Do not begin Phase 2 until they answer.
 
 **Two things make this safe rather than merely announced.** `facts.md` lives in the
-person's own folder and is never rewritten by a new advertisement — read it, do not
-rebuild it. And every render passes `--role "<the job title>"`, so each application
-writes its own PDF instead of two applications sharing one filename. When a file would
-be written over by a different application anyway, the earlier one is kept under a
-dated name and the render says so.
+person's own folder and is never rewritten by a new advertisement, so read it and do
+not rebuild it. And every render passes `--role "<the job title>"` and
+`--employer "<the employer>"`, so each application writes its own PDF instead of two
+applications sharing one filename. When a file would be written over by a different
+application anyway, the earlier one is kept under a dated name and the render says so.
+Re-rendering the same application on another skin replaces its own file, which is what
+somebody trying six skins wants.
 
-**Never pass `--role` for one advertisement while working on another.** That is the
-one thing that would let a document be written over: the filename is what tells two
-applications apart.
+**Never pass `--role` or `--employer` for one advertisement while working on
+another.** That is the one thing that would let a document be written over: those two
+names are what tell two applications apart.
 
-Copy every source into `sources/` untouched: the advertisement, the job pack if there
+Copy every source into `cv-source/` untouched, which is the folder
+`python3 scripts/paths.py --cv-source` names: the advertisement, the job pack if there
 is one, and every CV variant. Extract the text of each into a `.txt` beside it, so a
 later session can re-read without the original.
+
+**Then write the CV out as markdown in the `templates/cv.md` shape, into
+`cv-source/`.** Nothing later in this skill can read a PDF or a Word file. Phase 3
+builds the studio from a markdown CV, and `build_studio.py` refuses markdown with no
+`# Name` heading, so a CV that arrived as anything else has to be converted here or
+Phase 3 has nothing to open. Convert it faithfully: their headings, their wording,
+their order, their spelling. The file format changes and the content does not, so no
+line is reworded, dropped or tidied on the way through.
 
 Ask for what is missing. Advertisements of every kind point at a second document
 and assume you will go and read it: a job pack, an applicant kit, a position
@@ -207,8 +263,10 @@ advertisement references one, ask for it.** Working from the advertisement alone
 produces a confident answer to the wrong question. If a URL will not fetch, say so
 and ask for the text rather than reconstructing the ad from its title.
 
-**Done when:** every source is on disk in the person's own words, and the application
-format is known: what documents, what word limits, what page limit.
+**Done when:** every source is on disk in the person's own words, the CV is saved in
+`cv-source/` as markdown in the `templates/cv.md` shape with a `# Name` heading at the
+top of it, and the application format is known: what documents, what word limits, what
+page limit.
 
 ### Then stop and ask how deep to go. Before you read anything else.
 
@@ -238,9 +296,11 @@ Ask it plainly, in these terms, and wait for an answer:
 > Start with the must-haves if you are unsure. Expanding later costs the same as doing
 > it now, so nothing is wasted either way.
 
-**Record the answer** as `depth: essentials` or `depth: all` in the scorecard's
-frontmatter, so every later step and every later session knows what was agreed without
-asking again.
+**Record the answer in `answers.md`, the moment it arrives**, like every other answer,
+as `depth: essentials` or `depth: all`. The scorecard does not exist yet. When it is
+written in Phase 3, copy the same word into its frontmatter as `depth:`, which is
+where `build_studio.py` reads it and where every later session finds it without asking
+again.
 
 **Never choose for them, and never quietly do the bigger job.** If they have not
 answered, ask again rather than assuming. Doing the full pass uninvited spends someone
@@ -251,10 +311,13 @@ else's limit on a decision they did not make.
 Two ledgers. `facts.md` and `asks.md`. Templates in `templates/`.
 
 **They do not live in the skill.** Run `python3 scripts/paths.py` to see where this
-person's folder is; that is where `facts.md`, `cv-source/` and their finished
-documents go. A plugin update replaces the skill folder and deletes the old one, so
-anything kept inside it would disappear on a routine update — years of somebody's
-own history, with nothing on screen connecting the loss to the update that caused it.
+person's folder is; that is where `facts.md`, `asks.md`, `answers.md`, `cv-source/`
+and their finished documents go. Write them there and name them there:
+`"$(python3 scripts/paths.py --data)/asks.md"`, and
+`"$(python3 scripts/paths.py --facts)"` for the facts ledger. A file written to a bare
+relative name lands in the session's working directory, which is thrown away when the
+session ends, and the next advertisement then finds no history and rebuilds one that
+already existed.
 
 The facts ledger is the reusable asset. Build it once per person and add to it. It
 survives every application and every CV variant.
@@ -285,8 +348,15 @@ Say how many are unscored every time you report a score, in the same sentence as
 number. A score of sixteen of eighteen essentials with eleven asks untouched is an
 honest answer; the same number with the untouched ones unmentioned is not.
 
-`scorecard.md`. Every ask gets one of these, and these are the words the studio and
-the printed report both use, so all three describe an ask the same way:
+`scorecard.md`, in the person's folder. Copy the depth they chose in Phase 1 into its
+frontmatter as `depth: essentials` or `depth: all`; that is where `build_studio.py`
+reads it. Necessity on every row is one of five words: `must`, `nice`, `implied`,
+`condition`, `not a cv question`. The studio draws all five with labels of their own,
+so a citizenship or licence condition is shown as a condition of the job rather than
+as a soft item lifted off the role description.
+
+Every ask gets one of these states, and these are the words the studio and the printed
+report both use, so all three describe an ask the same way:
 
 | state | means |
 |---|---|
@@ -301,24 +371,40 @@ the printed report both use, so all three describe an ask the same way:
 Two counts, not one: what the person has, and what a reader would find on the current
 page. The gap between those two numbers is the entire value of the exercise.
 
-**Then build the studio. This is the end of Phase 3, not the start of Phase 6.**
+**Then build the studio, at the end of Phase 3.** This is where it first exists. It is
+rebuilt in Phase 4 with the proposals in it, and again in Phase 6 from the assembled
+CV. A rebuild for the same role, employer and CV file replaces this same page. The
+Phase 6 rebuild reads a different CV file, so it keeps this one under a dated name and
+says where it went, which is what you want: the score before and the score after are
+both still on disk.
 
 A table of rows is not a score anybody can take in, and this is the first moment the
 person has something real to look at: their own CV, drawn, with the score beside it.
 Everything up to here has been the skill's working papers.
 
 ```bash
-python3 scripts/build_studio.py --cv <their CV as it arrived>.md \
-    --scorecard scorecard.md --asks-md asks.md --facts facts.md \
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
+    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+    --facts "$(python3 scripts/paths.py --facts)" \
     --role "<the job title>" --employer "<the employer>"
 ```
 
-The Score tab is the scorecard. It reads the three files you have just written — the
-advertisement's own wording from `asks.md`, the state of each ask from
-`scorecard.md`, and the verbatim line that answers it from `facts.md` — and draws the
-two counts, every ask worst first, and the line on their CV that answers it.
-**Never build a separate scorecard page.** There is one place a person reads their
-score, and it is the studio.
+The `--cv` is the markdown written in Phase 1: their CV as it arrived, converted into
+the `templates/cv.md` shape and changed in no other way.
+
+**`--role` is required and the build refuses without it.** It names the file, and it
+is half of the key the studio's browser storage uses. `--employer` is the other half,
+so two employers hiring the same job title do not share one set of marks.
+
+The Score tab is the scorecard. It reads the three files you have just written: the
+advertisement's own wording from `asks.md`, the state of each ask from `scorecard.md`,
+and the verbatim line that answers it from `facts.md`. It draws the two counts, every
+ask worst first, and the line on their CV that answers it. **Never build a separate
+scorecard page.** There is one place a person reads their score, and it is the studio.
+
+The studio carries its typefaces inside itself rather than fetching them from a font
+server, so the preview measures its page breaks in the same metrics the print uses.
 
 Hand it over and say what it is: their CV as it stands, scored, before anything has
 been changed. The markdown files are the record behind it and are handed over too,
@@ -327,28 +413,34 @@ but the studio is the thing you point them at.
 Full instructions: `references/scoring.md`.
 
 **Done when:** the studio has been built and handed over with a populated Score tab,
-the person can see where they stand before a single word has changed, and the gaps
-are named plainly with no softening.
+everything the build said it had nowhere to put has been read and dealt with, the
+person can see where they stand before a single word has changed, and the gaps are
+named plainly with no softening.
 
 ## Phase 4: Propose
 
-`proposals.md`. One entry per change. Every entry carries:
+`proposals.md`, in the person's folder. One entry per change. The `## P1.` heading
+carries the location in words. Every entry then carries these fields, which are the
+ones `templates/proposals.md` shows and `build_studio.py` reads:
 
 ```
 Line          the studio's id for the line this lands on
-Location      section, role, which bullet, in words
-Currently     the full existing text, verbatim
-Suggested     the full replacement text, ready to paste
+Currently     the full existing text, verbatim, or `Not on the CV.`
+Suggested     the full replacement text, ready to paste, or `Delete this bullet.`
 Why           one or two sentences
 Answers       which ask ids this serves
 Draws on      which fact ids this rests on
+Costs         on an addition, which line comes out or how the budget rises
+Decision      left blank, for the person
 ```
 
 **`Line:` is not optional.** It is the id `render_cv.py` and the studio both build
-from the markdown — `professional-experience/2/b3`, `profile/0`, `key-skills/technical`
-— and it is what puts the suggestion on the right line of the page. A proposal without
-one cannot be shown against anything and does not reach the person.
-`references/marking.md` has the full table of ids.
+from the markdown, such as `professional-experience/2/b3`, `profile/0` or
+`key-skills/technical`, and it is what puts the suggestion on the right line of the
+page. A proposal without one cannot be shown against anything and does not reach the
+person. A proposal whose `Line:` names an id that is not on this CV is left out for
+the same reason, and the build names it. `references/marking.md` has the full table of
+ids.
 
 Additions say `Currently: not on the CV`, and their `Line:` is the line they print
 after. Removals say `Suggested: delete this bullet` and always carry a reason.
@@ -356,32 +448,57 @@ after. Removals say `Suggested: delete this bullet` and always carry a reason.
 Run the budget check and the duplication check before writing the file, not after.
 
 **Then rebuild the studio with the proposals in it.** Same command as Phase 3 with
-`--proposals` added, same `--role`, so it replaces the studio they already have
-rather than making a second one. Their marks live in the browser keyed to the role,
-so nothing they have already decided is lost.
+`--proposals` added, same `--role` and same `--employer`, so it replaces the studio
+they already have rather than making a second one. Their marks live in the browser
+keyed to that role and employer, so nothing they have already decided is lost.
 
-**Draft the key achievements too, into `achievements.md`.** Six lines at career level,
-each reaching across more than one employer, from `templates/achievements.md`. They are
-not proposals — a proposal sits on a line that exists, and this section may not be on
-their CV at all — so they go in their own file and the studio offers them as picks.
-Nothing prints until the person ticks one. Full rules: `references/achievements.md`.
+**Draft the key achievements too, into `achievements.md`.** Draft six lines at career
+level, each reaching across more than one employer, from `templates/achievements.md`.
+The person then ticks four to six of them. If a sixth line only exists to reach six, it
+comes off. They are not proposals, because a proposal sits on a line that exists and
+this section may not be on their CV at all, so they go in their own file and the studio
+offers them as picks. Nothing prints until the person ticks it. Full rules:
+`references/achievements.md`.
 
 ```bash
-python3 scripts/build_studio.py --cv <their CV as it stands>.md \
-    --scorecard scorecard.md --asks-md asks.md --facts facts.md \
-    --proposals proposals.md --achievements achievements.md \
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
+    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+    --facts "$(python3 scripts/paths.py --facts)" \
+    --proposals "$D/proposals.md" --achievements "$D/achievements.md" \
     --role "<the job title>" --employer "<the employer>"
 ```
 
-**Read what the build prints, every time.** If it names sections it had nowhere to put,
-those parts of their CV are not on the page and saying otherwise is the worst thing
-this skill can do. The studio carries profile, key skills, experience, education,
-training and key achievements; anything else has to be folded into one of those or it
-does not print, and the person is told which and why.
+Same `--cv` as Phase 3, because nothing has been assembled yet and every proposal sits
+on a line of the CV as it arrived.
+
+**Read what the build prints, every time. There are two things in it.**
+
+The first is content it had nowhere to put. That is a whole section it does not know,
+and now also a block inside a section it does know: a profile written as bullets, an
+intro paragraph above the roles, a skills line it could not read as a group. Any of
+those is a part of their CV that is not on the page, and saying otherwise is the worst
+thing this skill can do. The studio holds six sections: profile, key skills,
+experience, education, training and key achievements. Anything else has to be folded
+into one of those or it does not print, and the person is told which and why.
+
+The second is any proposal whose `Line:` names an id that is not on this CV. Those are
+not in the studio and the person will never see them, so fix the id against the CV the
+studio was built from and build again.
+
+Then run the check.
+
+```bash
+python3 scripts/check.py
+```
+
+It reads the person's own folder, so it needs nothing typed after it. Exit 0 means
+nothing found, 1 means faults to fix, 2 means the command line was wrong, and 3 means
+the folder is not there.
 
 Tell them it is the same studio, now with the suggestions in it. Each one sits on the
 line it would change, showing the line they have and the line proposed, with five
-buttons — **Use this**, **Edit it first**, **Keep mine**, **Ask for another**, and
+buttons: **Use this**, **Edit it first**, **Keep mine**, **Ask for another**, and
 **Take the line off instead**. Nothing is applied.
 
 **And tell them, in the same breath, how the work gets back to you.** The studio keeps
@@ -389,19 +506,20 @@ every decision in their own browser and nowhere else. You cannot see any of it. 
 so, plainly, before they start:
 
 > Nothing you do in there reaches me on its own. When you have been through it, open
-> **hand to Claude** on the edge of the page and paste the block into the chat — or
+> **hand to Claude** on the edge of the page and paste the block into the chat. Or
 > press **Save the decisions file** and give me `cv-decisions.json`. Then I apply it
 > all to the CV at once.
 
 A person who does not know this can work for an hour and believe it was saved,
-because it *was* saved — in their browser, where nothing else can read it. Leaving
+because it *was* saved, in their browser, where nothing else can read it. Leaving
 that unsaid is the single most expensive omission in this whole skill.
 
 Full instructions: `references/proposing-changes.md`.
 
-**Done when:** every proposal carries a `Line:`, the studio has been built with
-`--proposals` and handed over, and the person has been told that their CV is unchanged
-until they press a button in it.
+**Done when:** every proposal carries a `Line:` that names a line the CV actually has,
+`python3 scripts/check.py` has been run and everything it named has been fixed or
+answered, the studio has been built with `--proposals` and handed over, and the person
+has been told that their CV is unchanged until they press a button in it.
 
 ## Phase 5: Decide
 
@@ -413,12 +531,12 @@ not seen is the thing this whole studio exists to prevent.
 So in this phase you wait. Do not put the proposals to them one by one. Do not ask
 which ones they accept. Do not offer to work through them in the chat. They open the
 studio, press through the suggestions, and bring back the **hand to Claude** block from
-its panel — which names what they used, what they kept, what they want written again,
+its panel, which names what they used, what they kept, what they want written again,
 and anything they flagged.
 
 **Waiting is not the same as going quiet.** Say what you are waiting for and how it
 gets to you, in one sentence, every time you hand the studio over. If they come back
-without the block — with a question, or a screenshot, or "I have done it" — ask for
+without the block, with a question, or a screenshot, or "I have done it", ask for
 the block before doing anything else. **Never guess at what they decided, and never
 ask them to tell you decision by decision in the chat.** That is the copying-out job
 the block exists to spare them.
@@ -433,7 +551,7 @@ Three things, and only these three, are still a conversation:
 - something they ask you directly
 - a suggestion they sent back with *Ask for another*
 
-If they say they would rather go through it in the chat, do that — their preference
+If they say they would rather go through it in the chat, do that. Their preference
 beats this rule. But it is offered by them, never by you.
 
 Record their decisions against the proposals when the block comes back. A rejected
@@ -454,61 +572,100 @@ to go through and tick everything, never treat unticked lines as outstanding, an
 never hold the CV back because the final check is not complete.** Only the suggestions
 need an answer.
 
-**Done when:** the hand-to-Claude block has come back from the studio and every
-proposal carries a yes, a no, or a rewording in their own words — and none of those
-decisions was extracted from them in the chat.
+**Done when:** the hand-to-Claude block has come back from the studio, every proposal
+carries a yes, a no, or a rewording in their own words, and none of those decisions
+was extracted from them in the chat.
 
 ## Phase 6: Assemble and rescore
 
-Write `cv-<variant>.md` from the accepted proposals plus the untouched lines. The
-markdown file is the deliverable and the master.
+Write `cv-<variant>.md`, into the person's folder, from the accepted proposals plus the
+untouched lines. The markdown file is the deliverable and the master.
 
 Then rescore: keep the first `scorecard.md` as `scorecard-before.md`, write the new
 one against the assembled CV, and rebuild the studio from it with the assembled CV as
-`--cv`. Same `--role`, so it is the same studio and their marks survive. The Score tab
-they have been reading all along now shows the new numbers, and they watch it move
-rather than being told it moved.
+`--cv`. Same `--role` and same `--employer`, so it is written under the same filename
+and their marks, which are keyed to that role and employer, are all still there. The
+Score tab they have been reading all along now shows the new numbers, and they watch
+it move rather than being told it moved.
+
+**Pass the ledgers on this rebuild too.** A rebuild given only `--cv`, `--role` and
+`--employer` opens with an empty Score tab, no suggestions and no achievements panel,
+and prints `asks : 0 (not scored yet)` while you are telling them to watch the score
+move.
+
+```bash
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/build_studio.py --cv "$D/cv-<variant>.md" \
+    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+    --facts "$(python3 scripts/paths.py --facts)" \
+    --proposals "$D/proposals.md" --achievements "$D/achievements.md" \
+    --role "<the job title>" --employer "<the employer>" \
+    --letter "$D/cover-letter-<variant>.md"
+```
+
+Drop `--letter` on the first pass through Phase 6. It goes in when a letter already
+exists from an earlier run, and otherwise the letter arrives in Phase 7 and this is
+built again then.
+
+Then run the check.
+
+```bash
+python3 scripts/check.py
+```
 
 Full instructions: `references/assembling.md`.
 
-**Done when:** the markdown carries every accepted change and no unaccepted one, the
-rescore is shown beside the first score so the movement is visible, and any ask that
-did not move is said out loud rather than left for them to notice.
+**Done when:** the markdown carries every accepted change and no unaccepted one,
+`python3 scripts/check.py` has been run and everything it named has been fixed or
+answered, the rescore is shown beside the first score so the movement is visible, and
+any ask that did not move is said out loud rather than left for them to notice.
 
 **Design is a separate, optional step, and it renders the markdown.** It never reads
 the ledgers, never invents a line, and never truncates. It dresses both documents: the
 resume and the letter always wear the same skin.
 
-**Do not pick the design for them.** They already have the studio from Phase 4. Build
-it again from the assembled CV so the page they are dressing is the finished one, and
-let them choose. It draws their own CV live with every layout, palette, typeface,
-skills treatment, section order and column placement as a control, works on a phone,
-marks where A4 actually cuts, and prints the command line for whatever they land on.
-
-```bash
-python3 scripts/build_studio.py --cv cv-<variant>.md \
-    --role "<the job title>" --employer "<the employer>" \
-    [--letter cover-letter-<variant>.md] [--asks asks.json]
-```
+**Do not pick the design for them.** They already have the studio from Phase 4, and the
+rebuild above is the page they are dressing. Let them choose. It draws their own CV
+live with every layout, palette, typeface, skills treatment, section order and column
+placement as a control, works on a phone, marks where A4 actually cuts, and prints the
+command line for whatever they land on.
 
 It writes into their documents folder, beside their finished PDFs. **Always pass
-`--role`**: it names the file, keys the studio's own browser storage so one
-application cannot show another's marks, and is what tells two applications apart
-when a document would otherwise be written over.
+`--role` and `--employer`.** `--role` is required and the build refuses without it.
+Together they name the file, key the studio's own browser storage so one application
+cannot show another's marks, and tell two applications apart when a document would
+otherwise be written over.
 
 **The studio is built, never edited.** Editing the template by hand is what made a
 second advertisement destroy the first, because there was only ever one copy. Building
-a second studio keeps the first, renamed with the date, and says where it went.
+the studio again for the same role, employer and CV file replaces that application's
+own page. Anything else, including this rebuild, which reads the assembled CV rather
+than the one from Phase 3, keeps the earlier page under a dated name and says where it
+went.
 
 Then render that.
 
 ```bash
-python3 scripts/render_cv.py cv-<variant>.md --gallery --outdir skins-samples
-python3 scripts/render_cv.py cv-<variant>.md --layout sidebar-dark --palette forest \
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/render_cv.py "$D/cv-<variant>.md" --gallery
+python3 scripts/render_cv.py "$D/cv-<variant>.md" --layout sidebar-dark --palette forest \
     --skills list --skills-by "Technical=bars;Tools=chips" \
-    --skills-order "Languages;Technical" --skills-place "Languages=main" \
-    --gap normal --order profile,key-skills:side,professional-experience
+    --skills-order "Tools;Technical" --skills-place "Tools=main" \
+    --gap normal \
+    --order profile,key-skills:side,professional-experience,education,training-and-certifications
 ```
+
+The names in `--order`, `--skills-by`, `--skills-order`, `--skills-place` and
+`--hide-groups` are this person's own headings, so read them off their markdown rather
+than copying the ones above. A section `--order` does not name still prints, last, in
+the main column, and the render says which. Any heading with the word "skill" in it is
+the skills section, whatever else it is called.
+
+The gallery draws one page per layout and palette, 180 of them, at the typeset it was
+given. There are 900 skins in all: 18 layouts, 10 palettes and 5 typesets. The five
+typesets are set in bundled families rather than in whatever the machine happens to
+have: Lora throughout, Arimo throughout, Lora headings over Source Sans 3, Source Sans
+3 headings over Lora, and Work Sans throughout at a slightly smaller size.
 
 **The PDF is printed, not redrawn.** `--pdf` puts the finished HTML through a real
 browser and writes both documents, one file each, on whatever skin was chosen. Same
@@ -517,10 +674,21 @@ is the studio's own page: the colours, the layout, the meters and rings, the
 typefaces. The text stays text, which is what an applicant tracking system reads.
 
 ```bash
-python3 scripts/render_cv.py cv-<variant>.md --letter cover-letter-<variant>.md \
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/render_cv.py "$D/cv-<variant>.md" --letter "$D/cover-letter-<variant>.md" \
     --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
-    --pdf
+    --role "<the job title>" --employer "<the employer>" --pdf
 ```
+
+**The filename is what stops one application writing over another.** With `--role` and
+`--employer` the PDFs are written as
+`<Name> - <Role> - <Employer> - <YYYYMMDD> - CV.pdf` and
+`<Name> - <Role> - <Employer> - <YYYYMMDD> - Cover Letter.pdf`, in that order, and a
+segment with nothing in it is left out rather than printed as a gap between two
+hyphens. Without `--employer`, two applications for the same job title built on the
+same day produce one filename. `--date` writes the stamp however you pass it and
+defaults to today as YYYYMMDD. `--out` names the HTML file, and `--pdf-dir` names the
+folder the PDFs go to.
 
 **Then read the PDF back as a screener would.** Most applications are parsed by
 software before a person sees them, and what it receives is not the page you designed.
@@ -531,8 +699,11 @@ heading appears as a word rather than spaced-out letters, and nothing is interle
 pdftotext "<the finished>.pdf" - | head -40
 ```
 
-A two-column sidebar reads out of order once extracted — on four of the eight sidebar
-layouts the file opens with the profile and the name arrives threaded through it. That
+A two-column sidebar reads out of order once extracted. On the four right-hand sidebar
+layouts, `sidebar-right`, `sidebar-tint-right`, `sidebar-line-right` and
+`sidebar-top-right`, the file opens with the profile and the name arrives after the
+whole main column. The four left-hand ones open with the name, wrapped onto two lines
+by the narrow column. This was measured, so `references/ats.md` carries the table. That
 is fine for an application going to a person and a poor bet for one going through a
 job board or a government portal. Offer the trade rather than switching quietly.
 
@@ -556,12 +727,21 @@ carries `--decisions`.
 
 Skip it and the render is wrong in the worst way: it prints from the markdown alone,
 so every line they deleted comes back and every rewrite reverts, and the PDF looks
-finished. They will not check a document they asked you to produce. The studio's
-Final tab is what they approved; the PDF has to match it.
+finished. They will not check a document they asked you to produce. **Final** is the
+right-hand half of the Working and Final switch beside the zoom, and what it shows is
+what they approved. The PDF has to match it.
 
-**Where they go.** `_Your Documents Are Here/` inside the skill, or wherever
-`--pdf-dir` says. Put them in the chat as well: a file they cannot find is a file
-they do not have.
+The decisions file also carries an `order` key, so a bullet the person moved with the
+arrows in the studio prints where they put it. The render lists every list it
+reordered, with the original line numbers in their new order, and every line still
+prints: one the order did not name keeps its own place at the end. A decisions file
+that is not valid JSON, or whose order names a line twice or names one that is not
+there, refuses in plain words and writes nothing, rather than printing a document
+nobody can tell is wrong.
+
+**Where they go.** `_Your Documents Are Here/` inside the person's own folder, which
+is `python3 scripts/paths.py --documents`, or wherever `--pdf-dir` says. Put them in
+the chat as well: a file they cannot find is a file they do not have.
 
 A section that is a flat list of short lines can run in two columns, in the studio or
 with `--columns`. Each skills group can be drawn its own way, and one treatment applied
@@ -573,12 +753,15 @@ because nothing here disappears quietly. A bar, a dot or a ring appears only whe
 everything else prints as text, so no number reaches the page that its owner did not
 write. `--order` moves sections and sends them to the sidebar, and never drops one.
 
-**A CV can grow a section.** Key achievements, professional memberships, volunteering
-and community. An added section never touches the markdown: it prints on that version,
-is reported as an addition, and comes off again. Key achievements is the one you draft:
-six candidate lines out of their record worked against this advertisement, each naming
-the ask it answers and the roles it rests on, and they tick which ones print. **Write
-them at career level.** Each line reaches across more than one employer, so it says
+**A CV can grow a section.** The studio holds six: profile, key skills, experience,
+education, training and key achievements. Three of those can be added to a CV that
+does not have them, and they are key achievements, professional memberships, and
+volunteering and community. An added section never touches the markdown: it prints on
+that version, is reported as an addition, and comes off again. Key achievements is the
+one you draft: six candidate lines out of their record worked against this
+advertisement, each naming the ask it answers and the roles it rests on, and they tick
+four to six of them. **Write them at career level.** Each line reaches across more than
+one employer, so it says
 something no role bullet says and nothing has to come off the page for it. A line that
 restates a single bullet gets rewritten wider; the bullet is never deleted, because
 that would leave the achievement with no job behind it.
@@ -598,11 +781,11 @@ move. Contract, skins, the skills treatments and the page count question:
 
 ## Phase 7: The cover letter
 
-**Written last, and only after Phase 3.** A letter written before the scoring is a
-letter about the person in general. A letter written after it knows which of their
-evidence this advertisement actually wants.
+**Written last.** A letter written before the scoring is a letter about the person in
+general. A letter written after it knows which of their evidence this advertisement
+actually wants.
 
-`cover-letter-<variant>.md`. One page. Four to six paragraphs. It does the one job the
+`cover-letter-<variant>.md`, in the person's folder. One page. Four to six paragraphs. It does the one job the
 CV and the statement of claims cannot: why this person, for this job. If a paragraph
 could be cut and nothing would be lost that the CV already says, cut it.
 
@@ -614,13 +797,16 @@ Full instructions, including what earns a paragraph and what a keyword screener 
 from it: `references/cover-letter.md`.
 
 ```bash
-python3 scripts/render_cv.py cv-<variant>.md --letter cover-letter-<variant>.md \
-    --layout sidebar-dark --palette navy --pdf
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/render_cv.py "$D/cv-<variant>.md" --letter "$D/cover-letter-<variant>.md" \
+    --layout sidebar-dark --palette navy \
+    --role "<the job title>" --employer "<the employer>" --pdf
 ```
 
-The studio has a Resume / Cover letter toggle in the Skin tab. Both documents wear
-the same skin, because they are posted together, and every line of the letter can be
-marked up exactly like a line on the CV.
+Then build the studio once more with `--letter` added, so the letter can be marked up
+the same way the CV was. The studio has a Resume and Cover letter chooser under
+Document in the Skin tab. Both documents wear the same skin, because they are posted
+together, and every line of the letter can be marked up exactly like a line on the CV.
 
 **Done when:** it is one page, every claim in it traces to the record, and there is not
 one defensive sentence in it.
@@ -663,17 +849,17 @@ never changes what is true.
 | `references/assembling.md` | Phase 6, and whenever a second CV variant exists |
 | `references/arithmetic.md` | Any time a number, date or year count is involved |
 | `references/rendering.md` | Only if the person wants a designed CV or a report |
-| `scripts/build_studio.py` | Phase 6: build the studio from their CV, before the design step |
-| `scripts/paths.py` | Any time you need to know where this person's files go |
+| `scripts/build_studio.py` | Phase 3, then rebuilt in 4 and 6: the studio, built from their CV |
+| `scripts/paths.py` | Any time you need to know where this person's files go, and in every command that names one |
 | `scripts/documents.py` | Phase 1, before anything else: what they have already produced |
-| `references/rewriting.md` | Before drafting any suggested line: the shape, the verb, worked examples |
+| `references/rewriting.md` | Before drafting any suggested line: the shape, the verb, and the named patterns to demonstrate on the person's own lines |
 | `references/ats.md` | Before handing over any PDF: what the screener actually gets |
 | `references/marking.md` | Before touching the studio's per-line decisions |
 | `references/achievements.md` | Before drafting key achievements or adding a section |
 | `references/cover-letter.md` | Phase 7, before writing a line of the letter |
 | `templates/` | Shapes for facts, answers, asks, proposals, scorecard, achievements, cv |
-| `scripts/check.py` | After phase 4 and after phase 6 |
-| `scripts/render_cv.py` | Optional final step: markdown CV to printable HTML, 350 skins |
+| `scripts/check.py` | Run it, with no arguments, at the end of Phase 4 and the end of Phase 6 |
+| `scripts/render_cv.py` | Optional final step: markdown CV to printable HTML, 900 skins |
 | `scripts/render_report.py` | Only if they ask for the score as a page of its own. The studio is the scorecard |
 | `scripts/to_pdf.py` | The print engine. Never called directly; `--pdf` uses it |
 | `scripts/fetch_fonts.py` | Once, on a machine with internet, so PDFs stop needing one |

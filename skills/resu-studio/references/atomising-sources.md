@@ -10,6 +10,22 @@ ledger describes one advertisement and is thrown away with it.
 `facts.md`. One entry per atomic claim the person has made about their working life,
 in their own words.
 
+**It lives in the person's own folder, outside the plugin, so it is never named as a
+bare relative path.** A relative path resolves against whatever directory the session
+happens to be in, and that directory is thrown away at the end of the session.
+`scripts/paths.py` prints the real one, and every command that passes it uses command
+substitution so the file lands where the next session will find it:
+
+```bash
+python3 scripts/paths.py --facts
+python3 scripts/build_studio.py --cv "cv-<variant>.md" --role "<the job title>" \
+    --facts "$(python3 scripts/paths.py --facts)"
+```
+
+`paths.py` has one flag per path, each printing one bare line and nothing else:
+`--data`, `--facts`, `--answers`, `--documents`, `--cv-source`. Run it with no argument
+to see the folder it resolved and why.
+
 ## What counts as one fact
 
 One claim, one entry. A role paragraph containing three claims is three facts with
@@ -38,6 +54,37 @@ conflict: false
 
 `kind` is one of: `profile`, `role`, `bullet`, `achievement`, `skill`,
 `qualification`, `education`.
+
+**A `kind: role` entry carries the role's own fields instead of `sources[].text`**, so
+a role can be printed without guessing at where its dates came from. From
+`templates/facts.md`:
+
+```
+id: role-example
+kind: role
+title: Data Intelligence Specialist
+employer: Example Employer
+location: <city, country>
+started: 2023-05
+ended: 2026-06
+display_dates: "2023 to 2026"
+sources:
+  - cv: CV 2026 condensed
+    section: Experience, role 1, date line and heading
+confirmed: true
+conflict: false
+```
+
+`started` and `ended` are machine-sortable. `display_dates` is what the person wrote
+and what prints, so "2023 to 2026" stays "2023 to 2026" and is never reformatted into a
+range with a dash in it. A current role has no `ended`. Every bullet under the role
+carries `parent: role-example`.
+
+A `kind: skill` entry carries `group`, which is the heading the skill prints under, and
+its level lives inside the source text in brackets rather than in a field of its own.
+
+A fact the person told Claude rather than wrote down has a `stated:` source instead of
+a `cv:` one, with who said it and when, and `confirmed: true`, because they said it.
 
 ## Read the bodies, not the headings
 
@@ -103,8 +150,37 @@ where: "Job pack, Our ideal candidate"
 group: tool
 ```
 
-`necessity` is `must`, `nice`, or `implied`. `group` is `experience`, `tool`, `skill`,
-`soft`, `qualification`, `other`.
+**`necessity` has five values**, the same five `templates/scorecard.md` allows and the
+same five the studio labels:
+
+| value | what it is | how the studio labels it |
+|---|---|---|
+| `must` | the advertisement says it is required | Essential |
+| `nice` | the advertisement would like it | Desirable |
+| `implied` | not stated, and traceable to a specific sentence | From the role description |
+| `condition` | a requirement of being employed at all: citizenship, a licence, a clearance | A condition of the job |
+| `not a cv question` | in the ad, and settled somewhere other than the document | Not a CV question |
+
+`condition` and `not a cv question` used to be folded into `implied` on the way into the
+studio, which showed a hard eligibility bar as a soft item lifted off the role
+description. They are their own values and they stay their own values.
+
+`group` is `experience`, `tool`, `skill`, `soft`, `qualification`, `other`.
+
+**A split compound ask carries `split_from:`**, holding the original sentence quoted in
+full, once, so the person can see what the seven asks were cut out of:
+
+```
+id: a2
+text: "Their exact words for the second subject in the same sentence"
+necessity: must
+where: "Job pack, Our ideal candidate, same bullet as a1"
+group: experience
+split_from: "the original compound sentence, quoted in full, once"
+```
+
+Anything the employer says about itself goes in its own section of `asks.md`, with a
+`v`-prefixed id, and is recorded rather than matched.
 
 ## Split compound asks
 
@@ -137,8 +213,8 @@ out anything asked for in these words:
 | N+ years, mandatory, you must hold, this role requires | must |
 
 Where an advertisement publishes criteria the application is expected to answer,
-under whatever name — selection criteria, essential criteria, key requirements,
-person specification — every one is a
+under whatever name, whether selection criteria, essential criteria, key requirements
+or person specification, every one is a
 `must` and the exact heading goes in `where`. In those sectors, failing to visibly
 address one criterion generally excludes the application.
 
@@ -167,16 +243,33 @@ list squeezed out of nothing. Record what made it hard.
 
 ## The application format is part of the ad
 
-Capture it explicitly, because it changes the deliverables:
+Capture it explicitly, because it changes the deliverables. It lives in the frontmatter
+of `asks.md`, nested under `application:`, exactly as `templates/asks.md` sets it out.
+`closes` is the one that sits at the top level, beside `employer` and `title`, because
+it is a fact about the advertisement rather than about the paperwork:
 
-```
-documents: tailored CV, 800 word statement of claims, referee details
-page_limit: 3
-word_limits: {statement: 800}
+```yaml
+---
+job: employer-role-title
+employer: Employer Name
+title: Role Title As Advertised
 closes: 2026-08-31 23:30 AEST
-conditions: [citizenship or right to work, security clearance]
-disclosure: "AI use must be disclosed"
+confidence: high
+sources:
+  - Advertisement
+  - Job pack
+application:
+  documents: [tailored CV, statement of claims, referee details]
+  page_limit: 3
+  word_limits: {statement: 800}
+  conditions: [citizenship or right to work, security clearance]
+  disclosure: "AI use must be disclosed"
+---
 ```
+
+A key with nothing to put in it stays, empty. The template ships them all empty for
+that reason: a missing `page_limit` reads as "there is no page limit" and an empty one
+reads as "nobody has found one yet", and those are different.
 
 If the ad references a job pack and the pack is not in hand, stop and ask for it
 before proposing anything. The pack routinely changes the deliverable, the length,
