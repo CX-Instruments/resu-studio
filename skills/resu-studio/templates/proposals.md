@@ -1,6 +1,6 @@
 ---
 job: employer-role-title
-variant: cv-data-reporting
+variant: cv-<audience>
 written: YYYY-MM-DD
 budget:
   role-example: 8 bullets

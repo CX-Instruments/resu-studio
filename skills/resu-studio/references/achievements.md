@@ -67,18 +67,17 @@ role stays where it is to back it up.
 
 Role level, and wrong:
 
-> Held single point of accountability across every workstream on the employer's most
-> complex data migration in over a decade.
+> Held single point of accountability for every part of <the programme> at <the
+> employer>.
 
 Career level, and right:
 
-> Accountable for enterprise data on two multi-year programmes: the company-wide data
-> transformation strategy inside a manufacturer's five-year digital programme, and single
-> point of accountability for every workstream on the employer's largest
-> replacement.
+> Accountable for <the thing> on two multi-year programmes: <the programme> at <the
+> employer>, and <the other programme> at <the earlier employer>.
 
 The second one names two employers, so no bullet under either of them says it, and both
-roles stay on the page to prove it.
+roles stay on the page to prove it. The wording of both comes out of the person's own
+lines, and this pair shows only the shape.
 
 The shapes that work at this level:
 
@@ -90,8 +89,8 @@ The shapes that work at this level:
 
 **Each employer keeps its own facts.** Reaching across roles is not licence to pool
 their numbers. If a figure belongs to one job, name that job in the same clause: "32+
-products end to end at Kestrel alone". Never let a count from one employer read as a
-career total.
+<the things> end to end at <that employer> alone". Never let a count from one employer
+read as a career total.
 
 ### Where the lines come from
 
@@ -133,9 +132,9 @@ coming off before anybody sees it.
 
 **Use a figure only where the record already carries it, in the form it carries it,
 attributed to the job it happened in.** Eight hours to three is theirs. Thirty-two
-projects at Kestrel is theirs. Anything else is scope: who they answered to, how many
-workstreams, which teams, over what window. A line without a number is not a weak line;
-a line with an invented one is a liability in the interview.
+projects at one named employer is theirs. Anything else is scope: who they answered to,
+how many workstreams, which teams, over what window. A line without a number is not a
+weak line; a line with an invented one is a liability in the interview.
 
 **Check the profile too.** The profile is a summary of the same career, so a figure
 that appears in both prints twice a few lines apart. If the profile already carries it,

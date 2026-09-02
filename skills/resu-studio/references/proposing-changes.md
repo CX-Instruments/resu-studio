@@ -12,18 +12,18 @@ Every entry, without exception:
 
 **Line:** professional-experience/0/b4
 **Currently:**
-Performed root cause analysis on complex data quality issues, translating findings into actionable remediation plans for business and technical teams
+The complete existing text of that bullet, verbatim, however long it runs.
 
 **Suggested:**
-Translated root cause findings on complex data quality issues into actionable remediation plans for business and technical teams
+The complete replacement text, ready to paste, carrying every piece of information
+the line above already held.
 
-**Why:** The achievement column already carries the root cause analysis. What it does
-not carry is translating findings for two different audiences, which answers their
-criterion on advice to diverse audiences. This keeps the unique half and drops the
-repeat.
+**Why:** The achievement panel already carries the first half of this claim. What it
+does not carry is the second half, which is what answers <the criterion it answers>.
+This keeps the unique half and drops the repeat.
 
 **Answers:** a4, a11
-**Draws on:** redgate-root-cause, redgate-remediation
+**Draws on:** firstrole-fact-a, firstrole-fact-b
 **Decision:**
 ```
 
@@ -95,11 +95,11 @@ once and is true, and the reason is that this advertisement does not ask for it.
 Declare the budget first, from the current CV:
 
 ```
-Redgate      8 bullets
-TPG             1 role paragraph, 4 achievements
-Kestrel OEL      6 bullets, 5 achievements
-skills column   8 group lines
-pages           3
+<the current employer>   8 bullets
+<the role before it>     1 role paragraph, 4 achievements
+<the role before that>   6 bullets, 5 achievements
+skills column            8 group lines
+pages                    3
 ```
 
 **An addition requires a removal.** If you propose four new bullets for a role that
@@ -130,15 +130,12 @@ Precedence when a claim appears in two places:
 **Partial overlaps get split, not deleted.** Two lines that share half a claim each
 keep the half the other does not have. Deleting either loses something.
 
-Worked example. A responsibility says "Designed migration governance artefacts
-including mapping specifications, transformation logic documentation, issue registers,
-exception trackers, and cutover logs supporting auditability". An achievement says
-"Developed comprehensive data mapping specifications and transformation logic
-documentation, creating a reusable, auditable record of all migration decisions". The
-responsibility contains everything the achievement does and adds three artefacts. Keep
-the responsibility, cut the achievement. Reading both in full before deciding is the
-only way to get this right, and reading only the first clause of each gets it
-backwards.
+The shape to watch for. A role bullet names five things the person produced and says
+what they were for. An achievement names two of the same five and says the same thing
+about them. The bullet contains everything the achievement does and adds three more, so
+the bullet stays and the achievement goes. Reading both in full before deciding is the
+only way to get this right, and reading only the opening clause of each gets it
+backwards, because the two openings are usually the part that matches.
 
 ## Ask rather than guess, every time
 

@@ -37,16 +37,16 @@ The test: could this appear on a page on its own and mean something?
 ## The entry
 
 ```
-id: redgate-liaison
+id: firstrole-liaison
 kind: bullet
-parent: role-redgate
+parent: role-firstrole
 sources:
   - cv: CV 2026 condensed
-    section: Redgate, Key Responsibilities, bullet 6
-    text: "Liaised with Rates, Property, Compliance, and Waste stakeholders to clarify data requirements, validate business rules, and ensure migrated data supported current and future operational processes"
+    section: <the employer>, Key Responsibilities, bullet 6
+    text: "Their exact words, verbatim, from this document"
   - cv: CV 2026 v2
-    section: Redgate, Key Responsibilities, bullet 7
-    text: "Liaising with business stakeholders across Rates, Property, Compliance, and Waste teams to clarify data requirements, validate business rules, and ensure migrated data reflects current and future operational processes in CiA"
+    section: <the employer>, Key Responsibilities, bullet 7
+    text: "Their exact words from the other document, where the two differ"
 figures: []
 confirmed: false
 conflict: false
@@ -62,7 +62,7 @@ a role can be printed without guessing at where its dates came from. From
 ```
 id: role-example
 kind: role
-title: Data Intelligence Specialist
+title: <their job title>
 employer: Example Employer
 location: <city, country>
 started: 2023-05
@@ -144,7 +144,7 @@ requirement nobody expected.
 
 ```
 id: a7
-text: "experience leading the development of <the thing the advertisement names> using <the tools it names>r BI or similar tools, and translating complex data into actionable insights for decision-makers"
+text: "experience leading the development of <the thing the advertisement names> using <the tools it names>, and <the second thing the same sentence asks for>"
 necessity: must
 where: "Job pack, Our ideal candidate"
 group: tool

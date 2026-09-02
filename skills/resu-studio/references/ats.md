@@ -30,9 +30,9 @@ Three things have to be true:
 
 1. **The person's name is present and unbroken.** Their whole name is in the file, in
    one run of characters, near the top. It may wrap onto two lines in a narrow column,
-   and that is a cost rather than a failure: `ALEX MORGAN` on one line and `TAYLOR` on
+   and that is a cost rather than a failure: `FIRST MIDDLE` on one line and `LAST` on
    the next is still their name. What is a failure is the letters coming apart, so that
-   the name arrives as `A LE X MORGA N TAYLOR` and no search for it matches.
+   the name arrives as `F IR ST MID DLE LA ST` and no search for it matches.
 2. **Every section heading appears as a word.** `EDUCATION`, not `E D U C AT I O N`.
    A screener uses those headings to decide where experience stops and education
    starts. A heading it cannot match is a section it may not record at all.
@@ -113,7 +113,7 @@ at risk of it.
 | `band`, `panel`, `hairline` | the same again, and a second date drifts: the middle role's dates land three or four lines into that role's own bullets |
 | `compact` | every section in one piece, but the whole KEY SKILLS block comes before the profile, the name and the contact line arrive joined as one line, and the last role's dates land at the end of the file |
 | `classic` | every section in one piece and each role's dates on its own heading line. **Fails check 2**: `TRAINING AND CERTIFICATIONS` came out as `TR AINING AND CERTIFICATIONS` |
-| `slab` | **Fails checks 2 and 3.** The gutter heading runs into the neighbouring body line, so the file carries `PROFILE Data analyst with...`, `KEY SKILLS Technical:` and `EDUCATION Bachelor of Mathematics...`. `PROFESSIONAL EXPERIENCE` and `TRAINING AND CERTIFICATIONS` are each split over two lines, and the training heading has a body line inserted into the middle of it |
+| `slab` | **Fails checks 2 and 3.** The gutter heading runs into the neighbouring body line, so the file carries `PROFILE` followed straight away by the first words of the profile, `KEY SKILLS` followed by the first group label, and `EDUCATION` followed by the first words of the qualification line. `PROFESSIONAL EXPERIENCE` and `TRAINING AND CERTIFICATIONS` are each split over two lines, and the training heading has a body line inserted into the middle of it |
 | `sidebar-dark`, `sidebar-tint`, `sidebar-line` | **Fails check 3.** Name first, wrapped over two lines, then the contact block. Then the profile's first paragraph, the KEY SKILLS heading, the profile's second paragraph, the first skills group label, the KEY ACHIEVEMENTS heading, the rest of the skills, education, training, and only after all of that the achievements themselves and the experience section |
 | `sidebar-top` | **Fails check 3.** Name first, wrapped, then the whole sidebar, then the main column, with the two training entries threaded back through the middle of the experience section |
 | `sidebar-right`, `sidebar-tint-right`, `sidebar-line-right` | **Fails check 3.** The file opens with PROFILE. The achievements print with no heading in front of them. The name and the contact block arrive about two thirds of the way down, after most of the experience section. The skills block is then split in two with role bullets between the halves, and the first role's dates land far above their own heading |

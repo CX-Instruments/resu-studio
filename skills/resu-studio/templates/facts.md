@@ -16,7 +16,7 @@ every application. Most of what is here will not print on any given CV.
 ```
 id: role-example
 kind: role
-title: Data Intelligence Specialist
+title: <their job title>
 employer: Example Employer
 location: <city, country>
 started: 2023-05

@@ -1954,8 +1954,8 @@ def _title_case(name):
 def _proper(text):
     """Sentence the way a person would write it, for a filename they will send.
 
-    A CV heading is usually set in capitals — ALEX MORGAN TAYLOR — and a filename
-    in capitals reads as shouting in an inbox. So an all-capitals string is put back
+    A CV heading is usually set in capitals, and a filename in capitals reads as
+    shouting in an inbox. So an all-capitals string is put back
     into ordinary casing. Anything already mixed is left exactly as written, because
     that is where the acronyms live, whatever they are for this person. Guessing is how
     "NHS" becomes "Nhs".

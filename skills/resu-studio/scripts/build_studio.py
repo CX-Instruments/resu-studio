@@ -962,8 +962,8 @@ def main():
           "their own\n           wording before any of them is put back on a line."
           % fp)
     print()
-    print("Open it and hand them the link. It draws their own CV live with every")
-    print("layout, palette and typeface as a control, and prints the command for")
+    print("Hand the file over so they can open it themselves. It draws their own CV live")
+    print("with every layout, palette and typeface as a control, and prints the command for")
     print("whatever they land on.")
     return 0
 

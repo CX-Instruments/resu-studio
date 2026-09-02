@@ -47,7 +47,7 @@ To choose the folder yourself, put a single line, the path you want, in
 `.resu-studio/location`, so the next update cannot take the pointer with it.
 
 Write the path the way the machine doing the work sees it. It starts with a `/` and
-has no drive letter and no backslashes. A Windows path like `D:\Users\Jane\CVs` is
+has no drive letter and no backslashes. A Windows path like `D:\Users\you\CVs` is
 refused with a message saying so, and where it can, the message names the folder on
 the working machine that looks like the one you meant.
 

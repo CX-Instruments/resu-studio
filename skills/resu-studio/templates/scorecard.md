@@ -1,6 +1,6 @@
 ---
 job: employer-role-title
-variant: cv-data-reporting
+variant: cv-<audience>
 scored: YYYY-MM-DD
 stage: before
 depth: essentials

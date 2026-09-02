@@ -3,9 +3,9 @@
 Two renderers, both optional, both last. Neither can change what a document says.
 
 ```bash
-python3 scripts/render_cv.py cv-data-reporting.md --decisions cv-decisions.json \
+python3 scripts/render_cv.py cv-<variant>.md --decisions cv-decisions.json \
     --layout sidebar-dark --palette forest
-python3 scripts/render_cv.py cv-data-reporting.md --decisions cv-decisions.json \
+python3 scripts/render_cv.py cv-<variant>.md --decisions cv-decisions.json \
     --gallery --outdir skins-samples
 python3 scripts/render_cv.py --list
 python3 scripts/render_report.py scorecard.md --before scorecard-before.md
@@ -653,11 +653,11 @@ The role is `--role`, the employer is `--employer`, and the date is `--date` or 
 as `YYYYMMDD`. So a run with all of them gives:
 
 ```
-Alex Morgan Taylor - Records Officer - Redgate Council - 20260902 - CV.pdf
+<Name> - <Role> - <Employer> - <YYYYMMDD> - CV.pdf
 ```
 
-and a run with only a role gives `Alex Morgan Taylor - Records Officer - 20260902 -
-CV.pdf`, with no empty gap between two hyphens where the employer would have been.
+and a run with only a role gives `<Name> - <Role> - <YYYYMMDD> - CV.pdf`, with no empty
+gap between two hyphens where the employer would have been.
 
 **`--employer` is why it is there.** Two applications for the same job title, built from
 the same markdown on the same day, otherwise produce one filename and the second run

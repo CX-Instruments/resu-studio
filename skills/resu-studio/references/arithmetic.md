@@ -8,7 +8,7 @@ are printed on the same page as the claim, and anyone can add them up.
 **A span claim is measured from the start of the first qualifying role to the end of
 the last one.** It is not the sum of the qualifying periods with the gaps subtracted.
 
-Worked example. Somebody claims "seven years leading data teams". Their roles:
+Worked example. Somebody claims "seven years leading teams". Their roles:
 
 - Leading role A, Jan 2019 to Apr 2022
 - A role, Aug 2022 to May 2023, not leading

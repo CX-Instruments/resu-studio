@@ -106,7 +106,7 @@ disk.** One line, the folder, in either pointer file:
 A pointer beats the `CLAUDE_PLUGIN_DATA` environment variable, because a person
 writing a path has said what they want and a host guessing one has not.
 
-**Write the path as this session sees it.** A Windows path like `D:\Users\Jane\CVs`,
+**Write the path as this session sees it.** A Windows path like `D:\Users\you\CVs`,
 or any path with a backslash in it, or a relative path, is refused with a plain
 message rather than quietly building a folder whose name contains the backslashes.
 A person on Windows has their folders mounted somewhere under a session path that

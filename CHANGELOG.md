@@ -77,6 +77,12 @@ found ten more. All of them are fixed. The record is in `docs/audit-2026-09-02.m
 
 ### Documentation
 
+Every example identity was taken out of the shipped files. The reference files and the
+templates used to carry a named employer, a named job title and a named person, some of
+it apparently lifted from a real CV when the skill was first written. They now carry
+placeholders in the skill's own bracket style, which also brings the files into line with
+the skill's own rule against illustrating anything with an invented occupation.
+
 Every command block published in the skill has now been run. The extraction behaviour of
 all eighteen layouts was measured rather than repeated: all eight sidebar layouts
 interleave once extracted, including the default, so the guidance offers the trade

@@ -3,12 +3,12 @@
 Two applications can produce documents with identical names. The filename carries
 the person's name, the role and the date, and the role is only there when it was
 given, so two advertisements answered on one afternoon, with no role passed, write
-`Alex Taylor - 20260901 - CV.pdf` twice, and the second one silently takes the place
+`<Name> - 20260901 - CV.pdf` twice, and the second one silently takes the place
 of the first. Nothing on screen says so. The person finds out when they open what
 they thought was Tuesday's application.
 
 Two applications for the same role at different employers do it too, and that is the
-commoner case: a Project Manager post at two councils, both assembled from
+commoner case: the same advertised job title at two employers, both assembled from
 `cv-tailored.md`, both printed the same afternoon. The role matches, the source
 matches, and without the employer the record cannot tell them apart. So the employer
 is part of what a document is, and a record with no employer is never treated as the

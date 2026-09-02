@@ -111,7 +111,7 @@ is supposed to still hold every line somebody decided to take off.
 ## The format
 
 ```markdown
-# ALEX MORGAN TAYLOR
+# FULL NAME
 
 email | location | linkedin
 [eligibility line, if the person decides to carry one]
@@ -175,7 +175,8 @@ Rules that are not optional:
 One facts ledger, several `cv-<variant>.md` files. A variant chooses which facts
 print and how they are worded for an audience. A variant never changes what is true.
 
-Name them for the audience: `cv-data-reporting.md`, `cv-etl-developer.md`.
+Name them for the audience they are written for: `cv-<audience>.md`, one file per
+audience.
 
 ## Aligning variants
 
@@ -194,9 +195,9 @@ produce an alignment report in the phase 4 proposal format, split into:
 4. **Not a contradiction, worth knowing.** Different figures counting different things.
    Say what each covers so the person can answer if asked.
 
-**A correction propagates to every variant. A tailoring choice does not.** Visual
-Studio appearing on a developer CV and not a reporting CV is deliberate. Two different
-levels for the same skill is drift.
+**A correction propagates to every variant. A tailoring choice does not.** A tool that
+prints on one variant and is left off another is deliberate. Two different levels for
+the same skill is drift.
 
 ## Rendering, if the person wants a designed version at all
 
