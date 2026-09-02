@@ -18,6 +18,12 @@ the page when the studio is built with `--proposals`. An entry without one never
 reaches the person, and so does an entry naming an id this CV does not have:
 `build_studio.py` names both on the way past.
 
+**The ids belong to the CV the studio was built from.** Ids are positional, and
+`scripts/assemble.py` reorders and removes lines in Phase 6, so after the assembly every
+id here names a line of the assembled document. Every entry in this file gets a
+`Decision:` before the assembly runs. Anything raised after it goes into a new studio
+built from `cv-<variant>.md`, where the ids and the page agree again.
+
 The `## P1.` heading carries the location, in words. Everything else is a bold field:
 
 ```

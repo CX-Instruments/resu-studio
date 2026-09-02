@@ -228,6 +228,24 @@ button,input,select{font:inherit;color:inherit}
   padding:8px;border:1px solid var(--line2);border-radius:2px;background:var(--panel2);
   color:var(--ink);margin:8px 0 0;resize:vertical}
 
+/* What a rebuild did to what was already decided here. */
+.rebuilt{width:100%;max-width:900px;flex:none;margin:16px 0 2px;padding:13px 16px 14px;
+  background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--warn);
+  border-radius:3px;box-shadow:var(--shadow)}
+.rebuilt h2{margin:0 0 5px;font-size:15px;font-weight:700;letter-spacing:-.15px}
+.rebuilt p{margin:0 0 8px;font-size:13px;line-height:1.5;color:var(--muted)}
+.rebuilt p.lead{color:var(--ink)}
+.rebuilt ul{margin:0 0 10px;padding:0 0 0 18px;font-size:12.5px;line-height:1.5;
+  color:var(--muted)}
+.rebuilt li{margin:0 0 6px}
+.rebuilt p.sub{margin:0 0 4px;font-size:12.5px}
+.rebuilt li b{color:var(--ink);font-weight:600}
+.rebuilt .row{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 0}
+.rebuilt .row button{border:1px solid var(--line);background:var(--panel2);
+  border-radius:2px;padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--ink)}
+.rebuilt .row button:hover{color:var(--accent);border-color:var(--accent)}
+@media print{.rebuilt{display:none}}
+
 /* a numbered tab beside each sheet */
 .pgs{position:absolute;inset:0;pointer-events:none;z-index:3}
 .pgs i{position:absolute;left:0;right:0;display:block;font-style:normal}
@@ -504,6 +522,12 @@ button,input,select{font:inherit;color:inherit}
 
   <main class="stage">
    <div class="scroll" id="scroll">
+    <!-- What a rebuild did to the decisions already saved here. Empty and hidden
+         unless the CV underneath this studio changed and something had to move or
+         had to go: see `migrate` and `paintRebuilt` in the script below. It sits at
+         the top of the page rather than inside a drawer because a person who does
+         not open the drawer is exactly the person this has to reach. -->
+    <div class="rebuilt" id="rebuilt" hidden></div>
     <div class="stagebar">
       <span class="now" id="now"></span>
       <div class="seg viewsw" id="c-view"></div>
@@ -778,6 +802,20 @@ let S = {
          {id:"training",place:"main",show:true}]
 };
 
+/* Where this application's decisions live in this browser. One key per application,
+   written here by scripts/build_studio.py from the role and the employer, so marking a
+   line in one application cannot show up in another. Every read and write in this file
+   goes through this const, including the copy kept under PREV_STORE, so there is one
+   place that decides the namespace. */
+const STORE = "cvwb";
+const PREV_STORE = STORE + ":previous";
+
+/* The fingerprint of the CV content this page was built from, stamped in by
+   scripts/build_studio.py. See `migrate` below for what it is for and see the
+   `fingerprint` function in that file for what goes into it. Empty in the template,
+   which is the one page that was never built for anybody. */
+const FINGERPRINT = "";
+
 /* What the saved state means. Bump this whenever a change alters what an existing
    mark stands for. A studio rebuilt after an update reads the state the last one
    left behind, which is the point — a person's decisions survive a rebuild. But a
@@ -787,7 +825,252 @@ let S = {
    did not give. */
 const STATE_V = 4;
 
-try{ const raw=localStorage.getItem("cvwb"); if(raw) S=Object.assign(S,JSON.parse(raw)); }catch(e){}
+/* The saved state exactly as it was found, kept as text so that whatever happens to
+   S from here on, the thing this person actually left behind can still be put back. */
+let RAW_STATE = null;
+try{ RAW_STATE=localStorage.getItem(STORE);
+     if(RAW_STATE) S=Object.assign(S,JSON.parse(RAW_STATE)); }catch(e){}
+
+/* ================================================ the CV underneath changed
+
+   Every line id on this page is a position. `professional-experience/0/b3` means the
+   fourth bullet of the first role and nothing more. The studio is rebuilt during an
+   application, on purpose, so that nothing already decided is lost, and once a
+   removal and a reorder have been written into the markdown, the fourth bullet of the
+   first role is a different sentence. Reading the old state straight back in would
+   hang every mark on a line it was never made about, and the page would look right.
+   That is the worst failure this thing has, because nobody can see it happen.
+
+   So: the build stamps the CV's own fingerprint into the page, this file saves the
+   fingerprint it was working against, and when the two differ nothing keyed to a
+   position is put back until it has been checked against the wording it was made
+   about. Everything keyed to an ask, a proposal or a section is untouched, because a
+   bullet moving does not move an ask.
+
+   Nothing is thrown away either way: the state as it stood is copied to PREV_STORE
+   before a single key is rewritten. */
+
+function normText(t){ return String(t==null?"":t).replace(/\s+/g," ").trim(); }
+
+/* Every line this CV and this letter can address, with the wording each one holds.
+   `atoms()` answers a narrower question: what is on the page right now, under this
+   grouping, with these sections switched on. A mark on a switched-off section
+   still has to be checked, so this asks for the lot. The skills groups are listed
+   under all three groupings because a group's id is built from its heading and the
+   heading changes with the grouping. */
+function wordingByLine(){
+  const out={};
+  out["name/0"]=normText(CV.name);
+  (CV.contact||[]).forEach((c,i)=>{ out["contact/"+i]=normText(c); });
+  PROFILE.forEach((t,i)=>{ out[SID.profile+"/"+i]=normText(t); });
+  ["own","discipline","level"].forEach(mode=>{
+    let gs=[];
+    try{ gs=naturalGroups(mode)||[]; }catch(e){ gs=[]; }
+    gs.forEach(g=>{ if(!(g.gid in out))
+      out[g.gid]=normText(g.g+": "+g.items.map(rawLine).join("; ")); });
+  });
+  (CV.roles||[]).forEach((r,ri)=>{
+    const rid=SID.experience+"/"+ri;
+    out[rid+"/h"]=normText(r.t);
+    if(r.d) out[rid+"/d"]=normText(r.d);
+    (r.s||[]).forEach((x,j)=>{ out[rid+"/s"+j]=normText(x); });
+    (r.b||[]).forEach((x,j)=>{ out[rid+"/b"+j]=normText(x); });
+  });
+  (CV.education||[]).forEach((e,i)=>{
+    out[SID.education+"/"+i]=normText(e.lab+" "+e.txt); });
+  (CV.training||[]).forEach((t,i)=>{ out[SID.training+"/"+i]=normText(t); });
+  if(LETTER){
+    out["cover-letter/date"]=normText(LETTER.date);
+    (LETTER.to||[]).forEach((t,i)=>{ out["cover-letter/to"+i]=normText(t); });
+    out["cover-letter/ref"]=normText(LETTER.ref);
+    out["cover-letter/sal"]=normText(LETTER.sal);
+    (LETTER.paras||[]).forEach((t,i)=>{ out["cover-letter/p"+i]=normText(t); });
+    out["cover-letter/close"]=normText(LETTER.close);
+    out["cover-letter/sign"]=normText(LETTER.sign);
+  }
+  return out;
+}
+
+/* The lists the arrows can reorder, each with the wording of its lines in the order
+   the markdown has them. A saved order is a list of positions, so it can only be put
+   back on a list that still holds exactly the same lines. */
+function listsNow(){
+  const out=[];
+  (CV.roles||[]).forEach((r,ri)=>out.push({key:SID.experience+"/"+ri,
+    name:normText(r.t), texts:(r.b||[]).map(normText)}));
+  out.push({key:SID.training, name:"your training and certifications",
+            texts:(CV.training||[]).map(normText)});
+  out.push({key:SID.education, name:"your education",
+            texts:(CV.education||[]).map(e=>normText(e.lab+" "+e.txt))});
+  return out;
+}
+function listTexts(key){
+  const L=listsNow().find(x=>x.key===key);
+  return L ? L.texts : null;
+}
+
+/* What each kind of state is called when the studio has to name it out loud. */
+const WHAT={marks:"A change you made to a line", checked:"A tick you put on a line",
+            flags:"A line you flagged to come back to",
+            adds:"A line you added", bOrder:"An order you had set"};
+
+/* The same decisions, named for the case where the CV has already carried them out. */
+const DONE={marks:"A change you made", adds:"A line you added"};
+
+/* Written on every save: the wording each line held at the moment a decision was made
+   about it, and the wording of every list whose order was changed. Without it the only
+   thing a mark carries is a position, and a position is exactly what a rebuilt CV
+   invalidates. Marks already record their own `was`; the ticks and the flags never
+   did, so they are recorded here for all four together. */
+function remember(){
+  const now=wordingByLine(), seen={};
+  [S.marks, S.checked, S.flags, S.adds].forEach(bag=>{
+    Object.keys(bag||{}).forEach(id=>{ if(id in now) seen[id]=now[id]; });
+  });
+  S.seen=seen;
+  const bt={};
+  Object.keys(S.bOrder||{}).forEach(key=>{
+    const L=listTexts(key);
+    if(L && L.length) bt[key]=bOrder(key, L.length).map(i=>L[i]);
+  });
+  S.bText=bt;
+  S.fp=FINGERPRINT;
+}
+
+function migrate(){
+  if(!FINGERPRINT) return;                 /* the template itself, built for nobody */
+  if(!S.fp){ S.fp=FINGERPRINT; return; }   /* saved before this page kept one */
+  if(S.fp===FINGERPRINT) return;           /* the same CV: everything carries, silently */
+
+  /* Before anything is rewritten, keep what they left, under a key of its own. */
+  try{ if(RAW_STATE) localStorage.setItem(PREV_STORE, RAW_STATE); }catch(e){}
+
+  const now=wordingByLine(), byText={};
+  Object.keys(now).forEach(id=>{ (byText[now[id]]=byText[now[id]]||[]).push(id); });
+  const seen=S.seen||{};
+  const rep={kept:0, moved:0, dropped:[], moves:[], done:[], had:!!RAW_STATE};
+
+  /* Some of what looks lost is not lost, it is done. Phase 6 writes what was decided
+     here into the markdown, so a line somebody took off really is off the CV, and a
+     rewrite they accepted really is the line now. Calling those dropped is true and
+     useless: it reads as an evening of work thrown away when it is an evening of work
+     carried out, and it would teach a person to distrust the one message on this page
+     that has to be believed. They are counted and named separately. */
+  function alreadyDone(name, v, w){
+    if(name==="marks" && v && v.a==="remove") return !!w && !byText[w];
+    if(name==="marks" && v && v.a==="edit" && v.text)
+      return !!byText[normText(v.text)];
+    if(name==="adds"){
+      const xs=(v||[]).map(x=>normText(x&&x.text)).filter(Boolean);
+      return xs.length>0 && xs.every(t=>!!byText[t]);
+    }
+    return false;
+  }
+
+  /* Where a decision belongs now, or null. Same id and same words means it never
+     moved. Otherwise the wording is looked for, and it is only re-attached when one
+     line and one line only holds it: two identical lines cannot tell us which one was
+     meant, and guessing is the thing this whole block exists to prevent.
+
+     `taken` is per kind of decision and not shared across them. One line can carry a
+     rewrite, a tick, a flag and a line added under it all at once, and it does, so a
+     single shared set had the first kind claim the line and the other three dropped
+     off it as though the line had gone. */
+  function remap(name, bag, wordingOf, extra){
+    const out={}, taken={};
+    Object.keys(bag||{}).forEach(id=>{
+      const w=normText(wordingOf(id, bag[id]));
+      let to=null;
+      if(w){
+        if(now[id]===w && !taken[id]) to=id;
+        else {
+          const hits=(byText[w]||[]).filter(x=>!taken[x]);
+          if(hits.length===1) to=hits[0];
+        }
+      }
+      if(!to){
+        if(alreadyDone(name, bag[id], w))
+          rep.done.push({what:DONE[name], id:id, text:w, under:name==="adds",
+                         done:true, act:(bag[id]&&bag[id].a)||"add",
+                         extra:extra?extra(bag[id]):""});
+        else
+          rep.dropped.push({what:WHAT[name], id:id, text:w, under:name==="adds",
+                            extra:extra?extra(bag[id]):""});
+        return;
+      }
+      taken[to]=1;
+      out[to]=bag[id];
+      if(to===id) rep.kept++;
+      else { rep.moved++; rep.moves.push({what:WHAT[name], from:id, to:to, text:w}); }
+    });
+    return out;
+  }
+
+  /* A mark already carries the wording it was made about, in `was`. The ticks, the
+     flags and the added lines do not, so they lean on `seen`. Either way, a decision
+     with no wording recorded anywhere cannot be checked, so it goes. */
+  S.marks   = remap("marks",   S.marks,   (id,m)=>seen[id] || (m&&m.was) || "");
+  S.checked = remap("checked", S.checked, id=>seen[id] || "");
+  S.flags   = remap("flags",   S.flags,   id=>seen[id] || "",
+                    v=>(v&&v.note)||"");
+  /* An added line is keyed to the line it sits after. If that line has gone there is
+     nowhere on the page to put it, but the words are the person's own, so they are
+     named in full in the list below rather than reduced to a number. */
+  S.adds    = remap("adds",    S.adds,    id=>seen[id] || "",
+                    v=>(v||[]).map(x=>x&&x.text).filter(Boolean).join(" / "));
+
+  /* An order is a list of positions over a list of positions, so neither half of it
+     can be taken at face value. The list is found again by its lines and not by its
+     key, and the order is written out as the positions those same lines hold now.
+     A line that has gone simply leaves the order, and a line that is new falls in at
+     the end, which is what `bOrder` does with any position it was not told about. So
+     every slot in the order that survives still points at the line whose wording was
+     in that slot, which is the whole test. Insisting the list be identical, which is
+     what this did first, threw away the order of a training list somebody had spent
+     time on because one certificate had been added to the end of it. An order whose
+     list cannot be found, or none of whose lines are left, goes, and is named. */
+  const oldOrd=S.bOrder||{}, oldText=S.bText||{}, newOrd={}, lists=listsNow();
+  Object.keys(oldOrd).forEach(key=>{
+    const want=oldText[key];
+    const name=(lists.find(x=>x.key===key)||{}).name || key;
+    const gone=()=>rep.dropped.push({what:WHAT.bOrder, id:key, order:true,
+                                     extra:"", text:name});
+    if(!Array.isArray(want) || !want.length){ gone(); return; }
+    /* the list holding most of the lines this order was written about, and only when
+       one list holds more of them than any other does */
+    let best=null, bestN=0, tie=false;
+    lists.forEach(L=>{
+      let n=0; const left=L.texts.slice();
+      want.forEach(t=>{ const at=left.indexOf(t);
+                        if(at>=0){ n++; left.splice(at,1); } });
+      if(n>bestN){ best=L; bestN=n; tie=false; }
+      else if(n===bestN && n>0 && best && L.key!==best.key){
+        if(L.key===key) best=L;             /* its own list wins a tie */
+        else if(best.key!==key) tie=true;
+      }
+    });
+    if(!best || !bestN || tie){ gone(); return; }
+    const left=best.texts.map((t,i)=>({t:t,i:i})), idx=[];
+    want.forEach(t=>{ const at=left.findIndex(x=>x.t===t);
+                      if(at>=0){ idx.push(left[at].i); left.splice(at,1); } });
+    newOrd[best.key]=idx;
+    if(best.key===key) rep.kept++;
+    else { rep.moved++;
+           /* the list is under a new key, so it answers to its new name */
+           rep.moves.push({what:WHAT.bOrder, from:key, to:best.key,
+                           text:best.name || name}); }
+  });
+  S.bOrder=newOrd;
+
+  /* Whatever was selected is a position too, and it is worth nothing. */
+  if(S.sel && !(S.sel in now)) S.sel=null;
+
+  S.fp=FINGERPRINT;
+  if(rep.moved || rep.dropped.length || rep.done.length) S.rebuilt=rep;
+  else delete S.rebuilt;
+  try{ localStorage.setItem(STORE,JSON.stringify(S)); }catch(e){}
+}
+migrate();
 
 if(S.v !== STATE_V){
   /* Keep everything that carries content: rewrites, removals, added lines, flags,
@@ -804,10 +1087,11 @@ if(S.v !== STATE_V){
   S.turnView="need";
   S.v=STATE_V;
   S.updated={ticks:dropped};
-  try{ localStorage.setItem("cvwb",JSON.stringify(S)); }catch(e){}
+  try{ localStorage.setItem(STORE,JSON.stringify(S)); }catch(e){}
 }
 
-function save(){ try{ S.v=STATE_V; localStorage.setItem("cvwb",JSON.stringify(S)); }catch(e){} }
+function save(){ try{ S.v=STATE_V; remember();
+                      localStorage.setItem(STORE,JSON.stringify(S)); }catch(e){} }
 
 /* If Claude drafted key achievements for this advertisement, the section has to be on
    the page for them to be seen at all. It used to sit behind an "add a section"
@@ -820,7 +1104,7 @@ if((DRAFTS.achievements||[]).length &&
   const at=(S.order||[]).findIndex(o=>o.id==="profile");
   (S.order=S.order||[]).splice(at<0?0:at+1, 0,
     {id:"achievements", place:"main", show:true});
-  try{ localStorage.setItem("cvwb",JSON.stringify(S)); }catch(e){}
+  try{ localStorage.setItem(STORE,JSON.stringify(S)); }catch(e){}
 }
 
 /* ============================================== the page-laying engine
@@ -1189,9 +1473,13 @@ function withGids(list){
   return list;
 }
 
-function naturalGroups(){
-  if(S.group==="own") return withGids(CV.skills.map(g=>({g:g.g,items:g.items})));
-  if(S.group==="discipline"){
+/* `mode` is the grouping to build, defaulting to the one chosen. The migration above
+   asks for all three by name, because a group's id is built from its heading and the
+   heading is different under each grouping. */
+function naturalGroups(mode){
+  mode = mode || S.group;
+  if(mode==="own") return withGids(CV.skills.map(g=>({g:g.g,items:g.items})));
+  if(mode==="discipline"){
     /* The renderer folds the headings the map names and passes every other heading
        through untouched, so this does the same. Dropping the unnamed ones, which is
        what this used to do, took skills off the preview that the print still carried. */
@@ -1293,8 +1581,12 @@ function added(id){ return S.order.some(o=>o.id===id); }
 function extraState(id){
   if(!S.extra[id]) S.extra[id]={picks:null, lines:[]};
   const e=S.extra[id];
-  if(e.picks===null && EXTRA[id] && EXTRA[id].kind==="picks"){
-    e.picks={}; (DRAFTS[id]||[]).forEach(d=>{ e.picks[d.id]=!!d.on; });
+  if(e.picks===null && EXTRA[id] && EXTRA[id].kind==="picks"){ e.picks={}; }
+  /* Any draft this saved state has never seen takes its own default. It used to be
+     the whole set or nothing, so a line already printing on the CV that arrived in a
+     later rebuild came in unticked, which takes it off the page without saying so. */
+  if(e.picks && EXTRA[id] && EXTRA[id].kind==="picks"){
+    (DRAFTS[id]||[]).forEach(d=>{ if(!(d.id in e.picks)) e.picks[d.id]=!!d.on; });
   }
   if(!Array.isArray(e.lines)) e.lines=[];
   return e;
@@ -2800,7 +3092,138 @@ async function savePdfs(btn){
 
 
 let t=null;
+/* ---------------------------------------- what the rebuild did, said out loud
+
+   `migrate` leaves S.rebuilt behind when a rebuilt CV moved or dropped something. A
+   console message would not do: the person whose marks moved is not looking at a
+   console, and a number on its own is not an answer either, so the wording of every
+   dropped decision is here to be read. The banner sits above the page itself, ahead
+   of the toolbar, and stays until it is dismissed. */
+let showDropped=false;
+function nWord(n, one, many){ return n+" "+(n===1?one:many); }
+function shortText(t, n){
+  t=String(t||"").trim();
+  return t.length>n ? t.slice(0, n-1).replace(/\s+\S*$/,"")+"..." : t;
+}
+function paintRebuilt(){
+  const box=$("#rebuilt");
+  if(!box) return;
+  const r=S.rebuilt;
+  if(!r){ box.hidden=true; box.textContent=""; return; }
+  box.hidden=false; box.textContent="";
+
+  const h=document.createElement("h2");
+  h.textContent="Your CV changed, so some of what you decided here has moved.";
+  box.appendChild(h);
+
+  const lead=document.createElement("p"); lead.className="lead";
+  const bits=[];
+  if(r.kept) bits.push(nWord(r.kept,"decision","decisions")+" stayed on the line you "
+    +"made "+(r.kept===1?"it":"them")+" about.");
+  if(r.moved) bits.push(nWord(r.moved,"decision was","decisions were")
+    +" put back by matching your wording, because "
+    +(r.moved===1 ? "the line it was made on had moved."
+                  : "the lines they were made on had moved."));
+  const done=(r.done||[]).length;
+  if(done) bits.push(nWord(done,"decision is","decisions are")
+    +" not lost but done: this CV already reads the way you asked for.");
+  if(r.dropped.length) bits.push(nWord(r.dropped.length,"decision was","decisions were")
+    +" dropped, because "
+    +(r.dropped.length===1 ? "the line it was made on is"
+                           : "the lines they were made on are")
+    +" not on this CV any more.");
+  lead.textContent="This studio was rebuilt on a newer version of your CV. "+bits.join(" ");
+  box.appendChild(lead);
+
+  const how=document.createElement("p");
+  how.textContent="Nothing was guessed at. A decision is put back only where one line, "
+    +"and only one, still reads exactly as it read when you made it. Everything you "
+    +"decided about the advertisement, about a suggestion, or about a whole section is "
+    +"untouched: none of that hangs on where a line sits.";
+  box.appendChild(how);
+
+  function listOf(items, intro){
+    if(!items.length) return;
+    if(intro){
+      const p=document.createElement("p"); p.className="sub"; p.hidden=!showDropped;
+      p.textContent=intro; box.appendChild(p);
+    }
+    const ul=document.createElement("ul");
+    ul.hidden=!showDropped;
+    items.forEach(d=>{
+      const li=document.createElement("li");
+      const b=document.createElement("b"); b.textContent=d.what;
+      li.appendChild(b);
+      const rest=document.createElement("span");
+      if(d.done){
+        const q=d.text ? (d.under ? ", under the line that read \u201c"
+                                  : ", to the line that read \u201c")
+                         +shortText(d.text,160).replace(/[.,;:]+$/,"")+"\u201d. "
+                       : ". ";
+        rest.textContent = q + (d.act==="remove" ? "That line is off this CV now."
+                              : d.act==="edit" ? "Your wording is the line now."
+                              : "It is on this CV now.");
+      } else if(d.order){
+        rest.textContent=", for "+d.text+". That list is not on this CV any more, so "
+          +"there is nothing left to put in an order.";
+      } else {
+        const where = d.under ? ", under the line that read \u201c"
+                              : ", on the line that read \u201c";
+        rest.textContent = d.text
+          ? where+shortText(d.text,160).replace(/[.,;:]+$/,"")+"\u201d."
+          : (d.under ? ", under a line this CV no longer has."
+                     : ", on a line this CV no longer has.");
+      }
+      li.appendChild(rest);
+      if(d.extra){
+        const x=document.createElement("span");
+        x.textContent=(d.under ? " You had written: \u201c" : " Your note on it was: \u201c")
+          +shortText(d.extra,200).replace(/[.,;:]+$/,"")+"\u201d.";
+        li.appendChild(x);
+      }
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+  }
+  listOf(r.dropped, r.dropped.length && done
+    ? "These were dropped. The line each one was made on is not on this CV any more:"
+    : "");
+  listOf(r.done||[], "These are not lost. The CV already reads the way you asked for:");
+
+  const keep=document.createElement("p");
+  keep.textContent="Nothing has been thrown away. Everything exactly as it stood "
+    +"before this rebuild is still saved in this browser under "+PREV_STORE+". "
+    +"If this went wrong, use the button below, paste what it gives you into your "
+    +"browser console on this page and reload, and you are back where you were.";
+  box.appendChild(keep);
+
+  const row=document.createElement("div"); row.className="row";
+  const detail=r.dropped.length+done;
+  if(detail){
+    const t=document.createElement("button"); t.type="button";
+    t.textContent = showDropped
+      ? (done ? "Hide the detail" : "Hide what was dropped")
+      : (done ? "Show the detail ("+detail+")"
+              : "Show what was dropped ("+r.dropped.length+")");
+    t.addEventListener("click",()=>{ showDropped=!showDropped; paintRebuilt(); });
+    row.appendChild(t);
+  }
+  const back=document.createElement("button"); back.type="button";
+  back.textContent="Copy the line that puts it back";
+  back.addEventListener("click",function(){
+    handOver('localStorage.setItem('+JSON.stringify(STORE)+', '
+             +'localStorage.getItem('+JSON.stringify(PREV_STORE)+'))',
+             this, "Copied", true);
+  });
+  row.appendChild(back);
+  const ok=document.createElement("button"); ok.type="button"; ok.textContent="Got it";
+  ok.addEventListener("click",()=>{ delete S.rebuilt; save(); paintRebuilt(); });
+  row.appendChild(ok);
+  box.appendChild(row);
+}
+
 function draw(){
+  paintRebuilt();
   paintSkin(); paintSkills(); paintOrder(); paintScore();
   paintView(); paintRails(); if(S.drawer) paintDrawer(); save();
   paper.srcdoc=buildDoc();

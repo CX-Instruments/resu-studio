@@ -322,6 +322,68 @@ def check_proposals(path, facts_ids, ask_ids, faults, notes):
     return text
 
 
+def _decisions_beside(root, cv):
+    """The decisions file this draft belongs with, or None.
+
+    The note the assembly leaves in the markdown names its own file, so that is asked
+    first. Failing that, the two names the skill actually writes.
+    """
+    stem = cv[3:-3] if cv.startswith("cv-") and cv.endswith(".md") else cv
+    tries = []
+    try:
+        import render_cv
+        note = render_cv.read_note(read(os.path.join(root, cv)))
+        for e in ((note or {}).get("baked") or []):
+            if e.get("file"):
+                tries.append(e["file"])
+    except Exception:                                          # noqa: BLE001
+        pass
+    tries += ["cv-%s-decisions.json" % stem, "cv-decisions.json"]
+    for fn in tries:
+        if os.path.isfile(os.path.join(root, fn)):
+            return fn
+    return None
+
+
+def check_pair(root, cv, faults, notes):
+    """Does this markdown hold what the person decided, or only some of it?
+
+    `cv-<variant>.md` is the deliverable and the master, which is only true when every
+    removal, addition, rewrite, reordering and ticked section is actually in it. A
+    markdown still holding a line the person took off is the fault this whole check
+    exists for: the PDF looked right, so nobody ever opened the file they were pasting
+    into the portal.
+    """
+    fn = _decisions_beside(root, cv)
+    if not fn:
+        return
+    try:
+        import json
+
+        import assemble
+        with open(os.path.join(root, fn), encoding="utf-8") as f:
+            d = json.load(f)
+    except ValueError as exc:
+        faults.append("%s is not valid JSON: %s. Nothing can be checked against it, "
+                      "and nothing can be assembled from it." % (fn, exc))
+        return
+    except Exception as exc:                                   # noqa: BLE001
+        notes.append("%s could not be read as a decisions file (%s), so %s was not "
+                     "checked against it." % (fn, exc, cv))
+        return
+    src = d.get("cv") if isinstance(d, dict) else None
+    # The CV the decisions were made about is the source, and a source is supposed to
+    # still hold every line somebody decided to take off. It is the variant written
+    # from it that has to hold the decisions, so the source is never audited as one.
+    if src and os.path.basename(src) == cv:
+        return
+    if src and not os.path.isfile(os.path.join(root, src)):
+        src = None
+    for msg in assemble.audit(read(os.path.join(root, cv)), d, cv_name=cv,
+                              decisions_name=fn, source_name=src, folder=root):
+        faults.append(msg)
+
+
 def _default_root():
     """The person's own folder, or None when paths.py cannot be asked."""
     try:
@@ -336,6 +398,11 @@ def _cv_files(root, variant):
     out = []
     for fn in sorted(os.listdir(root)):
         if not (fn.startswith("cv-") and fn.endswith(".md")):
+            continue
+        # The archive is a verbatim record of lines that came off a CV, not a draft.
+        # Read as one it prints every rewrite twice, before and after, and the
+        # same-claim-twice check fires on every one of them.
+        if fn.endswith("-archive.md"):
             continue
         if variant:
             stem = fn[3:-3].lower()
@@ -405,11 +472,17 @@ def main():
     cvs = _cv_files(root, variant)
     for fn in cvs:
         check_cv(os.path.join(root, fn), faults, notes)
+        check_pair(root, fn, faults, notes)
     if variant and not cvs:
         notes.append("No cv-*.md matching %r in this folder." % variant)
 
     for fn in sorted(os.listdir(root)):
         if not fn.endswith(".md") or fn == "facts.md":
+            continue
+        # The archive quotes the person's own wording back at them, word for word.
+        # Correcting a dash in a verbatim record would falsify the record, so the
+        # archive is left out of this sweep and the fault is reported on the CV.
+        if fn.endswith("-archive.md"):
             continue
         # A variant means this one draft, so the other drafts are not read at all.
         if variant and fn.startswith("cv-") and fn not in cvs:

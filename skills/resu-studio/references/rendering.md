@@ -11,17 +11,39 @@ python3 scripts/render_cv.py --list
 python3 scripts/render_report.py scorecard.md --before scorecard-before.md
 ```
 
-**`--decisions` goes on every render from the moment the file exists.** It is what
-carries the removals, the person's own rewordings, the added lines, the order they put
-the lines in and any section they added. A render without it prints the markdown alone,
-so the deleted bullet comes back, the added lines are gone and the reorder is undone,
-and the line count still balances because the markdown really does account for every one
-of its own lines. Nothing on screen says the document is wrong. The path is written
-out in full in `SKILL.md`, against the person's own data folder.
+**`--decisions` goes on every render from the moment the file exists**, and what it does
+depends on whether the markdown has been assembled.
+
+**On an assembled CV it applies nothing.** `scripts/assemble.py` writes the removals, the
+rewordings, the added lines, the order and the ticked sections into `cv-<variant>.md`
+itself, and leaves one HTML comment on the last line saying which decisions are in there.
+The render reads that comment, recognises the decisions it has been handed, applies none
+of them and says so in one sentence, so nothing prints twice. Rendering an assembled CV
+with no `--decisions` at all produces the correct document. Keep passing the flag anyway:
+a person can mark up a studio built from the assembled CV, and those decisions are
+relative to the assembled document and do apply normally.
+
+**On a markdown nobody assembled it does the applying**, and it is what carries the
+removals, the person's own rewordings, the added lines, the order they put the lines in
+and any section they added. A render of such a file without it prints the markdown alone,
+so the deleted bullet comes back, the added lines are gone and the reorder is undone, and
+the line count still balances because the markdown really does account for every one of
+its own lines. Nothing on screen says the document is wrong. The path is written out in
+full in `SKILL.md`, against the person's own data folder.
+
+**A decisions file changed after it was baked in stops matching the note**, which records
+what the file does to the page rather than its bytes. Its additions then print twice and
+its reordered lists shuffle a second time. The run says so on stderr and names the ids.
+The answer is to assemble again from the source.
 
 Where there is no decisions file, because the person handed their work back as the
 pasted block instead, the markdown has to already carry everything they decided, and
 that is worth saying out loud rather than assuming.
+
+**The render no longer reports what the decisions did on an assembled CV**, because it
+did nothing. `assemble.py` is the run that names every rewrite, removal, addition,
+reorder and section, and `cv-<variant>-archive.md` holds the wording of all of it.
+`references/marking.md` has the table of which command prints what.
 
 `render_report.py` takes the scorecard, an optional `--before` and an optional `--out`.
 It has no `--palette`. Its own docstring used to advertise one, which is why it turns
@@ -207,7 +229,9 @@ markdown; with no such file it falls back to `own` and says so.
 
 `--decisions` carries a top level `order` key, written by the studio's up and down
 arrows, and the renderer lays each list out in it, so a bullet the person moved on
-screen prints where they moved it.
+screen prints where they moved it. After the assembly the lines are already in that order
+in the markdown, so the render lays them out as it finds them and applies the key to
+nothing.
 
 ```json
 "order": {
@@ -418,8 +442,12 @@ its own source, and this workflow has already produced one of those.
 
 ## Sections the person added
 
-`--decisions` also carries sections that are not in the markdown. The studio writes
-them into `cv-decisions.json` under `sections`:
+**This is how an added section reaches the page before Phase 6.** After the assembly it
+is a real section in `cv-<variant>.md`, written there by `scripts/assemble.py`, and the
+renderer reads it off the markdown like any other section.
+
+Until then, `--decisions` carries sections that are not in the markdown. The studio
+writes them into `cv-decisions.json` under `sections`:
 
 ```json
 "sections": [

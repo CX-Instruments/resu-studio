@@ -42,6 +42,12 @@ being renamed.
 is reordered or sent to the other column, and it does not move when the person reorders
 the list either. A bullet keeps `b3` for as long as the markdown has it fourth.
 
+**Which is why the ids change at the assembly.** `scripts/assemble.py` writes the
+person's order into `cv-<variant>.md` and takes the removed lines out of it, so from then
+on the ids belong to the assembled document. Every proposal and every note holding a
+pre-assembly id is pointing at the wrong line. Close the proposals out before assembling,
+and make anything new in a studio built from the assembled CV.
+
 The duplicate-heading rule is worth reading twice. Two `**Tools:**` lines used to share
 one id, so a removal took both off and neither the studio nor the page said anything.
 The first keeps `key-skills/tools`, so decisions already recorded against it still land;
@@ -58,7 +64,7 @@ a paginated page never reflows while they are thinking.
 | ⚑ | Flag it | a coloured edge and a note to themselves. No change to the page |
 | ✦ | Needs a rewrite | joins the **hand to Claude** queue, with whatever they said about it |
 | ✎ | Edit it myself | their wording prints exactly as typed, the original kept in the archive |
-| ⊖ | Take it off | off this version, kept in full in the archive, markdown untouched |
+| ⊖ | Take it off | off this version, kept in full in the archive |
 | ＋ | Write a new line | their line, printed after the one they pointed at |
 | ↑ ↓ | Move it up or down | changes where the line prints in its own list, and nowhere else |
 
@@ -112,8 +118,7 @@ Two tabs sit on the edge of the page, with counts.
 **Your turn** is the review queue itself: every line not yet decided about, listed and
 grouped the way the CV reads, each with a tick box and each pressable to jump to that
 line on the page and select it there. It counts down as they work. Under it sits the
-archive: every decision, with the original wording, and one press to undo. A
-removal is not a deletion, and the archive is the point.
+panel holding every decision, with the original wording, and one press to undo.
 
 **Hand to Claude** is the rewrite requests. It ends in a block they copy into the chat,
 which names the id, the current wording and what they asked for, then lists what they
@@ -121,6 +126,19 @@ took off, what they rewrote themselves, and what they flagged. Read that block a
 the list.
 
 They can also save `cv-decisions.json` from that panel.
+
+## Where the archive actually lives
+
+The undo panel described above is a working view, and it lives in the browser's own
+storage, so it goes when the tab or the device does. **The durable archive is a file,
+`cv-<variant>-archive.md`, written beside the CV by `scripts/assemble.py` in Phase 6.**
+It holds every line taken off, in full, with its id, its wording, the reason the
+decisions file gives and the date, and every rewrite with the wording before and the
+wording after. It is appended to on each pass and nothing in it is ever rewritten.
+
+That file is what makes a removal something other than a deletion. Point at the panel
+while the person is still working in the studio, and at the file from Phase 6 onwards,
+which is when anybody asking where a line went can be handed something to open.
 
 ## Working and Final
 
@@ -142,29 +160,40 @@ kind of thing is named: "marks has to be an object of id to decision, and it is 
 list." This file is routinely hand saved out of a pasted block, so a small shape error
 is likely, and it used to arrive as a Python traceback in the middle of a render.
 
-`--decisions` applies the order, the removals, the rewritten wording and the added
-lines, then says the markdown was not touched. `--marks` puts the toolbar in the rendered
-page; it is off by default, so what gets printed is clean. Marks made in a rendered file
-stay in that file: only the studio feeds the queues.
+On a markdown that has not been assembled, `--decisions` applies the order, the removals,
+the rewritten wording and the added lines. On an assembled one it recognises the
+decisions the file already holds and applies nothing, and says so in one sentence.
+`--marks` puts the toolbar in the rendered page; it is off by default, so what gets
+printed is clean. Marks made in a rendered file stay in that file: only the studio feeds
+the queues.
 
-**Three of the four kinds are reported and one is not.**
+## Which command reports what
 
-| kind | what the run prints |
+**`scripts/assemble.py` is where the changes are reported now.** It is the run that makes
+them, so it is the run that names them, and after it the render has nothing left to apply
+and reports none of it.
+
+| kind | what `assemble.py` prints |
 |---|---|
-| a removal | `taken off by your decisions`, then each line by id and by its full wording |
-| an addition | `added by you`, then each line by id and by its wording, truncated to fit the terminal |
-| a reorder | `put in the order you chose`, then each list by id, as the original line numbers in the order they now print |
-| a rewrite | nothing. The new wording is applied and the run says nothing about it |
+| a rewrite | counted in the summary line, and written into the archive with the wording before and after |
+| a removal | counted, then each line by id and by its full wording, and written into the archive in full |
+| an addition | counted, then each line by the id it prints after and by its wording, truncated to fit the terminal |
+| a reorder | counted, then each list by id, as the original line numbers in the order they now print |
+| a section written in | counted, then named by its title |
 
-So a run that applied four rewrites and one removal reports one line, and the count above
-it still reads "31 content lines in, 31 out", because a rewrite changes no line's
-existence. **Do not tell the person the render listed every change**, and do not read the
-report as a full account of what the decisions file did. Open the decisions file itself
-when you need that, or read the studio's archive, which holds the wording of everything
-including the rewrites.
+It also names, on stderr, any mark or addition in the decisions file that this CV has no
+line for.
 
-The line count above the report is still the parse. Decisions are applied after it, which
-is why they are reported separately rather than folded into the number.
+**The render's own report is for the un-assembled case only**, where `--decisions` is
+doing the applying. There it prints `taken off by your decisions`, `added by you` and
+`put in the order you chose`, and it says nothing at all about a rewrite, so a run that
+applied four rewrites and one removal reports one line while the count above it still
+reads "31 content lines in, 31 out". **Do not read that report as a full account of what
+the decisions file did.** The full account is what `assemble.py` printed, and the wording
+of everything including the rewrites is in `cv-<variant>-archive.md`.
+
+The line count above either report is the parse of the markdown. Decisions are counted
+after it, which is why they are reported separately rather than folded into the number.
 
 ## The name and the contact lines
 
@@ -182,8 +211,9 @@ advertisement makes it a condition of employment, a screener reading only the CV
 it answered without opening anything else. Never take it off on their behalf and never
 add it on their behalf: both are silent edits to what the employer is told about them.
 
-Taking it off is one press, the wording goes to the archive intact, and the markdown
-still has it for the next application that does want it. `templates/cv.md`,
+Taking it off is one press, and the wording survives twice over: the assembly writes it
+into `cv-<variant>-archive.md` in full, and the CV as it arrived still carries it in
+`cv-source/` for the next application that does want it. `templates/cv.md`,
 `references/assembling.md` and `references/achievements.md` all say this the same way.
 
 **Each line of the contact block is its own line.** Consecutive lines under the name

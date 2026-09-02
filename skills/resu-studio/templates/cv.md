@@ -56,6 +56,9 @@ else, and some people would rather it be visible than be asked.
 
 **Never put it on unasked and never take it off unasked.** Both are silent edits to
 what the employer is told about them. The line goes in `proposals.md` with a `Line:` on
-the contact block, the trade in `Why:`, and a blank `Decision:`. If they take it off for
-one application it stays in the markdown for the next one, which is what the studio's
-archive is for.
+the contact block, the trade in `Why:`, and a blank `Decision:`.
+
+If they take it off for one application, the assembly takes it out of that version's
+`cv-<variant>.md` and writes it into `cv-<variant>-archive.md` in full. The CV as it
+arrived, in `cv-source/`, still carries it, and that is what the next application is
+assembled from, so nothing has to be typed again.

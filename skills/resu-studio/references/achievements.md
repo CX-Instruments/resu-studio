@@ -1,9 +1,16 @@
 # Key achievements, and the other sections a CV can grow
 
 A CV starts with five sections: profile, key skills, professional experience,
-education, training and certifications. Three more can be added, and adding one never
-touches the markdown. An added section prints on that version, is reported as an
-addition, and comes off again without a trace.
+education, training and certifications. Three more can be added.
+
+**A ticked section lives in the decisions file until Phase 6, and in the markdown after
+it.** While the person is working in the studio it prints on that version, is reported as
+an addition, and comes off again without a trace, because the markdown has not been
+touched. Then `scripts/assemble.py` writes it into `cv-<variant>.md` as a real section,
+under its own heading, in the case the file uses for its other headings. That is the
+point of assembling: the file they hand over holds what they chose. From there it is an
+ordinary section, so `--order` names it by its slug like any other and the studio built
+from the assembled CV reads it off the markdown.
 
 | Section | Where the content comes from |
 |---|---|

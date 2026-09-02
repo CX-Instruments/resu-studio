@@ -27,6 +27,7 @@ Skins are CSS only. A skin cannot change a word.
 import argparse
 import base64
 import datetime
+import hashlib
 import html
 import json
 import os
@@ -96,6 +97,133 @@ ASIDE_SECTIONS = ("key skills", "skills", "education", "training and certificati
                   "training & certifications", "certifications", "eligibility")
 
 
+# ------------------------------------------------- what is already in the markdown
+#
+# `scripts/assemble.py` bakes the decisions into `cv-<variant>.md`, so that file is
+# the whole document and everything downstream works from it alone. It then leaves one
+# line at the foot saying which decisions are already in there, and this is where that
+# line is written, read and compared.
+#
+# The line is an HTML comment, and a comment is not content: `parse` skips it, so it is
+# never drawn and never reaches the studio, and `count_source` skips it, so it does not
+# move the count that guards against a dropped line. Those two together are the whole
+# reason the note can sit in the file at all.
+
+NOTE_TAG = "resu-studio-assembled"
+_COMMENT_RE = re.compile(r"^<!--.*-->$")
+_NOTE_RE = re.compile(r"^<!--\s*" + NOTE_TAG + r"\s*(\{.*\})\s*-->$")
+
+
+def _is_note_line(t):
+    """A whole line that is one HTML comment. Never content, never counted."""
+    return bool(_COMMENT_RE.match((t or "").strip()))
+
+
+def read_note(md):
+    """The assembled note this markdown carries, or None."""
+    for raw in (md or "").split("\n"):
+        m = _NOTE_RE.match(raw.strip())
+        if m:
+            try:
+                return json.loads(m.group(1))
+            except ValueError:
+                return None
+    return None
+
+
+def note_line(obj):
+    return "<!-- %s %s -->" % (NOTE_TAG, json.dumps(
+        obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
+
+
+def effect(d):
+    """Only the part of a decisions file that changes what is on the page.
+
+    A flag, a tick, a note to themselves and a suggestion still waiting for an answer
+    are all real records and none of them moves a word, so none of them belongs in the
+    answer to "are these the decisions this CV already holds". Leaving them out is what
+    lets somebody flag three more lines, save again, and still be told that the
+    removals and the added lines in the file are the ones already baked in.
+    """
+    if not isinstance(d, dict):
+        return {"marks": {}, "adds": {}, "order": {}, "sections": []}
+    marks = {}
+    for key, m in (d.get("marks") or {}).items():
+        if not isinstance(m, dict):
+            continue
+        if m.get("a") == "remove":
+            marks[key] = {"a": "remove"}
+        elif m.get("a") == "edit" and m.get("text"):
+            got = {"a": "edit", "text": m["text"]}
+            if m.get("skills"):
+                got["skills"] = m["skills"]
+            marks[key] = got
+    adds = {}
+    for key, lst in (d.get("adds") or {}).items():
+        texts = [x.get("text", "") for x in (lst or [])
+                 if isinstance(x, dict) and x.get("text")]
+        if texts:
+            adds[key] = texts
+    order = {}
+    for key, want in (d.get("order") or {}).items():
+        seq = [_as_index(x) for x in (want or [])]
+        if [x for x in seq if x is not None]:
+            order[key] = seq
+    sections = []
+    for spec in (d.get("sections") or []):
+        if not isinstance(spec, dict):
+            continue
+        lines = [{"key": x.get("key"), "text": (x.get("text") or "").strip()}
+                 for x in (spec.get("lines") or [])
+                 if isinstance(x, dict) and (x.get("text") or "").strip()]
+        if not lines:
+            continue
+        sections.append({"title": spec.get("title") or "Added section",
+                         "after": (spec.get("after") or ""), "lines": lines})
+    return {"marks": marks, "adds": adds, "order": order, "sections": sections}
+
+
+def digest(d):
+    """A fingerprint of what a decisions file would do, so it can be recognised."""
+    return hashlib.sha256(json.dumps(
+        effect(d), sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def baked_entry(md, d):
+    """The note's record of these very decisions, if this CV already holds them."""
+    note = read_note(md)
+    if not note:
+        return None
+    want = digest(d)
+    for e in (note.get("baked") or []):
+        if isinstance(e, dict) and e.get("sha256") == want:
+            return e
+    return None
+
+
+def baked_clash(md, d):
+    """The parts of these decisions that are already in the markdown, or None.
+
+    Applying an addition that is already in the file prints the line twice, and
+    applying an order that names the original line numbers to a file already in that
+    order shuffles it a second time. Neither shows up in the line count, because
+    neither loses a line, which is exactly why it has to be said here.
+    """
+    note = read_note(md)
+    if not note:
+        return None
+    have_adds, have_order = set(), set()
+    for e in (note.get("baked") or []):
+        ids = (e.get("ids") or {}) if isinstance(e, dict) else {}
+        have_adds.update(ids.get("added") or [])
+        have_order.update(ids.get("ordered") or [])
+    eff = effect(d)
+    adds = sorted(set(eff["adds"]) & have_adds)
+    order = sorted(set(eff["order"]) & have_order)
+    return (adds, order) if (adds or order) else None
+
+
 # ---------------------------------------------------------------- parsing
 
 _MONTHS = ("jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec")
@@ -137,7 +265,7 @@ def parse(md):
             t = lines[j].strip()
             if (not t or t.startswith("#") or t.startswith("- ") or t.startswith("* ")
                     or re.match(r"^\*\*(.+?):\*\*", t)
-                    or re.match(r"^(-{3,}|\*{3,})$", t)):
+                    or re.match(r"^(-{3,}|\*{3,})$", t) or _is_note_line(t)):
                 break
             buf.append(t)
             j += 1
@@ -145,7 +273,7 @@ def parse(md):
 
     while i < n:
         line = lines[i].strip()
-        if not line or re.match(r"^(-{3,}|\*{3,})$", line):
+        if not line or re.match(r"^(-{3,}|\*{3,})$", line) or _is_note_line(line):
             i += 1
             continue
         if line.startswith("# ") and not doc["name"]:
@@ -352,7 +480,8 @@ def count_source(md):
     n = 0
     for raw in md.replace("\r\n", "\n").split("\n"):
         t = raw.strip()
-        if not t or t.startswith("#") or re.match(r"^(-{3,}|\*{3,})$", t):
+        if (not t or t.startswith("#") or re.match(r"^(-{3,}|\*{3,})$", t)
+                or _is_note_line(t)):
             continue
         n += 1
     return n
@@ -882,6 +1011,7 @@ def _group_html(g):
 DECIDE = {"marks": {}, "adds": {}, "sections": [], "order": {}}
 APPLIED = []      # what the decisions file actually changed, for the report
 REORDERED = {}    # the lists the decisions file put in a different order
+SAID = []         # sentences the run owes the person, printed with the report
 
 
 def d_removed(i):
@@ -1184,17 +1314,24 @@ def section_html(s, role_wrap="role", region=None, section_place="main"):
     ri = 0
     two = slug(s["title"]) in OPTS.get("cols2", set())
     if s.get("added"):
-        lis = []
+        # Drawn exactly as a flat list written in the markdown is drawn, and for one
+        # reason: `scripts/assemble.py` writes a ticked section into the markdown, and
+        # after that it is a flat list written in the markdown. Drawing it as a bulleted
+        # `ul` here and as plain lines there would mean the same accepted section
+        # printed two different ways depending on which file the render was given, with
+        # nothing on either page to say why.
+        got = 0
         for n, b in enumerate(s["blocks"]):
             i = b.get("id") or ("%s/%d" % (sid, n))
             if d_removed(i):
                 continue
-            lis.append(_tag("li", "", i, d_text(i, b["text"])))
+            out.append(_tag("p", "item", i, d_text(i, b["text"])))
             d_note("added", i, b["text"])
-        if not lis:
+            got += 1
+        if not got:
             return ""
-        out.append('<ul class="bul%s">%s</ul>'
-                   % (" cols2" if two else "", "".join(lis)))
+        if two and len(out) > 1:
+            return out[0] + '<div class="cols2">' + "".join(out[1:]) + "</div>"
         return "\n".join(out)
     # The flat lines of a section are laid out in the order the person put them in.
     # The lines themselves are addressed by their original number, so `education/1` is
@@ -2380,13 +2517,14 @@ def main():
     OPTS["size"] = a.size
     OPTS["gap"] = a.gap
     OPTS["cols2"] = set(slug(x) for x in (a.columns or "").split(",") if x.strip())
+    decided = None
     if a.decisions:
         if not os.path.isfile(a.decisions):
             sys.stderr.write("no decisions file at %s\n" % a.decisions)
             return 2
         try:
             with open(a.decisions, encoding="utf-8") as f:
-                d = json.load(f)
+                decided = json.load(f)
         except ValueError as exc:
             sys.stderr.write("REFUSING TO WRITE. %s is not valid JSON: %s. It is "
                              "usually a missing comma, a trailing comma or a quote "
@@ -2396,14 +2534,13 @@ def main():
             sys.stderr.write("REFUSING TO WRITE. %s could not be read: %s\n"
                              % (a.decisions, exc))
             return 1
-        wrong = _decisions_wrong(d)
+        wrong = _decisions_wrong(decided)
         if wrong:
             sys.stderr.write("REFUSING TO WRITE. In %s, %s\n" % (a.decisions, wrong))
             return 1
-        DECIDE["marks"] = d.get("marks") or {}
-        DECIDE["adds"] = d.get("adds") or {}
-        DECIDE["sections"] = d.get("sections") or []
-        DECIDE["order"] = d.get("order") or {}
+        # DECIDE is filled in below, once the markdown has been read, because whether
+        # these decisions get applied at all depends on what the markdown already
+        # holds.
     if a.skills_order:
         OPTS["group_order"] = [x.strip() for x in a.skills_order.split(";") if x.strip()]
     if a.skills_place:
@@ -2455,6 +2592,43 @@ def main():
             return 2
 
     md = open(a.cv, encoding="utf-8").read()
+
+    # `scripts/assemble.py` bakes the decisions into the markdown and leaves a note at
+    # the foot saying which ones. Applying them again would print every added line
+    # twice and shuffle every reordered list a second time, and the line count would
+    # still balance, so nothing would say a word about it. Offered the decisions the
+    # file already holds, this applies nothing and says so. Offered different ones it
+    # applies them normally, because a studio built from the assembled CV makes new
+    # decisions and those are relative to the assembled document.
+    if decided is not None:
+        already = baked_entry(md, decided)
+        if already:
+            SAID.append(
+                "%s already has these decisions baked into it, from %s%s, so nothing "
+                "was applied and nothing was printed twice."
+                % (os.path.basename(a.cv), already.get("file") or "the decisions file",
+                   (" saved " + already["saved"]) if already.get("saved") else ""))
+        else:
+            clash = baked_clash(md, decided)
+            if clash:
+                adds, order = clash
+                sys.stderr.write(
+                    "%s is already assembled, and %s asks for %s that this file "
+                    "already holds. Every added line below will print twice and every "
+                    "reordered list will be shuffled again. Build a fresh studio from "
+                    "%s and make new decisions against that, or render with no "
+                    "--decisions at all.\n"
+                    % (os.path.basename(a.cv), os.path.basename(a.decisions),
+                       " and ".join(x for x in (
+                           ("the additions under " + ", ".join(adds)) if adds else "",
+                           ("the order for " + ", ".join(order)) if order else "")
+                           if x),
+                       os.path.basename(a.cv)))
+            DECIDE["marks"] = decided.get("marks") or {}
+            DECIDE["adds"] = decided.get("adds") or {}
+            DECIDE["sections"] = decided.get("sections") or []
+            DECIDE["order"] = decided.get("order") or {}
+
     doc = parse(md)
     src, got = count_source(md), count_doc(doc)
     # added sections come after the count, so they can never disguise a dropped line
@@ -2553,6 +2727,8 @@ def main():
     bullets = sum(len(b["bullets"]) for s in doc["sections"] for b in s["blocks"]
                   if b["kind"] == "role")
     print("wrote %s" % out)
+    for line in SAID:
+        print("  " + line)
     if letter:
         n_to = len(letter["to"])
         print("  cover letter: %d paragraph%s, addressed over %d line%s, on the "

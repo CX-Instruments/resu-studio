@@ -21,6 +21,7 @@ window is not built; this makes one, well.
 import argparse
 import base64
 import datetime
+import hashlib
 import io
 import json
 import os
@@ -362,6 +363,69 @@ def cv_ids(cv, letter=None):
         for i, _x in enumerate(letter.get("paras") or []):
             ids.add("cover-letter/p%d" % i)
     return ids
+
+
+def _norm(text):
+    """One spelling for a line whose whitespace has moved.
+
+    Markdown gets rewrapped: the same sentence broken over two lines instead of three
+    is the same sentence, and a rebuild that called it a change would reset somebody
+    for nothing.
+    """
+    return re.sub(r"\s+", " ", u"%s" % (text if text is not None else "")).strip()
+
+
+def fingerprint(cv, letter=None):
+    """A short, stable digest of the CV content this studio was built from.
+
+    Every line id on the page is positional. `professional-experience/0/b3` means the
+    fourth bullet of the first role and nothing else, so once a removal or a reorder is
+    baked into the markdown the fourth bullet is a different sentence and every mark
+    saved against that id lands somewhere it was never meant to. The studio cannot see
+    that on its own: the state it reads out of the browser looks exactly the same
+    either way. So the build stamps the CV's own fingerprint into the page and the
+    studio saves the one it was working against. When the two differ, nothing keyed to
+    a position is trusted until it has been checked against the wording it was made
+    about.
+
+    What goes in: everything a line id is built from or points at. The name and contact
+    lines, the section id prefixes (they come from the headings, so renaming a heading
+    renames every id under it), the profile paragraphs, every skills group with its
+    items, every role with its dates, scope and bullets, education, training, and the
+    cover letter, which has addressable lines of its own.
+
+    What stays out, on purpose: the advertisement, the scorecard, the proposals and the
+    drafted achievements, because state about those is keyed to an ask id or a proposal
+    id and does not move when a bullet does; and every presentation choice there is,
+    layout, palette, typeface, the regrouping map, the font files, the build date, the
+    plugin version, the filenames, the role and the employer. Rebuilding to pick up a
+    new skin, a rescored advertisement or a fresh set of proposals must reset nobody.
+    """
+    sid = cv.get("sid") or DEFAULT_SID
+    doc = {
+        "name": _norm(cv.get("name")),
+        "contact": [_norm(c) for c in cv.get("contact") or []],
+        "sid": dict((k, sid[k]) for k in sid),
+        "profile": [_norm(p) for p in cv.get("profile") or []],
+        "skills": [[_norm(g.get("g")),
+                    [[_norm(i.get("n")), _norm(i.get("l")), _norm(i.get("y"))]
+                     for i in g.get("items") or []]]
+                   for g in cv.get("skills") or []],
+        "roles": [[_norm(r.get("t")), _norm(r.get("d")),
+                   [_norm(x) for x in r.get("s") or []],
+                   [_norm(x) for x in r.get("b") or []]]
+                  for r in cv.get("roles") or []],
+        "education": [[_norm(e.get("lab")), _norm(e.get("txt"))]
+                      for e in cv.get("education") or []],
+        "training": [_norm(t) for t in cv.get("training") or []],
+        "letter": None if not letter else [
+            _norm(letter.get("date")), [_norm(x) for x in letter.get("to") or []],
+            _norm(letter.get("ref")), _norm(letter.get("sal")),
+            [_norm(p) for p in letter.get("paras") or []],
+            _norm(letter.get("close")), _norm(letter.get("sign"))],
+    }
+    blob = json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]
 
 
 def slug(text):
@@ -756,8 +820,16 @@ def main():
     # Lines already on their CV come first and arrive ticked, because they are already
     # printing. Anything drafted for this advertisement is offered underneath.
     if on_cv:
-        have = [{"id": "m%d" % (i + 1), "t": t, "w": "already on your CV",
-                 "roles": [], "on": True} for i, t in enumerate(on_cv)]
+        # The id is taken from the wording and not from the position in the section.
+        # Which of these lines a person has ticked is saved in the browser against this
+        # id, and `m1` used to mean "the first key achievement on the CV" — so a
+        # rebuild that added one at the top handed every tick to the line above it and
+        # nothing said so. Keyed to the words, a tick can only ever come back to the
+        # line it was made about, and a line whose wording changed loses its tick,
+        # which is the right answer for a line that is no longer the same line.
+        have = [{"id": "m" + hashlib.sha1(_norm(t).encode("utf-8")).hexdigest()[:10],
+                 "t": t, "w": "already on your CV", "roles": [], "on": True}
+                for t in on_cv]
         drafted["achievements"] = have + drafted.get("achievements", [])
     s = swap_const(s, "DRAFTS", drafted)
     if a.achievements and not drafted:
@@ -851,10 +923,16 @@ def main():
 
     # One browser store per application. Without this, marking a line in one
     # application shows up in another, which is the ghost every tool of this shape
-    # grows when nobody keys the storage.
+    # grows when nobody keys the storage. The page holds the key in one const and
+    # every read and write goes through it, including the copy the page keeps of the
+    # state as it stood before a rebuilt CV was migrated, so that copy is inside this
+    # application's own namespace too and the line printed below stays true.
     key = slug(". ".join(x for x in (a.role, a.employer) if x) or doc["name"])
-    s = s.replace('localStorage.getItem("cvwb")', 'localStorage.getItem("cvwb:%s")' % key)
-    s = s.replace('localStorage.setItem("cvwb"', 'localStorage.setItem("cvwb:%s"' % key)
+    s = swap_const(s, "STORE", "cvwb:%s" % key)
+
+    # What the saved marks are checked against. See `fingerprint`.
+    fp = fingerprint(CV, L)
+    s = swap_const(s, "FINGERPRINT", fp)
 
     out = a.out or os.path.join(paths.documents_dir(), studio_filename(a, doc))
     # `--out studio.html` gives a bare filename, whose dirname is "", and makedirs
@@ -880,6 +958,9 @@ def main():
              "" if drafted else "   (none passed, that panel stays empty)"))
     print("  letter : %s" % ("loaded" if L else "none yet"))
     print("  store  : cvwb:%s, so this application cannot see any other" % key)
+    print("  content: %s. Marks saved against a different one are checked against "
+          "their own\n           wording before any of them is put back on a line."
+          % fp)
     print()
     print("Open it and hand them the link. It draws their own CV live with every")
     print("layout, palette and typeface as a control, and prints the command for")

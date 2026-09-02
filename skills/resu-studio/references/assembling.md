@@ -6,11 +6,107 @@
 they copy into a portal, and what any renderer renders. It is plain, complete and
 readable on its own.
 
+That is only true when the file actually holds everything the person decided, and
+`scripts/assemble.py` is what puts it there.
+
 **The ledgers never render.** A renderer that reads the facts ledger will print things
 nobody chose. That is not a hypothetical: an earlier version of this workflow rendered
 straight from the ledger, and any ledger line not explicitly accounted for printed
 verbatim on the finished CV, including the reviewer's own working notes. The
 separation is the fix. Ledgers hold what is true. The markdown holds what prints.
+
+## Assembling, with assemble.py
+
+```bash
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/assemble.py "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
+    --decisions "$D/cv-decisions.json" \
+    --out "$D/cv-<variant>.md"
+```
+
+The first argument is the CV the studio was built from, which is the markdown written in
+Phase 1 and passed as `--cv` in Phase 3 and Phase 4. Every decision in the file was made
+against that document, so assembling from anything else lands the ids on the wrong lines.
+
+| Flag | What it does |
+|---|---|
+| `--decisions` | the `cv-decisions.json` the studio saved. Required |
+| `--out` | the assembled markdown to write, normally `cv-<variant>.md`. Required, and it refuses to write over the source |
+| `--archive` | where the record of every removal and every rewrite goes. Defaults to `cv-<variant>-archive.md` beside `--out` |
+| `--variant` | the name of this version. Read off the `--out` filename when it is left out |
+| `--no-archive` | writes no archive. Only for a run being thrown away, because a removal with no archive is a deletion |
+
+Exit 0 means it wrote the file. Exit 1 means it refused and said the reason. Exit 2 means
+the command line was wrong.
+
+### What comes out
+
+**The assembled markdown holds everything.** Every rewrite is in the person's own
+wording, every line they took off is gone, every line they added is in the place they
+added it, every list is in the order they put it in, and every extra section they ticked
+is written in under its own heading, in the case the file uses for its other headings.
+The work is done on the raw lines, so everything nobody decided anything about is copied
+through byte for byte: the headings, the blank lines, the indentation, the wrapping and
+the person's own punctuation. Assembling with an empty decisions file gives back the file
+it was handed, byte identical. A file with Windows line endings goes back out with
+Windows line endings.
+
+**`cv-<variant>-archive.md` holds what came off.** Every line taken off is in it in full,
+with its id, its wording, the reason where the decisions file gives one, and the date.
+Every rewrite is in it with the wording before and the wording after. It is appended to
+on each pass, it is never rewritten, and it is the durable record: a person who wants a
+line back has a file to open and can put it back by hand. The studio's own archive panel
+lives in one browser tab and goes when the tab does, so this file is the one to point
+anybody at.
+
+**The last line of the assembled markdown is one HTML comment** saying which decisions
+are baked in. It never prints, it does not affect the line count, and it is what lets
+`render_cv.py` recognise decisions it has already got. Nobody edits it by hand.
+
+**It prints what it did.** Every rewrite, every line taken off with its id and its
+wording, every line added, every list reordered and every section written in. That is the
+account of what changed and the only place it is given: after the assembly the render has
+nothing left to apply, so it reports none of this. It also names anything in the
+decisions file that this CV has no line for, on stderr, so an id that matches nothing is
+read rather than silently ignored.
+
+**It refuses rather than writing something wrong.** A decisions file that is not valid
+JSON or is the wrong shape, an `--out` that is the source file, a source whose line count
+does not balance, an order that names a line twice or names one that is not there: each
+of those stops the run with the reason said in plain words and nothing written. It also
+renders both routes and compares them, so an assembled file that would print anything
+other than what the source plus the decisions print is refused as a fault in the script.
+
+### Ids are positional, so close the proposals out first
+
+An id such as `professional-experience/2/b3` names a line by where it sits. After the
+assembly those ids name lines of the assembled document, so a proposal, a note or a
+hand-to-Claude line still carrying a pre-assembly id points at the wrong line, and a
+proposal for a line the person took off names nothing at all. Record every decision
+against its proposal before assembling. Anything the person wants to change after that
+belongs in a new studio built from the assembled CV, where the ids and the page agree.
+
+### Rendering an assembled CV
+
+Rendering `cv-<variant>.md` with no `--decisions` at all now produces the correct
+document, because everything is in the markdown. Keep passing `--decisions` anyway.
+`render_cv.py` reads the note at the foot, recognises the decisions the file already
+holds, applies nothing and says so in one sentence, and a person who makes new decisions
+in a studio built from the assembled CV gets those applied normally, because they are
+relative to the assembled document.
+
+The hazard that is left is a markdown nobody assembled, and a decisions file changed
+after it was baked in. See "Rendering, if the person wants a designed version at all"
+below.
+
+### Checking it
+
+`python3 scripts/check.py` reads each `cv-*.md` against the decisions file beside it and
+names anything the two disagree about: a line the decisions take off that the markdown
+still holds, a line the person added that is missing from it, a rewrite the file has not
+taken, a ticked section that is not there. Each fault comes with the `assemble.py`
+command that fixes it. The CV as it arrived is never audited this way, because a source
+is supposed to still hold every line somebody decided to take off.
 
 ## The format
 
@@ -108,6 +204,17 @@ Rendering is the last step of Phase 6, it is optional, and the markdown is finis
 before it starts. Phase 7 is the cover letter, so rendering is not the end of the
 work, and a cover letter written afterwards gets rendered on the same skin with
 `--letter`.
+
+**Render the assembled file, and keep `--decisions` on the command.** Two things can
+still go wrong, and neither is the assembled file itself. A markdown nobody assembled,
+one written by hand or the CV as it arrived, carries no note at the foot, so rendering it
+without `--decisions` prints the markdown alone: every line they took off comes back,
+every line they added is missing, every reorder is undone, any section they ticked is not
+there, and the line count still balances because the markdown really does account for all
+of its own lines. A decisions file changed after it was baked in no longer matches the
+note, because the note records what the file does to the page, so its additions print
+twice and its reordered lists shuffle again. `render_cv.py` says that on stderr. The
+answer to both is to assemble again from the source.
 
 **The rendering contract:**
 

@@ -13,7 +13,7 @@ Seven phases, in order. Each writes files and stops. The person decides between 
 3. SCORE       you against it, before any changes
 4. PROPOSE     every change as current / suggested / why, inside a bullet budget
 5. DECIDE      the person accepts, rejects or asks for a rewrite, item by item
-6. ASSEMBLE    the CV as markdown, then rescore
+6. ASSEMBLE    assemble.py bakes the decisions into the markdown, then rescore
 7. LETTER      one page, written last, because it needs the score to exist
 ```
 
@@ -598,8 +598,49 @@ was extracted from them in the chat.
 
 ## Phase 6: Assemble and rescore
 
-Write `cv-<variant>.md`, into the person's folder, from the accepted proposals plus the
-untouched lines. The markdown file is the deliverable and the master.
+**`scripts/assemble.py` writes the assembled CV.** It reads the CV the studio was built
+from and the decisions file the person saved, and writes `cv-<variant>.md` holding
+everything they decided: every rewrite in their own wording, every line they took off
+actually gone, every line they added in the place they added it, every list in the order
+they put it in, and every extra section they ticked written in as a real section.
+Anything nobody decided about is copied through byte for byte, so assembling with an
+empty decisions file gives back the file it was handed, unchanged. The markdown file is
+the deliverable and the master, and this is the command that makes that true.
+
+```bash
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/assemble.py "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
+    --decisions "$D/cv-decisions.json" \
+    --out "$D/cv-<variant>.md"
+```
+
+The first argument is the same markdown Phase 3 and Phase 4 passed as `--cv`, because
+every decision in the file was made against that document. `--out` is required and it
+refuses to write over the source. `--archive` defaults to `cv-<variant>-archive.md`
+beside `--out`, and `--variant` is read off the `--out` filename. Exit 0 means it wrote,
+1 means it refused and said the reason, 2 means the command line was wrong.
+
+**Read what it prints, and tell them what is in it.** It names every rewrite, every line
+taken off with its id and its wording, every line added, every list reordered and every
+section written in. That is the account of what changed, and it is the only place the
+account is given now: the render has nothing left to apply, so it reports none of this.
+
+**The archive is `cv-<variant>-archive.md`, beside the CV.** Every line taken off is in
+it in full, with its id, its wording, the reason and the date, and every rewrite is in it
+with the wording before and the wording after. It is appended to on each pass and nothing
+in it is ever rewritten. It is the durable record of what came off, so a person who wants
+a line back has a file to open.
+
+**The last line of the assembled file is one HTML comment saying which decisions are
+baked in.** It never prints and it is not counted. Leave it exactly as it is: it is what
+stops the same decisions being applied a second time.
+
+**Close the proposals out before assembling.** Line ids are positional, so once the file
+is assembled every id names a line of the assembled document. A proposal, a note or a
+hand-to-Claude line still carrying a pre-assembly id points at the wrong line, and a
+proposal for a line they took off names nothing at all. Record every decision against its
+proposal first. Anything they want to change after this belongs in the new studio the
+rebuild below gives them.
 
 Then rescore: keep the first `scorecard.md` as `scorecard-before.md`, write the new
 one against the assembled CV, and rebuild the studio from it with the assembled CV as
@@ -607,6 +648,12 @@ one against the assembled CV, and rebuild the studio from it with the assembled 
 and their marks, which are keyed to that role and employer, are all still there. The
 Score tab they have been reading all along now shows the new numbers, and they watch
 it move rather than being told it moved.
+
+**The rebuilt studio says the CV changed, and that is right after an assembly.** It is
+reading a CV that is no longer the one their marks were made on, so it says on the page
+what carried over, what it put back by matching their wording, and what it dropped
+because the line it was made on has gone. Nothing has gone wrong. Say that plainly if
+they ask about it, and do not go hunting for a fault.
 
 **Pass the ledgers on this rebuild too.** A rebuild given only `--cv`, `--role` and
 `--employer` opens with an empty Score tab, no suggestions and no achievements panel,
@@ -627,7 +674,10 @@ Drop `--letter` on the first pass through Phase 6. It goes in when a letter alre
 exists from an earlier run, and otherwise the letter arrives in Phase 7 and this is
 built again then.
 
-Then run the check.
+Then run the check. It now reads the assembled markdown against the decisions file
+beside it and names anything the two disagree about: a line the decisions take off that
+is still in the file, a line the person added that is missing from it, a rewrite the file
+has not taken, a ticked section that is not there.
 
 ```bash
 python3 scripts/check.py
@@ -635,10 +685,18 @@ python3 scripts/check.py
 
 Full instructions: `references/assembling.md`.
 
-**Done when:** the markdown carries every accepted change and no unaccepted one,
-`python3 scripts/check.py` has been run and everything it named has been fixed or
-answered, the rescore is shown beside the first score so the movement is visible, and
-any ask that did not move is said out loud rather than left for them to notice.
+**Done when** every one of these is true:
+
+- `assemble.py` exited 0 and named the file it wrote.
+- `cv-<variant>.md` is in the person's folder, and so is `cv-<variant>-archive.md`
+  whenever the run baked anything in at all.
+- What it printed accounts for the decisions file: every rewrite, every removal, every
+  addition, every reorder and every ticked section is on that list, and anything it
+  reported as having no line to land on has been read and dealt with.
+- `python3 scripts/check.py` has been run and everything it named has been fixed or
+  answered.
+- The rescore is shown beside the first score so the movement is visible, and any ask
+  that did not move is said out loud rather than left for them to notice.
 
 **Design is a separate, optional step, and it renders the markdown.** It never reads
 the ledgers, never invents a line, and never truncates. It dresses both documents: the
@@ -665,13 +723,23 @@ went.
 
 Then render that.
 
-**Every render carries `--decisions` once a decisions file exists.** From the moment the
-person saves `cv-decisions.json` out of the studio, every `render_cv.py` command in this
-skill passes it, including the gallery, including the HTML preview, and including the
-`--pdf` run. Leave it off and the render prints from the markdown alone: every line they
-took off comes back, every line they added is missing, every reorder is undone, and any
-section they added is not there. The file still says "31 content lines in, 31 out", so
-nothing on screen says it is wrong.
+**Every render still carries `--decisions` once a decisions file exists**, including the
+gallery, including the HTML preview, and including the `--pdf` run. On an assembled CV it
+applies nothing: `render_cv.py` reads the note at the foot, sees that these decisions are
+already in the file, and says so in one sentence. Keep passing it anyway, because the
+person can make new decisions in a studio built from the assembled CV, and those are
+relative to the assembled document and do apply.
+
+**Two things can still go wrong here, and neither of them is the assembled file.** The
+first is a markdown nobody assembled: one written by hand, or the CV as it arrived. It
+carries no note, so a render of it without `--decisions` prints the markdown alone, and
+every line they took off comes back, every line they added is missing, every reorder is
+undone and any section they ticked is not there, while the file still says "31 content
+lines in, 31 out". The second is a decisions file changed after it was baked in. The note
+records what was baked by what it does to the page, so a file that would now do something
+different no longer matches it, and its additions print twice and its reordered lists
+shuffle a second time. The render says that on stderr, and the answer is to assemble
+again from the source rather than to patch either file by hand.
 
 ```bash
 D="$(python3 scripts/paths.py --data)"
@@ -682,7 +750,7 @@ python3 scripts/render_cv.py "$D/cv-<variant>.md" --decisions "$D/cv-decisions.j
     --skills list --skills-by "Technical=bars;Tools=chips" \
     --skills-order "Tools;Technical" --skills-place "Tools=main" \
     --gap normal \
-    --order profile,key-skills:side,professional-experience,education,training-and-certifications
+    --order profile,key-achievements,key-skills:side,professional-experience,education,training-and-certifications
 ```
 
 If no decisions file exists, because the person handed their work back as the pasted
@@ -695,11 +763,12 @@ than copying the ones above. A section `--order` does not name still prints, las
 the main column, and the render says which. Any heading with the word "skill" in it is
 the skills section, whatever else it is called.
 
-**A section the decisions file adds is named in `--order` by its slug, the same as any
-other.** Key achievements comes in that way, as `key-achievements`, and it is not in the
-markdown, so it is easy to leave out of an order copied off the CV file. Left out it
-prints last in the main column and the run says so, which is almost never where a person
-wanted their achievements.
+**A section the person ticked is written into the assembled markdown, so `--order` names
+it by its slug like any other section.** Key achievements comes through as
+`key-achievements`. Read the order off the assembled file rather than off the CV as it
+arrived, because that is where the section now is. A section `--order` leaves out prints
+last in the main column and the run says so, which is almost never where a person wanted
+their achievements.
 
 The gallery draws one page per layout and palette, 180 of them, at the typeset it was
 given. There are 900 skins in all: 18 layouts, 10 palettes and 5 typesets. The five
@@ -784,11 +853,14 @@ they added, and any section that is not in the markdown. Write that JSON to
 `cv-decisions.json` beside the CV markdown before running the command, which already
 carries `--decisions`.
 
-Skip it and the render is wrong in the worst way: it prints from the markdown alone,
-so every line they deleted comes back and every rewrite reverts, and the PDF looks
-finished. They will not check a document they asked you to produce. **Final** is the
-right-hand half of the Working and Final switch beside the zoom, and what it shows is
-what they approved. The PDF has to match it.
+Write it down even when the CV has already been assembled, because it is the record of
+what they decided and `check.py` reads it against the assembled file. If the command is
+pasted before the assembly, the CV it names is the one that has not been assembled yet,
+and skipping the JSON there is wrong in the worst way: the render prints from the
+markdown alone, so every line they deleted comes back and every rewrite reverts, and the
+PDF looks finished. They will not check a document they asked you to produce. **Final**
+is the right-hand half of the Working and Final switch beside the zoom, and what it shows
+is what they approved. The PDF has to match it.
 
 The decisions file also carries an `order` key, so a bullet the person moved with the
 arrows in the studio prints where they put it. The render lists every list it
@@ -815,8 +887,9 @@ write. `--order` moves sections and sends them to the sidebar, and never drops o
 **A CV can grow a section.** The studio holds six: profile, key skills, experience,
 education, training and key achievements. Three of those can be added to a CV that
 does not have them, and they are key achievements, professional memberships, and
-volunteering and community. An added section never touches the markdown: it prints on
-that version, is reported as an addition, and comes off again. Key achievements is the
+volunteering and community. Until the assembly a ticked section lives in the decisions
+file and prints on that version only. The assembly writes it into `cv-<variant>.md` as a
+real section, which is the point of assembling. Key achievements is the
 one you draft: six candidate lines out of their record worked against this
 advertisement, each naming the ask it answers and the roles it rests on, and they tick
 four to six of them. **Write them at career level.** Each line reaches across more than
@@ -829,8 +902,9 @@ that would leave the achievement with no job behind it.
 **Every line on the page can be pointed at.** Flag it, ask for a rewrite, put it in
 their own words, take it off this version, or add one after it. Two queues on the edge
 of the page keep score: what they have not decided about yet, and what they have handed
-to you. Nothing touches the markdown, and everything taken off is kept in full in the
-archive. `references/marking.md`.
+to you. Marking touches no file at all until Phase 6, and the assembly then writes every
+line taken off into `cv-<variant>-archive.md` in full before it leaves the CV.
+`references/marking.md`.
 
 `render_cv.py` counts content lines in and lines accounted for, and refuses to write
 the file if they differ. The rescore goes into the studio the same way the first score
@@ -920,6 +994,7 @@ never changes what is true.
 | `references/assembling.md` | Phase 6, and whenever a second CV variant exists |
 | `references/arithmetic.md` | Any time a number, date or year count is involved |
 | `references/rendering.md` | Only if the person wants a designed CV or a report |
+| `scripts/assemble.py` | Phase 6: bakes the decisions file into the markdown and writes the archive |
 | `scripts/build_studio.py` | Phase 3, then rebuilt in 4 and 6: the studio, built from their CV |
 | `scripts/paths.py` | Any time you need to know where this person's files go, and in every command that names one |
 | `scripts/documents.py` | Phase 1, before anything else: what they have already produced |
