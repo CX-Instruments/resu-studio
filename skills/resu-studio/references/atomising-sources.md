@@ -1,0 +1,183 @@
+# Atomising the sources
+
+Two ledgers. The facts ledger describes the person and is reused forever. The asks
+ledger describes one advertisement and is thrown away with it.
+
+---
+
+# The facts ledger
+
+`facts.md`. One entry per atomic claim the person has made about their working life,
+in their own words.
+
+## What counts as one fact
+
+One claim, one entry. A role paragraph containing three claims is three facts with
+the role as parent. A bullet that says two things is two facts if they can be
+separated and used independently, one if they cannot.
+
+The test: could this appear on a page on its own and mean something?
+
+## The entry
+
+```
+id: redgate-liaison
+kind: bullet
+parent: role-redgate
+sources:
+  - cv: CV 2026 condensed
+    section: Redgate, Key Responsibilities, bullet 6
+    text: "Liaised with Rates, Property, Compliance, and Waste stakeholders to clarify data requirements, validate business rules, and ensure migrated data supported current and future operational processes"
+  - cv: CV 2026 v2
+    section: Redgate, Key Responsibilities, bullet 7
+    text: "Liaising with business stakeholders across Rates, Property, Compliance, and Waste teams to clarify data requirements, validate business rules, and ensure migrated data reflects current and future operational processes in CiA"
+figures: []
+confirmed: false
+conflict: false
+```
+
+`kind` is one of: `profile`, `role`, `bullet`, `achievement`, `skill`,
+`qualification`, `education`.
+
+## Read the bodies, not the headings
+
+Most of what makes a CV strong for a particular job is in the third bullet of the
+second-last role, or inside a paragraph that has never been broken into bullets. A
+reading that takes job titles and a skills list can only ever answer the requirements
+the person already knew they met.
+
+## More than one CV variant is normal and it is the point
+
+People keep a long one and a short one, and a version aimed at a different industry.
+**The longer or older one usually holds the buried material,** because it was cut for
+space rather than because it stopped being true.
+
+Merge them into one ledger. Same claim from three documents is one fact carrying all
+three wordings under `sources`. Keep every wording: one of them is likely to be the
+language some future employer uses.
+
+**Where two variants state the same fact differently, set `conflict: true` and record
+both. Never pick.** The person decides. Two kinds of conflict matter:
+
+- **Level conflicts.** The same skill at Master on one CV and Advanced on another.
+- **Claim size conflicts.** "Developed, maintained and optimised" on one and
+  "supported the development, maintenance and optimisation" on another. Those are
+  different sizes of the same claim and the person has to choose which is true.
+
+Conflicts drive both the questions in phase 4 and the alignment report.
+
+## Skills need a grain decision, and the grain is the group
+
+An earlier version of this workflow split a skills column into forty-five individual
+skill entries. That is correct as a ledger and unusable as a page: a narrow skills
+column cannot hold forty-five lines and the renderer silently clipped the overflow.
+
+**In the ledger, one entry per skill, with its level and its group.**
+**On the page, one line per group, with the skills comma separated inside it.** That
+is how the person's own CV was written and it is what fits.
+
+## Confirmed
+
+`confirmed: false` on everything read out of a document. It becomes true when the
+person has looked at it and said it is right. Nothing enforces this. It exists so a
+later session can tell what has been checked from what has merely been extracted.
+
+## What this step is not
+
+Not a rewrite. Not an edit. Not a scoring exercise. Do not fix grammar, shorten
+bullets or drop the 2009 role because it looks irrelevant. Relevance is decided per
+advertisement, and the 2009 role is exactly the kind of thing that answers a
+requirement nobody expected.
+
+---
+
+# The asks ledger
+
+`asks.md`. One entry per thing the advertisement asks of the person.
+
+```
+id: a7
+text: "experience leading the development of <the thing the advertisement names> using <the tools it names>r BI or similar tools, and translating complex data into actionable insights for decision-makers"
+necessity: must
+where: "Job pack, Our ideal candidate"
+group: tool
+```
+
+`necessity` is `must`, `nice`, or `implied`. `group` is `experience`, `tool`, `skill`,
+`soft`, `qualification`, `other`.
+
+## Split compound asks
+
+**This is the single most important instruction in this file.**
+
+A duty that names seven subjects in one sentence is seven asks. Left whole, a person
+who answers five of the seven reads as failing the entire thing, and the report tells
+them they have a gap where they have a strength with two holes in it.
+
+Split it, score each part, and the report can say "five of these seven are yours
+outright, and here are the two that are not".
+
+## Find the preferences the ad never labels
+
+Some advertisements have a Desirable heading. Most fold preferences into prose. If
+you only read the bulleted essential list you will miss half of what is actually
+being weighed.
+
+Read the whole thing, the role description, the About us, the last paragraph, and pull
+out anything asked for in these words:
+
+| Wording | Necessity |
+|---|---|
+| ideally, preferably, we would love, it would be great | nice |
+| desirable, advantageous, beneficial, a plus, a bonus | nice |
+| exposure to, familiarity with, some experience of, an understanding of | nice |
+| you may have, you might bring, bonus points for | nice |
+| experience with X or Y | nice for each, because either satisfies it |
+| required, essential, must have, you will need, proven, demonstrated | must |
+| N+ years, mandatory, you must hold, this role requires | must |
+
+Where an advertisement publishes criteria the application is expected to answer,
+under whatever name — selection criteria, essential criteria, key requirements,
+person specification — every one is a
+`must` and the exact heading goes in `where`. In those sectors, failing to visibly
+address one criterion generally excludes the application.
+
+## Implied asks
+
+Some of the hardest filtering happens on things the advertisement plainly needs and
+never states. Citizenship for an ongoing public service role. Domain knowledge of the
+thing the whole branch exists to do. Write these in your own plain words, because
+there are no words of theirs to quote, and put the sentence you inferred it from in
+`where` so the person can argue with the inference.
+
+Be disciplined. An implied ask is traceable to a specific sentence. It is not a guess
+about what employers generally like.
+
+## What the ad says about itself is not an ask
+
+Values, culture statements, how the team describes its own pace. These set the
+register of the writing and nothing else. They never become something a person is
+scored against, and a person is never matched against them.
+
+## Say how well it read
+
+Set `confidence` on the ledger to high, medium or low. Low is a normal outcome for
+four sentences of adjectives, and saying so is more useful than a thorough-looking
+list squeezed out of nothing. Record what made it hard.
+
+## The application format is part of the ad
+
+Capture it explicitly, because it changes the deliverables:
+
+```
+documents: tailored CV, 800 word statement of claims, referee details
+page_limit: 3
+word_limits: {statement: 800}
+closes: 2026-08-31 23:30 AEST
+conditions: [citizenship or right to work, security clearance]
+disclosure: "AI use must be disclosed"
+```
+
+If the ad references a job pack and the pack is not in hand, stop and ask for it
+before proposing anything. The pack routinely changes the deliverable, the length,
+and the eligibility.

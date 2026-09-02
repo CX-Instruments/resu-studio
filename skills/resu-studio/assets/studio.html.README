@@ -1,0 +1,28 @@
+studio.html is the live studio. It is a complete HTML document: doctype, head, body,
+the lot. Open it in any browser and it works, with no server and no build step.
+
+**What gets published as an artifact is the same file with the first five lines and the
+last two removed.** The artifact host supplies its own doctype, head and body and
+refuses a file that brings its own, so publishing strips them:
+
+    the head block here is charset, viewport and a four-line reset, which is exactly
+    what the artifact host puts in. Take those off and the two are byte-identical.
+
+It used to be stored the other way round, as the bare fragment. A browser forgives a
+fragment and renders it, so that looked fine for months; the previews that sandbox a
+file rather than opening it do not, and it came back as a blank white page with the
+headings showing and nothing in them. Store the whole document. Strip on the way out.
+
+The CV lives inside it as the CONST CV block near the top of the script. Rebuild that
+block from the current markdown whenever the wording changes, then republish. Layouts,
+palettes, typesets and the layout CSS are copies of the ones in scripts/render_cv.py
+and assets/skins.json, so the preview equals the print. If you change one, change both.
+
+Copy settings prints the render_cv.py command line for whatever was chosen.
+
+The studio also carries, as a const ASKS block, the advertisement atomised into asks
+with the line on the current draft that answers each one. Rebuild it the same way the
+CV block is rebuilt: read resu/jobs/<id>.md for the requirements, resu/matches/<id>.md
+for the evidence, then re-check every claim against the CV markdown as it currently
+reads rather than trusting the match file, because the match file does not know what
+survived the last edit.

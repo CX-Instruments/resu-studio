@@ -1,0 +1,291 @@
+{
+ "layouts": {
+  "sidebar-dark": {
+   "label": "Dark sidebar",
+   "kind": "sidebar",
+   "side": "left",
+   "fill": "band",
+   "full": true,
+   "rule": true,
+   "fam": "panelled"
+  },
+  "sidebar-right": {
+   "label": "Dark sidebar, right",
+   "kind": "sidebar",
+   "side": "right",
+   "fill": "band",
+   "full": true,
+   "rule": true,
+   "fam": "panelled"
+  },
+  "sidebar-tint": {
+   "label": "Tinted sidebar",
+   "kind": "sidebar",
+   "side": "left",
+   "fill": "tint",
+   "full": true,
+   "rule": true,
+   "fam": "panelled"
+  },
+  "sidebar-tint-right": {
+   "label": "Tinted sidebar, right",
+   "kind": "sidebar",
+   "side": "right",
+   "fill": "tint",
+   "full": true,
+   "rule": true,
+   "fam": "panelled"
+  },
+  "sidebar-line": {
+   "label": "Light sidebar",
+   "kind": "sidebar",
+   "side": "left",
+   "fill": "none",
+   "full": true,
+   "rule": true,
+   "fam": "panelled"
+  },
+  "sidebar-line-right": {
+   "label": "Light sidebar, right",
+   "kind": "sidebar",
+   "side": "right",
+   "fill": "none",
+   "full": true,
+   "rule": true,
+   "fam": "panelled"
+  },
+  "sidebar-top": {
+   "label": "Sidebar, page one",
+   "kind": "sidebar",
+   "side": "left",
+   "fill": "tint",
+   "full": false,
+   "rule": true,
+   "fam": "panelled"
+  },
+  "sidebar-top-right": {
+   "label": "Sidebar, page one, right",
+   "kind": "sidebar",
+   "side": "right",
+   "fill": "tint",
+   "full": false,
+   "rule": true,
+   "fam": "panelled"
+  },
+  "band": {
+   "label": "Header band",
+   "kind": "band",
+   "rule": true,
+   "fam": "banner"
+  },
+  "slab": {
+   "label": "Slab and gutter",
+   "kind": "slab",
+   "rule": false,
+   "fam": "banner"
+  },
+  "panel": {
+   "label": "Panel header",
+   "kind": "panel",
+   "rule": false,
+   "fam": "banner"
+  },
+  "spine": {
+   "label": "Timeline spine",
+   "kind": "spine",
+   "rule": false,
+   "fam": "editorial"
+  },
+  "cards": {
+   "label": "Role cards",
+   "kind": "cards",
+   "rule": true,
+   "fam": "editorial"
+  },
+  "rail": {
+   "label": "Date rail",
+   "kind": "rail",
+   "rule": false,
+   "fam": "editorial"
+  },
+  "bands": {
+   "label": "Section bands",
+   "kind": "bands",
+   "rule": false,
+   "fam": "editorial"
+  },
+  "classic": {
+   "label": "Classic centred",
+   "kind": "classic",
+   "rule": false,
+   "fam": "plain"
+  },
+  "compact": {
+   "label": "Compact two-up",
+   "kind": "compact",
+   "rule": true,
+   "tight": true,
+   "fam": "plain"
+  },
+  "hairline": {
+   "label": "Hairline",
+   "kind": "hairline",
+   "rule": false,
+   "fam": "plain"
+  }
+ },
+ "palettes": {
+  "ink": {
+   "label": "Ink",
+   "accent": "#1f2937",
+   "muted": "#6b7280",
+   "rule": "#d1d5db",
+   "band": "#1f2937",
+   "bandink": "#f6f7f8",
+   "bandmuted": "#b8bfc7",
+   "tint": "#eef0f3",
+   "paper": "#ffffff",
+   "text": "#111827"
+  },
+  "forest": {
+   "label": "Forest",
+   "accent": "#1f4d3a",
+   "muted": "#5f6b64",
+   "rule": "#c9d6cf",
+   "band": "#1c3a2e",
+   "bandink": "#f2f7f4",
+   "bandmuted": "#a8c0b4",
+   "tint": "#eaf1ed",
+   "paper": "#fffefb",
+   "text": "#14201a"
+  },
+  "navy": {
+   "label": "Navy",
+   "accent": "#1b3a63",
+   "muted": "#5f6f83",
+   "rule": "#ccd7e4",
+   "band": "#152e4d",
+   "bandink": "#f1f5fa",
+   "bandmuted": "#a3b6cd",
+   "tint": "#e9eff6",
+   "paper": "#ffffff",
+   "text": "#101c2b"
+  },
+  "slate": {
+   "label": "Slate",
+   "accent": "#3f4a56",
+   "muted": "#77808b",
+   "rule": "#d5dae0",
+   "band": "#343d47",
+   "bandink": "#f4f6f8",
+   "bandmuted": "#adb6c0",
+   "tint": "#edeff2",
+   "paper": "#ffffff",
+   "text": "#1b222a"
+  },
+  "oxblood": {
+   "label": "Oxblood",
+   "accent": "#6d2230",
+   "muted": "#7c6a6d",
+   "rule": "#e0cdd1",
+   "band": "#551a25",
+   "bandink": "#faf3f4",
+   "bandmuted": "#c9a9b0",
+   "tint": "#f4eaec",
+   "paper": "#fffdfd",
+   "text": "#241417"
+  },
+  "teal": {
+   "label": "Teal",
+   "accent": "#125b63",
+   "muted": "#5d777a",
+   "rule": "#c6dcdd",
+   "band": "#0e474e",
+   "bandink": "#f0f8f8",
+   "bandmuted": "#9dc2c5",
+   "tint": "#e6f2f2",
+   "paper": "#ffffff",
+   "text": "#0f2427"
+  },
+  "plum": {
+   "label": "Plum",
+   "accent": "#4a2a5e",
+   "muted": "#726579",
+   "rule": "#dbd0e2",
+   "band": "#3a2150",
+   "bandink": "#f7f3fa",
+   "bandmuted": "#bda9c8",
+   "tint": "#f0eaf4",
+   "paper": "#fffdff",
+   "text": "#1f1526"
+  },
+  "sand": {
+   "label": "Sand",
+   "accent": "#7a5a22",
+   "muted": "#7d7159",
+   "rule": "#e3d8c2",
+   "band": "#5f4519",
+   "bandink": "#fcf8ef",
+   "bandmuted": "#cdb894",
+   "tint": "#f5eeddff",
+   "paper": "#fffdf8",
+   "text": "#2a2113"
+  },
+  "copper": {
+   "label": "Copper",
+   "accent": "#8a4520",
+   "muted": "#836b5f",
+   "rule": "#e6d2c6",
+   "band": "#6d3618",
+   "bandink": "#fdf4ef",
+   "bandmuted": "#d5ac96",
+   "tint": "#f7ebe3",
+   "paper": "#fffdfb",
+   "text": "#2b1a10"
+  },
+  "mono": {
+   "label": "Mono",
+   "accent": "#111111",
+   "muted": "#5a5a5a",
+   "rule": "#c9c9c9",
+   "band": "#111111",
+   "bandink": "#fafafa",
+   "bandmuted": "#b0b0b0",
+   "tint": "#eeeeee",
+   "paper": "#ffffff",
+   "text": "#000000"
+  }
+ },
+ "typesets": {
+  "serif": {
+   "label": "Serif",
+   "head": "Georgia, 'Times New Roman', serif",
+   "body": "Georgia, 'Times New Roman', serif",
+   "scale": 1.0
+  },
+  "sans": {
+   "label": "Sans",
+   "head": "'Helvetica Neue', Arial, sans-serif",
+   "body": "'Helvetica Neue', Arial, sans-serif",
+   "scale": 1.0
+  },
+  "mixed": {
+   "label": "Serif heads",
+   "head": "Georgia, 'Times New Roman', serif",
+   "body": "'Helvetica Neue', Arial, sans-serif",
+   "scale": 1.0
+  },
+  "mixedalt": {
+   "label": "Sans heads",
+   "head": "'Helvetica Neue', Arial, sans-serif",
+   "body": "Georgia, 'Times New Roman', serif",
+   "scale": 1.0
+  },
+  "tight": {
+   "label": "Tight sans",
+   "head": "'Helvetica Neue', Arial, sans-serif",
+   "body": "'Helvetica Neue', Arial, sans-serif",
+   "scale": 0.94
+  }
+ }
+}

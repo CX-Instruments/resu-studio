@@ -1,0 +1,7 @@
+# Local working data lives outside the plugin, but ignore strays anyway
+data-location.txt
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+*.zip

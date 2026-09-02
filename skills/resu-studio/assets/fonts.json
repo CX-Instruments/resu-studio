@@ -1,0 +1,111 @@
+{
+ "fonts": {
+  "archivo-narrow": {
+   "label": "Archivo Narrow",
+   "css": "'Archivo Narrow',Arial,sans-serif",
+   "g": "Archivo+Narrow"
+  },
+  "arial": {
+   "label": "Arial",
+   "css": "Arial,Helvetica,sans-serif"
+  },
+  "arimo": {
+   "label": "Arimo",
+   "css": "Arimo,Arial,sans-serif",
+   "g": "Arimo"
+  },
+  "arvo": {
+   "label": "Arvo",
+   "css": "Arvo,Georgia,serif",
+   "g": "Arvo"
+  },
+  "cabin": {
+   "label": "Cabin",
+   "css": "Cabin,Arial,sans-serif",
+   "g": "Cabin"
+  },
+  "eb-garamond": {
+   "label": "EB Garamond",
+   "css": "'EB Garamond',Garamond,Georgia,serif",
+   "g": "EB+Garamond"
+  },
+  "lato": {
+   "label": "Lato",
+   "css": "Lato,Arial,sans-serif",
+   "g": "Lato"
+  },
+  "lora": {
+   "label": "Lora",
+   "css": "Lora,Georgia,serif",
+   "g": "Lora"
+  },
+  "merriweather": {
+   "label": "Merriweather",
+   "css": "Merriweather,Georgia,serif",
+   "g": "Merriweather"
+  },
+  "montserrat": {
+   "label": "Montserrat",
+   "css": "Montserrat,Arial,sans-serif",
+   "g": "Montserrat"
+  },
+  "open-sans": {
+   "label": "Open Sans",
+   "css": "'Open Sans',Arial,sans-serif",
+   "g": "Open+Sans"
+  },
+  "oswald": {
+   "label": "Oswald",
+   "css": "Oswald,'Arial Narrow',Arial,sans-serif",
+   "g": "Oswald"
+  },
+  "poppins": {
+   "label": "Poppins",
+   "css": "Poppins,Arial,sans-serif",
+   "g": "Poppins"
+  },
+  "quicksand": {
+   "label": "Quicksand",
+   "css": "Quicksand,Arial,sans-serif",
+   "g": "Quicksand"
+  },
+  "raleway": {
+   "label": "Raleway",
+   "css": "Raleway,Arial,sans-serif",
+   "g": "Raleway"
+  },
+  "roboto": {
+   "label": "Roboto",
+   "css": "Roboto,Arial,sans-serif",
+   "g": "Roboto"
+  },
+  "rubik": {
+   "label": "Rubik",
+   "css": "Rubik,Arial,sans-serif",
+   "g": "Rubik"
+  },
+  "source-sans": {
+   "label": "Source Sans Pro",
+   "css": "'Source Sans 3','Source Sans Pro',Arial,sans-serif",
+   "g": "Source+Sans+3"
+  },
+  "times": {
+   "label": "Times New Roman",
+   "css": "'Times New Roman',Times,serif"
+  },
+  "verdana": {
+   "label": "Verdana",
+   "css": "Verdana,Geneva,sans-serif"
+  },
+  "work-sans": {
+   "label": "Work Sans",
+   "css": "'Work Sans',Arial,sans-serif",
+   "g": "Work+Sans"
+  }
+ },
+ "sizes": {
+  "small": 0.94,
+  "normal": 1,
+  "large": 1.06
+ }
+}

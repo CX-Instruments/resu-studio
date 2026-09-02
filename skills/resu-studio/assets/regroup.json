@@ -1,0 +1,12 @@
+{
+  "_note": "An EXAMPLE, and inert until it matches. Used only by --group discipline. Keys are the new headings; values must be the exact headings from THIS person's CV markdown. Any heading not named here passes through unchanged, so a file left as shipped simply does nothing. Rewrite the values to their headings, or leave it alone and do not pass --group.",
+  "discipline": {
+    "Example group A": [
+      "<a heading from their CV>",
+      "<another heading from their CV>"
+    ],
+    "Example group B": [
+      "<a third heading from their CV>"
+    ]
+  }
+}
