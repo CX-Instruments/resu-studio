@@ -296,11 +296,16 @@ Ask it plainly, in these terms, and wait for an answer:
 > Start with the must-haves if you are unsure. Expanding later costs the same as doing
 > it now, so nothing is wasted either way.
 
-**Record the answer in `answers.md`, the moment it arrives**, like every other answer,
-as `depth: essentials` or `depth: all`. The scorecard does not exist yet. When it is
-written in Phase 3, copy the same word into its frontmatter as `depth:`, which is
-where `build_studio.py` reads it and where every later session finds it without asking
-again.
+**Record the answer in `answers.md`, the moment it arrives**, like every other answer.
+It goes in twice, and `templates/answers.md` shows both places: as a `depth:` line in the
+file's frontmatter, so a later session finds it without reading the whole file, and as a
+normal `q:` and `a:` block carrying a `depth:` field of its own, so what was asked and
+what they said is on the record like every other question. The word is `essentials` or
+`all`.
+
+The scorecard does not exist yet. When it is written in Phase 3, copy the same word into
+its frontmatter as `depth:`, which is where `build_studio.py` reads it and where every
+later session finds it without asking again.
 
 **Never choose for them, and never quietly do the bigger job.** If they have not
 answered, ask again rather than assuming. Doing the full pass uninvited spends someone
@@ -354,6 +359,21 @@ reads it. Necessity on every row is one of five words: `must`, `nice`, `implied`
 `condition`, `not a cv question`. The studio draws all five with labels of their own,
 so a citizenship or licence condition is shown as a condition of the job rather than
 as a soft item lifted off the role description.
+
+**Two of those five need a rule to tell them apart from `must`, and both rules are in
+`references/atomising-sources.md`.**
+
+- **`condition` wins over `must`.** Anything that is a condition of being employed at
+  all, a licence, citizenship or a right to work, a clearance, is a `condition`, whether
+  or not the advertisement published it among the criteria. A `must` is a claim about
+  capability, which the application has to evidence. A condition is a yes or a no about
+  the person's standing. Where the sector expects every criterion addressed, a condition
+  is still addressed; it is only counted differently.
+- **`implied` covers a stated duty as well as an inferred one.** A duty the
+  advertisement states and does not list among its criteria is `implied`, quoted in the
+  employer's own words. So is something the advertisement never writes down that a
+  specific sentence gives away. What makes something a `must` is being on the list the
+  application is scored against.
 
 Every ask gets one of these states, and these are the words the studio and the printed
 report both use, so all three describe an ask the same way:
@@ -645,21 +665,41 @@ went.
 
 Then render that.
 
+**Every render carries `--decisions` once a decisions file exists.** From the moment the
+person saves `cv-decisions.json` out of the studio, every `render_cv.py` command in this
+skill passes it, including the gallery, including the HTML preview, and including the
+`--pdf` run. Leave it off and the render prints from the markdown alone: every line they
+took off comes back, every line they added is missing, every reorder is undone, and any
+section they added is not there. The file still says "31 content lines in, 31 out", so
+nothing on screen says it is wrong.
+
 ```bash
 D="$(python3 scripts/paths.py --data)"
-python3 scripts/render_cv.py "$D/cv-<variant>.md" --gallery
-python3 scripts/render_cv.py "$D/cv-<variant>.md" --layout sidebar-dark --palette forest \
+python3 scripts/render_cv.py "$D/cv-<variant>.md" --decisions "$D/cv-decisions.json" --gallery
+python3 scripts/render_cv.py "$D/cv-<variant>.md" --decisions "$D/cv-decisions.json" \
+    --layout sidebar-dark --palette forest \
+    --role "<the job title>" --employer "<the employer>" \
     --skills list --skills-by "Technical=bars;Tools=chips" \
     --skills-order "Tools;Technical" --skills-place "Tools=main" \
     --gap normal \
     --order profile,key-skills:side,professional-experience,education,training-and-certifications
 ```
 
+If no decisions file exists, because the person handed their work back as the pasted
+block instead, drop the flag and say so out loud in the same breath: the render is then
+the markdown, and the markdown has to already carry everything they decided.
+
 The names in `--order`, `--skills-by`, `--skills-order`, `--skills-place` and
 `--hide-groups` are this person's own headings, so read them off their markdown rather
 than copying the ones above. A section `--order` does not name still prints, last, in
 the main column, and the render says which. Any heading with the word "skill" in it is
 the skills section, whatever else it is called.
+
+**A section the decisions file adds is named in `--order` by its slug, the same as any
+other.** Key achievements comes in that way, as `key-achievements`, and it is not in the
+markdown, so it is easy to leave out of an order copied off the CV file. Left out it
+prints last in the main column and the run says so, which is almost never where a person
+wanted their achievements.
 
 The gallery draws one page per layout and palette, 180 of them, at the typeset it was
 given. There are 900 skins in all: 18 layouts, 10 palettes and 5 typesets. The five
@@ -676,9 +716,18 @@ typefaces. The text stays text, which is what an applicant tracking system reads
 ```bash
 D="$(python3 scripts/paths.py --data)"
 python3 scripts/render_cv.py "$D/cv-<variant>.md" --letter "$D/cover-letter-<variant>.md" \
+    --decisions "$D/cv-decisions.json" \
     --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
     --role "<the job title>" --employer "<the employer>" --pdf
 ```
+
+**A `--letter` run does not rewrite the CV's own HTML file.** It writes both PDFs and the
+letter's HTML, and the CV's named HTML is left exactly as the previous run made it. So a
+CV HTML written earlier without `--decisions` survives beside a correct PDF, with the
+deleted bullet still in it, and it is the file with the plain name that a person opens.
+Two ways out, and take one of them: run the CV on its own with `--decisions` first so
+that file is right, or delete the stale HTML and hand over the PDF alone. Never leave
+two files in their folder that disagree with each other.
 
 **The filename is what stops one application writing over another.** With `--role` and
 `--employer` the PDFs are written as
@@ -696,16 +745,26 @@ Extract the text and check three things: the name is first and whole, every sect
 heading appears as a word rather than spaced-out letters, and nothing is interleaved.
 
 ```bash
-pdftotext "<the finished>.pdf" - | head -40
+pdftotext "$(python3 scripts/paths.py --documents)/<the finished>.pdf" - | head -40
 ```
 
-A two-column sidebar reads out of order once extracted. On the four right-hand sidebar
-layouts, `sidebar-right`, `sidebar-tint-right`, `sidebar-line-right` and
-`sidebar-top-right`, the file opens with the profile and the name arrives after the
-whole main column. The four left-hand ones open with the name, wrapped onto two lines
-by the narrow column. This was measured, so `references/ats.md` carries the table. That
-is fine for an application going to a person and a poor bet for one going through a
-job board or a government portal. Offer the trade rather than switching quietly.
+Drop the `head -40` and read the whole extraction the moment anything looks wrong. On a
+right-hand sidebar the name arrives about two thirds of the way down, past line 40, so a
+check that reads only the head reports a missing name that is in the file.
+
+**All eight sidebar layouts interleave the two columns once extracted, and that includes
+the default, `sidebar-dark`.** The measured read-back of a real CV puts the KEY SKILLS
+heading between the two paragraphs of the profile and the KEY ACHIEVEMENTS heading inside
+the skills block. On the four right-hand ones the file also opens with the profile and the
+name arrives after most of the main column. `references/ats.md` carries the measured table
+for all eighteen layouts and names the ones that came through with every section in one
+piece.
+
+So the check will fail on a default render, and when it does the person is told what the
+extraction looks like and offered a layout that came through clean. An interleaved file is
+fine for an application going to a person and a poor bet for one going through a job board
+or a government portal. **Offer the trade rather than switching quietly, and rather than
+withholding the document.** They choose where it is going, so they choose the layout.
 
 Full instructions: `references/ats.md`.
 
@@ -796,12 +855,24 @@ pack, not a template.
 Full instructions, including what earns a paragraph and what a keyword screener needs
 from it: `references/cover-letter.md`.
 
+**Print it on the skin the CV is already on.** The layout, the palette and the typeset in
+this command are whatever the person landed on in Phase 6, copied across unchanged. The
+two documents are posted together and are read within a minute of each other, so a letter
+in a different palette reads as somebody else's letter. `--palette forest` here is the
+Phase 6 example carried over, and it changes to whatever they actually chose.
+
 ```bash
 D="$(python3 scripts/paths.py --data)"
 python3 scripts/render_cv.py "$D/cv-<variant>.md" --letter "$D/cover-letter-<variant>.md" \
-    --layout sidebar-dark --palette navy \
+    --decisions "$D/cv-decisions.json" \
+    --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
     --role "<the job title>" --employer "<the employer>" --pdf
 ```
+
+One run writes both PDFs, so the two files cannot end up on different skins by being
+printed at different moments. `--decisions` is on it for the same reason it is on every
+other render: this run reprints the CV as well as the letter, and without it the CV PDF
+reverts to the markdown.
 
 Then build the studio once more with `--letter` added, so the letter can be marked up
 the same way the CV was. The studio has a Resume and Cover letter chooser under

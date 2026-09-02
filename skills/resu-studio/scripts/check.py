@@ -62,6 +62,61 @@ PRESENT_VERBS = ("deliver ", "develop ", "build ", "perform ", "apply ", "automa
                  "manage ", "lead ", "support ", "maintain ", "coordinate ",
                  "liaise ", "oversee ", "design ", "conduct ", "currently ")
 
+# A role that has not finished. Any of these words in the dates and the role is still
+# running, whatever else is in there.
+STILL_THERE = re.compile(r"\b(present|current|currently|now|ongoing|to date)\b", re.I)
+
+
+def _is_date_line(text):
+    """Is this line only dates? render_cv.py's own test, asked of render_cv.py.
+
+    This check used to read the `###` heading and nothing else, so it only ever saw
+    a role that had ended on a CV written `### Title | 2019 to 2023`. render_cv.py's
+    parser exists partly because almost nobody writes it that way: the dates go on
+    the line underneath. On the CV most people actually write, no role was ever seen
+    as ended and the past tense check never fired once.
+
+    The renderer is asked rather than copied, because a second copy of that test here
+    would drift from the one that decides what prints.
+    """
+    try:
+        import render_cv
+        return render_cv._is_date_line(text)
+    except Exception:                                          # noqa: BLE001
+        return False
+
+
+def role_dates(head, body_lines):
+    """The dates of one `### role`, wherever this person put them.
+
+    Three places, in the order render_cv.py looks: after a `|` in the heading, on the
+    first line under the heading, and last the tail of the heading after a comma,
+    which is the shape this check used to be built around.
+    """
+    if "|" in head:
+        return head.rsplit("|", 1)[1].strip()
+    for raw in body_lines:
+        if not raw.strip():
+            continue
+        return raw.strip() if _is_date_line(raw.strip()) else ""
+    return ""
+
+
+def role_ended(head, body_lines):
+    """Has this role finished? Unknown dates count as not finished.
+
+    Erring towards no is deliberate: a wrong yes tells somebody their present tense
+    is a fault on a job they still hold, and being told off for describing today's
+    work in today's tense is how a person stops believing the rest of the output.
+    """
+    dates = role_dates(head, body_lines)
+    if not dates:
+        tail = head.rsplit(",", 1)[-1].strip()
+        dates = tail if _is_date_line(tail) else ""
+    if not dates or STILL_THERE.search(dates):
+        return False
+    return bool(re.search(r"(19|20)\d\d", dates))
+
 
 def read(path):
     """The text of one file, whatever it was saved as.
@@ -151,12 +206,12 @@ def check_cv(path, faults, notes):
     for chunk in roles[1:]:
         head = chunk.split("\n", 1)[0]
         body = chunk.split("\n", 1)[1] if "\n" in chunk else ""
-        ended = re.search(r"to\s+(19|20)\d\d\s*$", head.strip()) or "to 20" in head
-        if not ended:
+        body_lines = body.split("\n")
+        if not role_ended(head, body_lines):
             continue
-        for raw in body.split("\n"):
+        for raw in body_lines:
             line = raw.strip().lstrip("-").strip()
-            if not line or line.startswith("#"):
+            if not line or line.startswith("#") or _is_date_line(line):
                 continue
             low = line.lower()
             for v in PRESENT_VERBS:
@@ -207,10 +262,18 @@ def check_proposals(path, facts_ids, ask_ids, faults, notes):
 
         has_current = "**Currently:**" in e
         has_sugg = "**Suggested:**" in e
+        has_q = "**Question:**" in e
         if not has_current:
             faults.append("%s %s has no Currently block." % (name, pid))
-        if not has_sugg:
-            faults.append("%s %s has no Suggested block." % (name, pid))
+        # An entry with no Suggested is not always malformed. rewriting.md says that
+        # where the stronger line needs a fact nobody has, the correct output is the
+        # question rather than the rewrite, and build_studio.py carries such an entry
+        # into the studio as a question against its line. It still has to say what it
+        # is asking, or the person is shown a card with nothing on it.
+        if not has_sugg and not has_q:
+            faults.append("%s %s has neither a Suggested block nor a Question block. "
+                          "One of the two: the replacement wording, or the question "
+                          "the wording is waiting on." % (name, pid))
         if "**Why:**" not in e:
             faults.append("%s %s has no reason. A change without one gets reversed by "
                           "the first person who disagrees." % (name, pid))

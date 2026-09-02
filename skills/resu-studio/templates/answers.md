@@ -1,5 +1,6 @@
 ---
 updated: YYYY-MM-DD
+depth: essentials
 ---
 
 # Answers
@@ -14,6 +15,28 @@ job advertisement to the next. `answers.md` records that the question was asked;
 
 If an answer changes, append a new block rather than editing the old one, and use the
 newer one. What they said and when is part of the record.
+
+## The scoring depth has a field of its own
+
+`depth:` is how far the person asked you to take the scoring, and it is either
+`essentials` or `all`. It goes in two places in this file. In the frontmatter above, so
+a later session finds it without reading the whole thing. And on the block that recorded
+the question, as a sixth field, so what was asked and what they said stays on the record
+like every other answer. Copy the same word into `scorecard.md`'s frontmatter in Phase 3,
+because that is where `build_studio.py` reads it.
+
+If they widen it later, append a second block carrying `depth: all` and use the newer
+one, the same as any other changed answer, and change the frontmatter to match.
+
+```
+q: Before I go through this, how far do you want me to take it? The must-haves only,
+   or everything it asks for?
+a: Just the must-haves for now, I want to know whether it is worth applying.
+on: 2026-08-27
+phase: 1
+depth: essentials
+led to: nothing
+```
 
 ```
 q: How many analysts were on the team? The line is much stronger with the number.

@@ -93,6 +93,13 @@ paragraph after it. Nothing touches the markdown.
 `render_cv.py --letter <file.md>` renders the same thing from the markdown, on the
 same skin, taking the name and contact block from the CV file.
 
+**The same skin means the same layout, the same palette and the same typeset**, copied
+off whatever the person landed on for the CV in Phase 6. The two files are opened within
+a minute of each other by the same reader, so a letter in a different colour reads as
+somebody else's letter, or as a template the applicant did not look at. One command with
+both `--letter` and the skin flags on it writes both PDFs, which is the way to be sure
+they cannot end up on different skins by being printed at different moments.
+
 **They are saved separately.** Save as PDF at the top gives one file per document, each
 in Final so nothing but the document reaches the paper. They are two documents and a
 panel reads them as two.

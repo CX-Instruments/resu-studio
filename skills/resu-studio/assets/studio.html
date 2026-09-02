@@ -7,9 +7,12 @@
 </head>
 <body>
 <title>Resu Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600&display=swap">
+<!-- The studio's own chrome asked a font server for Hanken Grotesk and Archivo Narrow.
+     Nothing a person hands over was ever affected, because the CV faces are embedded
+     below, but with no network the interface fell back mid-render and the panel
+     reflowed. Archivo Narrow is bundled in assets/fonts and is already embedded by the
+     block below, so the labels keep their face offline; the body face of the interface
+     is now the stack the machine already has. Nothing here goes to a network. -->
 <!-- The typefaces the CV is set in are carried inside this page, base64, put here by
      scripts/build_studio.py out of assets/fonts/, which is where the print gets them
      too. Fetching them from a font server meant the studio measured in whatever the
@@ -24,8 +27,8 @@
   --ink:#12161c; --muted:#5c6674; --line:#c9cfd9; --line2:#e2e6ec;
   --accent:#14607f; --accent-soft:#e2eef3; --on-accent:#ffffff;
   --ok:#2e7d52; --warn:#a8681a; --gap:#a63b36; --near:#7a6a3c;
-  --ui:"Hanken Grotesk","Helvetica Neue",Arial,sans-serif;
-  --label:"Archivo Narrow","Hanken Grotesk","Helvetica Neue",Arial,sans-serif;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --label:"Archivo Narrow","Arial Narrow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
   --shadow:0 1px 2px rgba(16,22,32,.06),0 8px 26px rgba(16,22,32,.10);
 }
 @media (prefers-color-scheme: dark){
@@ -1335,7 +1338,9 @@ function listOf(id){
   if(m) return {key:m[1], i:+m[2], n:(CV.education||[]).length};
   return null;
 }
-function movableBullet(id){ return !!listOf(id); }
+/* A list of one has no order to change, and `moveBullet` refuses to act on it. The
+   arrows were drawn anyway, so the only thing they could do was nothing. */
+function movableBullet(id){ const L=listOf(id); return !!(L && L.n>1); }
 function anyReorder(){ return Object.keys(S.bOrder||{}).length>0; }
 
 /* The order the arrows put a list in travels in the decisions file, under `order`,
@@ -2833,16 +2838,29 @@ function propsDecided(){ if(!S.props) S.props={};
   Object.keys(PROPOSED).forEach(id=>(PROPOSED[id]||[]).forEach(x=>{
     if(S.props[x.p]) out.push({id:id, p:x, was:S.props[x.p]}); }));
   return out; }
-function settleProp(id, x, how){
+/* What the person said when a suggestion was a question. Kept beside the decision
+   rather than inside it, so `S.props` stays one word per proposal and every reader of
+   it keeps working. */
+function propNote(p){ return (S.propNotes||{})[p] || ""; }
+function settleProp(id, x, how, note){
   if(!S.props) S.props={};
   S.props[x.p]=how;
+  if(note){ S.propNotes=S.propNotes||{}; S.propNotes[x.p]=note; }
+  /* Every branch below either returns through something that saves, or falls to the
+     save at the end. A decision that changes nothing on the page is still a decision:
+     an addition they did not want, a question they had no answer to, and a rejection
+     are all recorded, and all of them travel, so a later session does not raise the
+     same thing against an explicit no. */
   if(how==="used"){
     if(x.kind==="add"){ (S.adds[id]=S.adds[id]||[]).push(
       {text:x.sug, at:new Date().toISOString(), from:"claude", p:x.p}); }
     else if(x.kind==="remove"){ setMark(id,"remove",{from:"claude", p:x.p}); return; }
     else { setMark(id,"edit",{text:x.sug, from:"claude", p:x.p}); return; }
   }else if(how==="kept"){
-    if(x.kind!=="add" && !S.marks[id]){ setChecked(id, true); return; }
+    /* Keeping their own wording ticks the line as read. There is nothing to tick on
+       an addition, because the line is not on the page: the decision itself is the
+       whole record, and it is already in S.props above. */
+    if(x.kind!=="add" && x.kind!=="ask" && !S.marks[id]){ setChecked(id, true); return; }
   }else if(how==="removed"){
     setMark(id,"remove",{from:"claude", p:x.p}); return;
   }else if(how==="another"){
@@ -2864,6 +2882,7 @@ function handoffCount(){
     + Object.keys(S.checked||{}).length + Object.keys(S.flags||{}).length
     + Object.keys(S.adds).reduce((n,k)=>n+S.adds[k].length,0)
     + Object.keys(S.props||{}).length
+    + Object.keys(S.states||{}).length
     + asksForClaude().length + extrasForClaude().length;
 }
 function extrasForClaude(){
@@ -3435,11 +3454,63 @@ function propCard(id, x){
   box.appendChild(w);
 
   const pill=document.createElement("span"); pill.className="pill";
-  pill.style.color="var(--accent)";
+  pill.style.color = x.kind==="ask" ? "var(--warn)" : "var(--accent)";
   pill.textContent = x.kind==="add" ? "Suggested: a new line"
                    : x.kind==="remove" ? "Suggested: take it off"
+                   : x.kind==="ask" ? "A question for you"
                    : "Suggested rewrite";
   box.appendChild(pill);
+
+  /* Sometimes the honest output is a question and not a rewrite: the stronger line
+     needs a fact only they have, and writing one anyway would be inventing the
+     answer. These used to be dropped before the page ever saw them, so the question
+     was never asked and the line stayed as it was for want of one sentence. */
+  if(x.kind==="ask"){
+    /* Not struck through. Nothing is proposed against this line, so drawing it as
+       replaced would say a change is waiting that nobody has written. */
+    const now=document.createElement("p"); now.className="t";
+    now.style.color="var(--muted)";
+    now.textContent=(x.cur || (atomBy(id)||{}).text || "");
+    box.appendChild(now);
+    const q=document.createElement("p"); q.className="t";
+    q.textContent=x.q || x.why || "";
+    box.appendChild(q);
+    const n=document.createElement("p"); n.className="note";
+    n.textContent="There is no suggested wording here, because writing one would mean "
+      +"inventing the answer. Tell me and I will draft the line from what you say.";
+    box.appendChild(n);
+    const meta=[];
+    if(x.answers) meta.push("answers "+x.answers);
+    if(x.draws)   meta.push("draws on "+x.draws);
+    if(meta.length){ const m=document.createElement("p"); m.className="note";
+      m.style.opacity="0.8"; m.textContent=meta.join(" · "); box.appendChild(m); }
+    const row=document.createElement("div"); row.className="row";
+    const ans=document.createElement("button"); ans.type="button";
+    ans.textContent="Answer this";
+    ans.addEventListener("click",()=>{
+      if(box.querySelector("textarea")) return;
+      const ta=document.createElement("textarea");
+      ta.placeholder="Your answer, in your own words. Nothing goes on the page until "
+        +"you have handed this over.";
+      box.appendChild(ta);
+      const r2=document.createElement("div"); r2.className="row";
+      const ok=document.createElement("button"); ok.type="button";
+      ok.textContent="That is my answer";
+      ok.addEventListener("click",()=>{ const v=ta.value.trim();
+        if(v) settleProp(id,x,"answered",v); });
+      const no=document.createElement("button"); no.type="button";
+      no.textContent="Cancel";
+      no.addEventListener("click",()=>{ ta.remove(); r2.remove(); });
+      r2.append(ok,no); box.appendChild(r2);
+      setTimeout(()=>ta.focus(),30);
+    });
+    const none=document.createElement("button"); none.type="button";
+    none.textContent="Nothing to add";
+    none.title="The record has nothing that answers this, and the line stays as it is.";
+    none.addEventListener("click",()=>settleProp(id,x,"nothing"));
+    row.append(ans,none); box.appendChild(row);
+    return box;
+  }
 
   const now=document.createElement("p");
   now.className = x.kind==="add" ? "note" : "t was";
@@ -3547,8 +3618,9 @@ function handoffText(){
   const L=[(S.doc==="letter"?"Cover letter work":"CV work")+", from Resu Studio.",""];
   const kept=Object.keys(S.checked||{}).length;
   L.push(handoffCount()+" decision"+(handoffCount()===1?"":"s")+" in this block."
-         +(kept ? "  "+kept+" of them are lines I read and was happy with, "
-                 +"listed here only as a count so you do not raise them again." : ""));
+         +(kept ? "  "+kept+(kept===1?" of them is a line":" of them are lines")
+                 +" I read and was happy with, listed here only as a count so you do "
+                 +"not raise them again." : ""));
   L.push("");
   const am=asksForClaude();
   if(am.length){
@@ -3559,6 +3631,22 @@ function handoffText(){
       L.push("    they ask: "+a.t);
       if(m.line) L.push("    the line:  "+m.line);
       if(m.note) L.push("    "+m.note);
+    });
+    L.push("");
+  }
+  /* A state they set themselves, over the one the scorecard read. This is the person
+     saying the scoring is wrong about their own record, and it used to reach neither
+     the pasted block nor the decisions file, so the next rescore read it the same
+     wrong way again. */
+  const restated=Object.keys(S.states||{}).filter(k=>S.states[k]);
+  if(restated.length){
+    L.push("You marked these asks differently from the scorecard:");
+    restated.forEach(k=>{
+      const a=ASKS.find(z=>z.id===k)||{};
+      L.push("  ["+k+"] you read it as "+((STATES[S.states[k]]||{}).label
+             || S.states[k])+", the scorecard read it as "
+             +((STATES[a.st]||{}).label || a.st || "not scored"));
+      if(a.t) L.push("    they ask: "+a.t);
     });
     L.push("");
   }
@@ -3581,15 +3669,26 @@ function handoffText(){
   }
   const pd=propsDecided();
   if(pd.length){
-    const used=pd.filter(x=>x.was==="used"), kept=pd.filter(x=>x.was==="kept"),
-          again=pd.filter(x=>x.was==="another"),
-          edited=pd.filter(x=>x.was==="edited"), gone=pd.filter(x=>x.was==="removed");
+    const by=w=>pd.filter(x=>x.was===w);
+    const used=by("used"), kept=by("kept"), again=by("another"),
+          edited=by("edited"), gone=by("removed"),
+          answered=by("answered"), nothing=by("nothing");
     L.push("Your decisions on the suggestions:");
     L.push("  used "+used.length+", used with your own edits "+edited.length
            +", kept your own "+kept.length+", asked for another "+again.length
-           +", took the line off "+gone.length);
-    kept.forEach(x=>L.push("  kept mine  ["+x.p.p+"] "+x.p.sug));
-    again.forEach(x=>L.push("  try again  ["+x.p.p+"] "+x.p.sug));
+           +", took the line off "+gone.length
+           +", questions answered "+answered.length
+           +", questions with nothing to add "+nothing.length);
+    kept.forEach(x=>L.push("  kept mine  ["+x.p.p+"] "+(x.p.sug||x.p.q||"")));
+    again.forEach(x=>L.push("  try again  ["+x.p.p+"] "+(x.p.sug||"")));
+    /* A question was asked and answered, and the answer is the whole point of it:
+       it is the fact the rewrite was waiting on. */
+    answered.forEach(x=>{
+      L.push("  answered   ["+x.p.p+"] "+x.id);
+      L.push("    asked: "+(x.p.q||x.p.why||""));
+      L.push("    you said: "+propNote(x.p.p)); });
+    nothing.forEach(x=>{
+      L.push("  no answer  ["+x.p.p+"] "+(x.p.q||x.p.why||"")); });
     const undecided=propsWaiting();
     if(undecided) L.push("  "+undecided+" suggestion(s) not looked at yet");
     L.push("");
@@ -3641,6 +3740,27 @@ function handoffText(){
                          L.push("    "+x.text); });
     L.push("");
   }
+  /* The sections they added, with the lines that are actually in them: the key
+     achievements they ticked, and anything they typed into a section of their own.
+     This block listed a section only when they had asked for a DIFFERENT set, so
+     somebody who ticked four achievements, closed the page and pasted the block
+     handed over an evening's work with every one of them missing, and nothing here
+     said so. The decisions file has always carried them under `sections`. */
+  const addedSecs=S.order.filter(o=>isExtra(o.id) && o.show);
+  addedSecs.forEach(o=>{
+    const def=EXTRA[o.id];
+    const lines=extraLines(o.id).filter(x=>!removed(x.key));
+    if(!lines.length) return;
+    const at=S.order.findIndex(z=>z.id===o.id);
+    const before=S.order.slice(0,at).filter(z=>!isExtra(z.id)).pop();
+    L.push(def.name+", a new section, printing "
+           +(before ? "after "+secName(before.id) : "at the top")
+           +" in this order:");
+    lines.forEach(x=>L.push("  - ["+x.key+"] "+textOf(x.key, x.text)));
+    L.push("  Nothing in the markdown says this section exists. It travels in the "
+           +"decisions file and the renderer prints it.");
+    L.push("");
+  });
   if(anyReorder()){
     L.push("Lines you reordered:");
     Object.keys(S.bOrder).forEach(k=>L.push("  "+k+": "+S.bOrder[k].join(", ")));
@@ -3661,6 +3781,21 @@ function handoffText(){
   return L.join("\n");
 }
 
+/* How each decision on a suggestion reads to somebody filling in the `Decision:`
+   field of proposals.md. The word in `was` is what the page stores; this is the
+   sentence it means. */
+const PROPWORD = {
+  used:     "Accepted, used as written.",
+  edited:   "Accepted with their own edit, and the wording they typed is the wording "
+           +"that prints.",
+  kept:     "Rejected. Their own line stays as it is.",
+  another:  "Rejected as written, and a different rewrite was asked for.",
+  removed:  "The line was taken off this version instead.",
+  answered: "A question, answered. The answer is in `note` and the line is still to "
+           +"be drafted from it.",
+  nothing:  "A question, and nothing on the record answers it. The line stays as it is."
+};
+
 function decisionsFile(){
   const sections=S.order.filter(o=>isExtra(o.id) && o.show).map(o=>{
     const def=EXTRA[o.id], at=S.order.findIndex(x=>x.id===o.id);
@@ -3670,12 +3805,44 @@ function decisionsFile(){
             lines:extraLines(o.id).filter(x=>!removed(x.key))
                     .map(x=>({key:x.key, text:textOf(x.key,x.text)}))};
   }).filter(x=>x.lines.length);
+
+  /* Every decision on every suggestion, including the ones that change nothing on
+     the page. A rejection used to leave no trace in this file at all: `marks` holds
+     what a line now says, and a suggestion the person said no to says nothing about
+     any line. So the file could not carry a no, and a later session raised the same
+     suggestion again against an explicit one. */
+  const proposals=propsDecided().map(x=>{
+    const m=S.marks[x.id];
+    const rec={p:x.p.p, line:x.id, kind:x.p.kind, was:x.was,
+               decision:PROPWORD[x.was] || x.was,
+               where:x.p.where||"", suggested:x.p.sug||""};
+    if(x.p.kind==="ask") rec.question=x.p.q||x.p.why||"";
+    if(propNote(x.p.p)) rec.note=propNote(x.p.p);
+    if(m && m.a==="edit" && m.text && m.p===x.p.p) rec.text=m.text;
+    return rec;
+  });
+  /* Named rather than left out, because "not looked at" and "said no" are different
+     answers and only one of them is a decision. */
+  const undecided=[];
+  Object.keys(PROPOSED).forEach(id=>propsFor(id).forEach(x=>
+    undecided.push({p:x.p, line:id, kind:x.kind})));
+
   return JSON.stringify({
     cv:"CV - draft.md",
     letter:"Cover letter.md",
     document:S.doc,
     saved:new Date().toISOString(),
     marks:S.marks, adds:S.adds,
+    /* Nothing downstream reads the four below yet. They are here because this file
+       and the pasted block are offered as the same handover, and everything the
+       block says has to be in the file too or one of the two routes loses work. */
+    proposals:proposals,
+    undecided:undecided,
+    flags:S.flags||{},
+    checked:S.checked||{},
+    asks:S.askMarks||{},
+    askStates:S.states||{},
+    sectionsAsked:Object.keys(S.extraAsk||{}).filter(k=>S.extraAsk[k]),
     /* The order the person put a role's bullets, or the training and education lines,
        into, keyed the way the ids print: `<section>/<role index>` for a role's bullets
        and the bare `<section>` for a flat list. Every entry is an original line number,

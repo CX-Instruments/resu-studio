@@ -75,10 +75,20 @@ Group by urgency, not by page order, and say what each group is:
    claims the record does not support.
 2. **Decide.** Places where you need a fact only the person has.
 3. **Same claim twice.** Duplications, with which copy to keep.
-4. **Missing and worth adding.** With where each goes.
-5. **Wording.**
-6. **No change needed.** Name what you checked and left alone, so the person is not
+4. **Cut this to make room.** A line that answers nothing this advertisement asks for,
+   on a page with no room left. `rewriting.md` names this as one of the three shapes a
+   useful change takes, and it is the only one whose `Suggested:` is a deletion with
+   nothing replacing it in place. The reason names which proposal takes the slot, so
+   the person can accept the cut and refuse the replacement, or the other way round.
+   Where the page has room, this group is empty and says so.
+5. **Missing and worth adding.** With where each goes.
+6. **Wording.**
+7. **No change needed.** Name what you checked and left alone, so the person is not
    left wondering whether you simply did not get to it.
+
+Groups 3 and 4 both end in a deleted line and they are different arguments. In 3 the
+claim is on the page twice and the reason quotes the other copy. In 4 the claim appears
+once and is true, and the reason is that this advertisement does not ask for it.
 
 ## The budget check, before writing anything
 

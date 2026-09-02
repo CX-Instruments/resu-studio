@@ -11,9 +11,20 @@ addition, and comes off again without a trace.
 | Professional memberships | they type it; nothing in a CV implies it |
 | Volunteering and community | they type it; nothing in a CV implies it |
 
-Two things a job platform asks for are deliberately not sections here: referees and
-eligibility. They are fields on the application form, not lines on a CV, and putting
-them on the page spends room that a criterion could have used.
+**Referees and eligibility are missing from that table because neither is a section.**
+Referees are a short block the person types when they want one, and eligibility is a
+single line under the contact block. Both are routinely fields on the application form
+as well.
+
+**Whether either goes on the page is the person's decision, put to them as a proposal
+with the trade stated.** It costs a line that a criterion could have used, and where the
+form already asks for it the same thing is being answered twice. Against that: where the
+advertisement makes it a condition, a screener reading only the CV can see it settled
+without opening anything else, and some people would rather it be visible than be asked
+about it. Write both halves into `Why:`, leave `Decision:` blank, and let them answer.
+Adding either unasked and stripping either unasked are both silent edits to what the
+employer is told about them. `templates/cv.md`, `references/assembling.md` and
+`references/marking.md` all say this the same way.
 
 ---
 
@@ -78,13 +89,19 @@ career total.
 ### Where the lines come from
 
 Each line comes from the facts ledger, worked against the asks ledger. For each
-candidate, record three things and show all three:
+candidate, record three things and show all three. **Write the field names exactly as
+they appear here**, which is how `templates/achievements.md` has them and what
+`build_studio.py --achievements` reads:
 
 ```
-the line     one sentence, their wording, condensed
-answers      which ask from the advertisement it speaks to, in the ad's own terms
-draws on     every role it rests on, and there should be at least two
+id: k1
+text: "one sentence, their wording, condensed"
+answers: which ask ids from the advertisement it speaks to
+draws_on: every role it rests on, and there should be at least two
 ```
+
+`draws_on:` is the one to write. `draws on:` with a space is read as the same field, so
+an older file still loads, and a new one gets the underscore.
 
 Showing the ask makes ticking a decision rather than a guess. Showing the roles is the
 check on the rule above: a candidate that draws on one role has not been written at

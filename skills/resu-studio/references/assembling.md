@@ -18,11 +18,12 @@ separation is the fix. Ledgers hold what is true. The markdown holds what prints
 # ALEX MORGAN TAYLOR
 
 email | location | linkedin
-[eligibility line, only where an ad makes it a condition]
+[eligibility line, if the person decides to carry one]
 
 ## PROFILE
 
-Three short paragraphs at most. Third person, no pronouns.
+Three short paragraphs at most. Third person with no pronouns where the profile is being
+written from nothing; the person the CV already uses where it is not.
 
 ## KEY SKILLS
 
@@ -54,6 +55,15 @@ stated plainly and without brackets or apology.
 
 - Name, Issuer (Year)
 ```
+
+**The eligibility line is the person's call, and it is put to them as a proposal.**
+Citizenship, a right to work, a licence, a clearance. It costs a line a criterion could
+have used and most application forms ask for it in a field of their own, so it is often
+answered twice. Where the advertisement makes it a condition, having it on the page means
+a screener reading only the CV can see it settled. Write the trade into `Why:`, leave
+`Decision:` blank, and let them answer. Putting it on unasked and taking it off unasked
+are both silent edits to what the employer is told about them. The same holds for
+referees. `references/achievements.md` says the same thing from the other end.
 
 Rules that are not optional:
 

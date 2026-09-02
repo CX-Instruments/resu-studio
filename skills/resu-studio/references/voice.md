@@ -64,6 +64,24 @@ reads past it either way and a reader who notices it discounts the sentence.
 **On the CV: third person, no pronouns, past tense for finished roles.** The field's
 own nouns, and the outcome before the activity where an outcome exists.
 
+**That rule is for a line being written from nothing.** A key achievement drafted out of
+the facts ledger, a bullet for a section the CV does not have yet, a profile where there
+was none. There is no established voice to keep, so this is the default the line gets
+written in.
+
+**Where a line already exists, the person's own CV decides and this rule gives way.**
+A CV written in the first person stays in the first person, and a rewrite of one of its
+bullets comes back in the first person too. `rewriting.md`, at *Keep their voice, not
+yours*, is the rule that governs an existing line, and it wins here without argument.
+Converting a whole CV out of the person's grammar and into this one is a change to every
+line on the page, and it is theirs to ask for. If it is worth proposing, propose it once,
+as one change, with a reason, and let them refuse it.
+
+**A page has to settle on one of the two.** So when a CV is in the first person and a
+line is being written from nothing to go on it, that line is written in the first person
+as well, to match the page it is joining. The default only applies where the page has no
+voice yet.
+
 **The strong verb is the one that is true, not the unusual one.** A verb earns its
 place by being specific and accurate. "Ran the forecasting cycle" beats "orchestrated
 the forecasting cycle", because a person said the first and a thesaurus said the

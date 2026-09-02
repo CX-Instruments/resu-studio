@@ -578,8 +578,14 @@ def documents_ledger():
 
 
 def cv_source_dir():
-    """The CV as it arrived, kept exactly as it was handed over."""
-    return os.path.join(data_dir(), "cv-source")
+    """The CV as it arrived, kept exactly as it was handed over.
+
+    Created, like every other folder here. The very first instruction anybody is
+    given copies their advertisement into this folder, and a path that is handed
+    out but not made turns that first command into `cp: cannot create regular
+    file ... No such file or directory` before the skill has done anything at all.
+    """
+    return sub("cv-source")
 
 
 #: What each one-path flag prints. Nothing else is printed with these, so they can

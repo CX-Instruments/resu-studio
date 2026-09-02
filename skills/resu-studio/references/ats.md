@@ -17,6 +17,15 @@ gets, and it is the only way to know what it got.
 pdftotext "path/to/CV.pdf" - | head -40
 ```
 
+**Forty lines is a starting point.** On a right-hand sidebar the name arrives about two
+thirds of the way down the file, well past line 40, so a check that reads only the head
+reports a missing name that is in the file all along. Drop the `head` and read the whole
+extraction the moment anything looks wrong:
+
+```bash
+pdftotext "path/to/CV.pdf" -
+```
+
 Three things have to be true:
 
 1. **The person's name is present and unbroken.** Their whole name is in the file, in
@@ -28,15 +37,45 @@ Three things have to be true:
    A screener uses those headings to decide where experience stops and education
    starts. A heading it cannot match is a section it may not record at all.
 3. **Nothing is interleaved.** A paragraph should not have a phone number or a skills
-   list threaded through the middle of it.
-
-If any of those fail, say so and offer a different layout. Do not hand over a document
-that has failed this check with a note attached; the person will not read the note.
+   list threaded through the middle of it, and a section heading should not land in the
+   middle of another section's content.
 
 **The check is run on the person's own file, every time.** Whether a name or a heading
-survives extraction depends on the layout, on the tracking, on the point size and on the
-name itself, so a layout that came through clean for the last person is not evidence
-about this one.
+survives extraction depends on the layout, on the tracking, on the point size, on how
+long their name is and on how their own sections happen to fall, so a layout that came
+through clean for the last person is not evidence about this one. The table further down
+was measured on one CV and it tells you where to look. It does not stand in for the run.
+
+## When the check fails, the person is told and the person decides
+
+**Several layouts in this skill fail check 3, including the default one.** That is
+measured and it is in the table below. A layout that interleaves is not a broken layout
+and it is not a document to withhold. It is a document that reads one way on paper and
+another way through a parser, and which of those matters depends entirely on where the
+application is going.
+
+So the finding goes to them, in their own file's words: what the extraction opens with,
+which heading landed inside which block, where their skills ended up. Then the trade,
+with a layout named that came through clean:
+
+> Extracted, your CV on this skin opens with your name, then the KEY SKILLS heading
+> lands between the two paragraphs of your profile, and your achievements arrive after
+> education and training. On the page none of that is visible. A screening system reads
+> the file in that order.
+>
+> `spine`, `rail` and `cards` came through with every section in one piece. They are the
+> same content in a different shape. Is this one going to a person, or to an upload form?
+
+**Do not switch the layout for them, and do not talk them out of the one they chose.**
+Where the application reaches a person, an interleaved extraction costs nothing anybody
+will ever see, and a good-looking page is worth something. Where it goes through a job
+board, a government portal or any "upload your resume" form, it costs the reading order
+of the whole file. Say which of those it is before they send it.
+
+**What is not a trade is a heading that came apart.** `E D U C AT I O N` or
+`TR AINING AND CERTIFICATIONS` gives a screener nothing to match on, and no reader
+benefits from it either. When check 2 fails, say so and move them to a layout where it
+passes.
 
 ## Tracking is in em, never in px
 
@@ -52,43 +91,77 @@ and check 2 are for, and it is why they are run on the real PDF rather than assu
 
 **If you are editing the stylesheet, do not put pixel values back.**
 
-## Two columns read out of order
+## What the eighteen layouts actually extract as
 
 A sidebar is a column of text beside another column of text. On the page a person
 reads them as two panels. An extractor reads them as one stream, and what comes out
 depends on where each line happens to sit.
 
-Measured on the layouts in this skill, by printing the same CV in each of the eighteen
-layouts and running `pdftotext` on the result:
+Measured on 2 September 2026 against one real CV of two pages, printed in all eighteen
+layouts on `--palette forest` at the default typeset, with the person's own decisions
+file applied, and read back with `pdftotext`. The commands are at the foot of this
+section.
 
-| layout | what the extractor gets first |
+The name came out whole in all eighteen. No layout broke it into letters on this file,
+including `panel`, `classic` and `hairline`, whose tracked uppercase name is the one most
+at risk of it.
+
+| layout | what the extraction reads like |
 |---|---|
-| `band`, `slab`, `spine`, `cards`, `rail`, `bands`, `compact` | the name, whole, on one line, then every section in order |
-| `panel`, `classic`, `hairline` | the name first, but tracked far enough that its letters can come apart |
-| `sidebar-dark`, `sidebar-tint`, `sidebar-line`, `sidebar-top` | the name first, wrapped onto two lines by the narrow column, then the whole sidebar, then the main column |
-| `sidebar-right`, `sidebar-tint-right`, `sidebar-line-right`, `sidebar-top-right` | the file **opens with PROFILE**. The name arrives later, after the whole main column, because the sidebar sits to the right of it |
+| `spine`, `rail` | name whole and first, then every section as its heading followed by its own content, in order, with each role's dates beside its own heading. Nothing out of place. `spine` prints the dates in capitals and `rail` wraps a long date over two lines in its gutter, and both of those are true on the page as well |
+| `cards`, `bands` | the same, except that the last role's dates line lands at the very end of the file, after training and certifications |
+| `band`, `panel`, `hairline` | the same again, and a second date drifts: the middle role's dates land three or four lines into that role's own bullets |
+| `compact` | every section in one piece, but the whole KEY SKILLS block comes before the profile, the name and the contact line arrive joined as one line, and the last role's dates land at the end of the file |
+| `classic` | every section in one piece and each role's dates on its own heading line. **Fails check 2**: `TRAINING AND CERTIFICATIONS` came out as `TR AINING AND CERTIFICATIONS` |
+| `slab` | **Fails checks 2 and 3.** The gutter heading runs into the neighbouring body line, so the file carries `PROFILE Data analyst with...`, `KEY SKILLS Technical:` and `EDUCATION Bachelor of Mathematics...`. `PROFESSIONAL EXPERIENCE` and `TRAINING AND CERTIFICATIONS` are each split over two lines, and the training heading has a body line inserted into the middle of it |
+| `sidebar-dark`, `sidebar-tint`, `sidebar-line` | **Fails check 3.** Name first, wrapped over two lines, then the contact block. Then the profile's first paragraph, the KEY SKILLS heading, the profile's second paragraph, the first skills group label, the KEY ACHIEVEMENTS heading, the rest of the skills, education, training, and only after all of that the achievements themselves and the experience section |
+| `sidebar-top` | **Fails check 3.** Name first, wrapped, then the whole sidebar, then the main column, with the two training entries threaded back through the middle of the experience section |
+| `sidebar-right`, `sidebar-tint-right`, `sidebar-line-right` | **Fails check 3.** The file opens with PROFILE. The achievements print with no heading in front of them. The name and the contact block arrive about two thirds of the way down, after most of the experience section. The skills block is then split in two with role bullets between the halves, and the first role's dates land far above their own heading |
+| `sidebar-top-right` | **Fails check 3.** Opens with PROFILE, name near the end, and the EDUCATION heading is separated from its one line by the whole PROFESSIONAL EXPERIENCE heading and its first role |
 
-**Four of the eight sidebar layouts open with something other than the name, and they
-are the four right-hand ones.** The rule is simply which side the column is on: a
-left-hand sidebar carries the name and is read first, a right-hand one carries the name
-and is read last.
+**All eight sidebar layouts interleave, not only the right-hand four.** The earlier
+version of this table said the left-hand ones came out as name, then sidebar, then main
+column. They do not. The two columns thread through each other, and the headings land
+inside whichever block happens to be beside them.
 
-None of this makes a sidebar wrong. A sidebar CV read by a person is often the better
-document, and plenty of applications go straight to a human: a small employer, a direct
-approach, a referral. But when the advertisement names a job board, a government or
-large-employer portal, or any "upload your resume" form, a single column is the safer
-choice and the person should be told why rather than quietly switched.
+**What the sides do change is where the name lands.** A left-hand sidebar carries the
+name and is read early. A right-hand one carries the name and is read after the whole
+main column, so the first thing a parser meets is the word PROFILE.
 
-**Offer the wrap as a trade.** Every sidebar layout costs something at the extractor,
-and on the four right-hand ones it costs the reading order as well.
-"This one reads better on screen; this one survives the upload. Which is it going for?"
-is a question they can answer. "Sidebars are bad for ATS" is folklore they will find
-contradicted somewhere else within a day.
+**The drifting dates line is worth naming when it happens.** On `cards`, `bands`, `band`,
+`panel`, `hairline` and `compact` at least one role's dates left its heading, usually the
+oldest role's, which ended up after training and certifications. A parser building an
+employment history from that file can attach the wrong dates to a role, or none. It is a
+smaller cost than an interleaved column and it is still a cost.
 
-**The default layout is a sidebar**, `sidebar-dark`, which is one of the left-hand ones.
-So the default costs a wrapped name and nothing else, and it is a reasonable default. A
-person uploading to a portal should still be offered a single column, and a person
-choosing a right-hand sidebar should be told that the file opens with their profile.
+**Where a date drifts depends on how the CV happens to fall**, so this row of the table
+is the one most likely to read differently for the next person. The layouts either side
+of the drift did not change; which particular date left its heading did.
+
+**A layout that fails is still a layout somebody may want.** A sidebar CV read by a
+person is often the better document, and plenty of applications go straight to a human:
+a small employer, a direct approach, a referral. The failure is only a failure at the
+parser, so it is the destination that decides.
+
+**The default layout is `sidebar-dark`, and it interleaves.** So on a default render the
+check fails, and the person hears about it and picks. The layouts to offer are `spine`,
+`rail`, `cards` and `bands`, which came through with every section in one piece on this
+CV, and `spine` and `rail` also kept every date beside its own role. Then run the check
+again on whatever they choose, because the table is a starting point rather than a
+promise about their file.
+
+Re-measure it like this, on their own file:
+
+```bash
+D="$(python3 scripts/paths.py --data)"
+python3 scripts/render_cv.py "$D/cv-<variant>.md" --decisions "$D/cv-decisions.json" \
+    --layout <the layout> --palette <their palette> \
+    --role "<the job title>" --employer "<the employer>" --pdf
+pdftotext "$(python3 scripts/paths.py --documents)/<the finished>.pdf" -
+```
+
+To re-measure the whole table, loop the same two commands over the eighteen names that
+`python3 scripts/render_cv.py --list` prints, writing each PDF to a folder of its own.
 
 ## Keywords, and the line this skill will not cross
 

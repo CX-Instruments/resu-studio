@@ -22,15 +22,41 @@
      fallback face and repainted in the real one, every measurement is wrong by a
      little, and a bullet that fitted moves to the next page. Worse, it is wrong
      differently in the preview and in the print, so the PDF stops matching what
-     was on screen. document.fonts.ready settles that before a single height is
-     read. The timeout is there so a font server that never answers costs three
-     seconds rather than the whole document. */
+     was on screen.
+
+     Waiting on document.fonts.ready alone does not do it, and the way it fails is
+     silent. A browser fetches a face only when something it is about to draw calls
+     for it, and this document arrives with every word inside a hidden #src and an
+     empty #doc, so at DOMContentLoaded not one face has been asked for. The set is
+     idle, status reads "loaded", and ready is already resolved. The paginator then
+     measured the whole CV in the fallback face, which sets wider: it counted lines
+     that were not there, and every sheet stopped four or five lines short of the
+     foot, with the overflow pushed onto a page of its own.
+
+     So ask for the faces first. Calling load() on each declared face is what turns
+     the wait into a real one, and it costs nothing here because the faces are
+     carried in the file. Then fonts.ready, for anything the styles pull in later.
+     The timeout is there so a font server that never answers costs three seconds
+     rather than the whole document. */
   function ready(fn) {
     function go() {
-      if (!document.fonts || document.fonts.status === "loaded") return fn();
+      var fonts = document.fonts;
+      if (!fonts) return fn();
       var done = false;
       var once = function () { if (!done) { done = true; fn(); } };
-      try { document.fonts.ready.then(once); } catch (e) { return once(); }
+      var waiting = [];
+      try {
+        fonts.forEach(function (face) {
+          if (face.status === "unloaded") {
+            waiting.push(face.load().then(null, function () {}));
+          }
+        });
+      } catch (e) { /* an older FontFaceSet: fall through to ready alone */ }
+      try {
+        Promise.all(waiting)
+          .then(function () { return fonts.ready; })
+          .then(once, once);
+      } catch (e) { return once(); }
       setTimeout(once, 3000);
     }
     if (document.readyState !== "loading") go();
@@ -271,8 +297,28 @@
       return { sheet: sheet, regions: regions };
     }
 
+    /* Is there anything left over the edge of this region.
+
+       scrollHeight counts the bottom margin of the last block in the region, and on
+       the last block of a sheet that margin is measuring a gap to a block that is on
+       the next page. A role card carries eighteen pixels of it. So a card that ended
+       two pixels past the line was thrown onto a sheet of its own to protect white
+       space nobody would ever have seen, and the page before it finished an inch
+       short. That margin is given back here.
+
+       Nothing else is. The padding at the foot of the region is the design's own
+       page margin and still has to fit, so what this allows is exactly: the ink of
+       the last block ends on or above the line where the bottom margin starts. The
+       region clips what hangs past it, and after this it has nothing to clip. */
     function overflowing(r) {
-      return r.scrollHeight > r.clientHeight + 1;
+      var over = r.scrollHeight - r.clientHeight;
+      if (over <= 1) return false;
+      var last = r.lastElementChild;
+      if (last) {
+        var gap = parseFloat(getComputedStyle(last).marginBottom) || 0;
+        if (gap > 0 && over - gap <= 1) return false;
+      }
+      return true;
     }
 
     /* --------------------------------------------------------------- fill */
@@ -302,6 +348,20 @@
       if (!region) return cursor;
       var box = gauge || region;
       var placed = 0;
+      /* One entry per atom put on this sheet, newest last: null when the atom was
+         appended whole, and the merge record when it was folded into the block above
+         it. Taking an atom off again is not simply removing the last child, because
+         a merged atom is not a child any more, and the sheet has to be able to give
+         one back once it knows what the next sheet would have started with. */
+      var trail = [];
+      function back() {
+        if (!trail.length) return false;
+        var m = trail.pop();
+        if (m) unmerge(m);
+        else if (region.lastElementChild) region.removeChild(region.lastElementChild);
+        cursor--; placed--;
+        return true;
+      }
       while (cursor < atoms.length) {
         var a = atoms[cursor];
         var prev = region.lastElementChild;
@@ -309,23 +369,40 @@
         if (!merged) region.appendChild(a);
         if (overflowing(box)) {
           if (merged) unmerge(merged); else region.removeChild(a);
+          /* A single bullet at the top of the next sheet, with the whole of its role
+             left behind on this one, reads as something that went wrong rather than
+             as a role that ran on. So send the bullet above it along for company.
+             Only when this sheet has two blocks to spare: a sheet that gives back
+             everything it has made no progress, and the loop outside would stop. */
+          if (placed >= 2 && cursor > 0 &&
+              sameGroup(atoms[cursor - 1], atoms[cursor]) &&
+              !sameGroup(atoms[cursor], atoms[cursor + 1])) {
+            back();
+          }
           /* pull back any heading that would be stranded */
           while (region.lastElementChild &&
                  region.lastElementChild.getAttribute("data-keep") === "1") {
-            region.removeChild(region.lastElementChild);
-            cursor--; placed--;
+            if (!back()) break;
           }
           if (placed <= 0) {
-            /* one block taller than a whole sheet. Let the sheet grow rather
-               than clip it: a long page is a problem you can see, a clipped
-               one is not. */
-            region.appendChild(a);
-            var sh = region.closest ? region.closest(".sheet") : null;
-            if (sh) sh.classList.add("grow");
+            /* Nothing at all would stay on this sheet. Put back whatever the cursor
+               now points at rather than the block that overflowed: after a pull back
+               they are not the same atom, and appending the wrong one dropped a
+               heading off the document altogether.
+
+               If it still does not fit, it is one block taller than a whole sheet.
+               Let the sheet grow rather than clip it: a long page is a problem you
+               can see, a clipped one is not. */
+            region.appendChild(atoms[cursor]);
+            if (overflowing(box)) {
+              var sh = region.closest ? region.closest(".sheet") : null;
+              if (sh) sh.classList.add("grow");
+            }
             cursor++;
           }
           return cursor;
         }
+        trail.push(merged);
         cursor++; placed++;
       }
       return cursor;
@@ -387,9 +464,73 @@
     }
     SRC.parentNode.removeChild(SRC);
     document.documentElement.setAttribute("data-pages", DOC.children.length);
+
+    /* How much of the last sheet is actually written on.
+
+       A CV can still spill a few lines onto a sheet of its own, and nobody wants to
+       post that without being told. The paginator is the only thing that knows, so
+       it says so here and leaves the document alone.
+
+       Measured as ink against the writable column, not against the paper: the foot
+       and head margins are not empty page, they are the design. So for each region
+       on the last sheet, take the bottom of the lowest thing that draws anything and
+       compare it with the height between the padding. Children with no height are
+       skipped, because a layout leaves display:none markers behind and the last one
+       of those is not where the writing stops. Regions are taken at their best, not
+       averaged: on a sidebar layout the panel is empty after page one, and averaging
+       it in would report every second page as half empty when it is full.
+
+       The line count is that ink divided by one line of body text: it is what would
+       have to come off the CV to lose the sheet, in the unit a person edits in. */
+    function fillOfLastSheet() {
+      var sheet = DOC.lastElementChild;
+      if (!sheet || DOC.getAttribute("data-paginated") === "no" ||
+          sheet.classList.contains("grow") || sheet.classList.contains("unpaged")) {
+        return null;
+      }
+      var regions = Array.prototype.slice.call(
+        sheet.querySelectorAll(".aside,.main,.pad,.rest"));
+      if (!regions.length) regions = [sheet];
+      var best = null;
+      regions.forEach(function (r) {
+        var cs = getComputedStyle(r);
+        var top = parseFloat(cs.paddingTop) || 0;
+        var bot = parseFloat(cs.paddingBottom) || 0;
+        var usable = r.clientHeight - top - bot;
+        if (usable <= 0) return;
+        var rt = r.getBoundingClientRect().top, ink = 0, any = false;
+        Array.prototype.slice.call(r.children).forEach(function (c) {
+          var box = c.getBoundingClientRect();
+          if (box.height <= 0) return;
+          any = true;
+          if (box.bottom - rt > ink) ink = box.bottom - rt;
+        });
+        if (!any) return;
+        var used = ink - top;
+        if (used < 0) used = 0;
+        var frac = used / usable;
+        if (frac > 1) frac = 1;
+        if (!best || frac > best.fill) best = { fill: frac, used: used, box: r };
+      });
+      if (!best) return { fill: 0, lines: 0 };
+      var lh = parseFloat(getComputedStyle(best.box).lineHeight);
+      if (!lh || lh <= 0) lh = parseFloat(getComputedStyle(document.body).lineHeight);
+      if (!lh || lh <= 0) lh = 16;
+      return { fill: best.fill, lines: Math.max(1, Math.round(best.used / lh)) };
+    }
+
+    var lastFill = null;
+    try { lastFill = fillOfLastSheet(); } catch (e) {}
+    if (lastFill) {
+      document.documentElement.setAttribute("data-lastfill", lastFill.fill.toFixed(3));
+      document.documentElement.setAttribute("data-lastlines", String(lastFill.lines));
+    }
+
     if (window.parent && window.parent !== window) {
       try {
         window.parent.postMessage({ cvPages: DOC.children.length,
+                                    lastFill: lastFill ? lastFill.fill : null,
+                                    lastLines: lastFill ? lastFill.lines : null,
                                     height: document.body.scrollHeight }, "*");
       } catch (e) {}
     }

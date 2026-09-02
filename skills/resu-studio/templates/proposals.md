@@ -77,7 +77,39 @@ copy is the one to keep.
 
 ---
 
-# 4. MISSING AND WORTH ADDING
+# 4. CUT THIS TO MAKE ROOM
+
+A line that answers nothing this advertisement asks for, on a page that is full.
+`references/rewriting.md` names this as one of the three shapes a useful change takes,
+and it is the only one that produces a proposal with no replacement text.
+
+**This is not the same as group 3.** There the claim is on the page twice and one copy
+goes. Here the claim appears once, it is true, and it is spending a slot that a line
+answering a criterion needs. So the reason has to name what goes in its place, and the
+person can accept the cut and refuse the replacement, or the other way round.
+
+Where the page has room, there is no cut to propose. Say so in group 7 rather than
+finding one.
+
+## P10. Section, role, which bullet
+
+**Line:** professional-experience/1/b2
+**Currently:**
+The complete existing text.
+
+**Suggested:**
+Delete this bullet.
+
+**Why:** What this advertisement asks for that this line does not touch, and which
+proposal takes the slot.
+
+**Costs:** frees one bullet in this role, taken by P12
+
+**Decision:**
+
+---
+
+# 5. MISSING AND WORTH ADDING
 
 ## P12. Section, role, where the new line goes
 
@@ -97,10 +129,10 @@ The complete new line.
 
 ---
 
-# 5. WORDING
+# 6. WORDING
 
 ---
 
-# 6. NO CHANGE NEEDED
+# 7. NO CHANGE NEEDED
 
 What was checked and deliberately left alone, so nothing looks overlooked.

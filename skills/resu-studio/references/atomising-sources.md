@@ -155,15 +155,55 @@ same five the studio labels:
 
 | value | what it is | how the studio labels it |
 |---|---|---|
-| `must` | the advertisement says it is required | Essential |
+| `must` | the advertisement names it as required, and the application is scored on it | Essential |
 | `nice` | the advertisement would like it | Desirable |
-| `implied` | not stated, and traceable to a specific sentence | From the role description |
-| `condition` | a requirement of being employed at all: citizenship, a licence, a clearance | A condition of the job |
+| `implied` | in the role description and not on the scored list, or not written down anywhere and traceable to a specific sentence | From the role description |
+| `condition` | a requirement of being employed at all: citizenship, a right to work, a licence, a clearance | A condition of the job |
 | `not a cv question` | in the ad, and settled somewhere other than the document | Not a CV question |
 
 `condition` and `not a cv question` used to be folded into `implied` on the way into the
 studio, which showed a hard eligibility bar as a soft item lifted off the role
 description. They are their own values and they stay their own values.
+
+### `condition` beats `must`, even where the advertisement publishes it as a criterion
+
+**The test is what kind of thing is being asked. Where it was printed does not decide
+it.** A condition of employment is a yes or a no about the person's standing: they hold
+the licence or they do not, they have the right to work or they do not. A `must` is a
+claim about capability, which the application has to evidence and a panel has to weigh.
+
+So a published criterion reading "must hold a current driver's licence" is a `condition`,
+and it stays a `condition` even though the advertisement listed it among the criteria the
+application is scored against. Marking it `must` puts a thing nobody can argue about into
+the same count as the things the whole document exists to argue, and the score then moves
+for a reason that has nothing to do with the writing.
+
+Two things follow, and both matter to the person:
+
+- **It still has to be visibly answered** where the sector's criteria have to be
+  addressed one by one. `condition` is about how it is counted, and it does not excuse
+  leaving it unanswered.
+- **A condition they do not meet is not a gap to work on.** It is a reason the
+  application will not proceed, and it is said plainly and early rather than scored.
+
+### What separates `implied` from `must`
+
+Both can be things the advertisement plainly states. **The line is whether the employer
+put it on the list the application is scored against.**
+
+- A duty in the role description, the duty statement or the position description, which
+  the advertisement never lists among its criteria, is `implied`. It is stated in the
+  employer's own words and it is still off the scored list, and it is worth answering
+  wherever the record supports it.
+- Something the advertisement never writes down at all but a specific sentence gives away
+  is also `implied`. Domain knowledge of what the whole branch does, for one.
+- Anything on the published criteria, the essential list, the person specification or
+  whatever the employer calls the list it scores against, is a `must`.
+
+The studio's label, "From the role description", is right for both halves of `implied`,
+because both are read off the description rather than off the scored list. Put the
+sentence it came from in `where` either way, so the person can see where it came from and
+argue with it.
 
 `group` is `experience`, `tool`, `skill`, `soft`, `qualification`, `other`.
 
@@ -212,22 +252,46 @@ out anything asked for in these words:
 | required, essential, must have, you will need, proven, demonstrated | must |
 | N+ years, mandatory, you must hold, this role requires | must |
 
+**The wording sets `must` or `nice`, and then the subject can override it.** "You must
+hold a current C class licence" is written in the language of the `must` rows and it is a
+`condition`, by the rule under the necessity table. Read what is being asked for before
+reading how it was phrased.
+
 Where an advertisement publishes criteria the application is expected to answer,
 under whatever name, whether selection criteria, essential criteria, key requirements
-or person specification, every one is a
-`must` and the exact heading goes in `where`. In those sectors, failing to visibly
-address one criterion generally excludes the application.
+or person specification, every one is a `must` and the exact heading goes in `where`.
+In those sectors, failing to visibly address one criterion generally excludes the
+application.
+
+**With one exception, and it is the one above.** A published criterion that is a
+condition of employment rather than a claim about capability is a `condition`. A licence,
+a citizenship or right-to-work requirement, a clearance, a working-with-children check.
+It still gets addressed in the application where the sector expects every criterion
+addressed, and it is counted as what it is.
 
 ## Implied asks
 
-Some of the hardest filtering happens on things the advertisement plainly needs and
-never states. Citizenship for an ongoing public service role. Domain knowledge of the
-thing the whole branch exists to do. Write these in your own plain words, because
-there are no words of theirs to quote, and put the sentence you inferred it from in
-`where` so the person can argue with the inference.
+`implied` covers two kinds of thing, and both belong to the role description rather than
+to the scored list.
 
-Be disciplined. An implied ask is traceable to a specific sentence. It is not a guess
-about what employers generally like.
+**A duty the advertisement states and does not list as a criterion.** The duty statement,
+the accountabilities, the "what you will be doing" paragraph. These are stated in the
+employer's own words, so quote them in `text` exactly as `must` entries are quoted, and
+name the section in `where`. They are not `must`, because the employer did not put them
+on the list the application is scored against. They are not `nice` either, because the
+advertisement is not saying it would merely like them. They are the job, described.
+
+**Something the advertisement never writes down and a specific sentence gives away.**
+Domain knowledge of the thing the whole branch exists to do. Write these in your own plain
+words, because there are no words of theirs to quote, and put the sentence you inferred it
+from in `where` so the person can argue with the inference.
+
+Be disciplined about the second kind. An inferred ask is traceable to a specific sentence.
+It is not a guess about what employers generally like.
+
+Where an ongoing public service role plainly needs citizenship and never says so, that is
+a `condition` rather than an `implied`, by the rule above: it is a fact about the person's
+standing, and inferring it does not change what kind of thing it is.
 
 ## What the ad says about itself is not an ask
 

@@ -10,10 +10,25 @@ counts:
   must: 0
   nice: 0
   implied: 0
+  condition: 0
+  not_a_cv_question: 0
   you_have: 0
   a_reader_would_find: 0
   unscored: 0
 ---
+
+**There is a count key for every necessity value, and all five are legal.**
+`condition` and `not_a_cv_question` were missing here while the table below allowed
+them, so a scorecard with a licence condition on it had rows the counts could not
+describe. The count key is written with underscores, `not_a_cv_question`, because the
+frontmatter reader takes a key of word characters. The word in the table stays
+`not a cv question`, with the spaces, because that is what the studio reads.
+
+The five necessity counts add up to `asks_total`. `you_have` and
+`a_reader_would_find` are the two gauges and they count states rather than necessities,
+so they are outside that sum. `render_report.py` prints these counts where they are
+there and tallies the table only where they are not, so a count that disagrees with the
+table is a report that disagrees with itself.
 
 `depth:` is `essentials` or `all`, copied out of `answers.md` from the question put in
 Phase 1. `build_studio.py` reads it straight from this frontmatter, so the studio can
@@ -43,7 +58,15 @@ under Necessity, the evidence lands under State, and the report either refuses o
 anything slips past, shows a bar chart that disagrees with its own gauges. An implied
 duty with no stated necessity is still `implied`, not blank.
 
-Necessity is one of: `must`, `nice`, `implied`, `condition`, `not a cv question`.
+Necessity is one of: `must`, `nice`, `implied`, `condition`, `not a cv question`, written
+in the table with the spaces exactly as here.
+
+`condition` is anything that is a requirement of being employed at all, a licence,
+citizenship or a right to work, a clearance, **whether or not the advertisement published
+it among its criteria**. `must` is a claim about capability that the application has to
+evidence. `implied` covers a duty the advertisement states and does not list among its
+criteria, as well as something it never writes down that a specific sentence gives away.
+The rules and the reasoning are in `references/atomising-sources.md`.
 
 State is one of these seven words, and no others. They are the words the studio's
 Score tab and the skill both use, so all three describe an ask the same way:

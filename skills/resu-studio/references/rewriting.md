@@ -107,6 +107,17 @@ matters. Cutting both halves is the mistake this section exists to stop.
   first person. Verbless third person, "Writes", "Defines", "Manages", is the
   grammar of a position description, and a page written in it reads as though the
   advertisement was pasted back at the employer.
+
+  **This is the rule that settles it, and it beats `voice.md`'s default.** `voice.md`
+  says a CV is third person with no pronouns. That is what a line gets written in when
+  it is being written from nothing and there is no established voice to keep. On a line
+  that already exists, the person's own grammar decides, and plenty of good CVs are in
+  the first person. Rewriting one of those into the third person changes every line on
+  the page, and that is a change they get asked about rather than a tidy-up. If it is
+  worth doing, it is one proposal with a reason on it, and they can say no.
+
+  A line written from nothing for a first-person CV goes in the first person too, so the
+  finished page is in one voice throughout.
 - **Keep the tense.** A current role stays present. Putting a role they still hold
   into the past tense reads as though they have left, and that is a factual error, not
   a style one.

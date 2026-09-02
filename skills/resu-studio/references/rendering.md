@@ -3,11 +3,25 @@
 Two renderers, both optional, both last. Neither can change what a document says.
 
 ```bash
-python3 scripts/render_cv.py cv-data-reporting.md --layout sidebar-dark --palette forest
-python3 scripts/render_cv.py cv-data-reporting.md --gallery --outdir skins-samples
+python3 scripts/render_cv.py cv-data-reporting.md --decisions cv-decisions.json \
+    --layout sidebar-dark --palette forest
+python3 scripts/render_cv.py cv-data-reporting.md --decisions cv-decisions.json \
+    --gallery --outdir skins-samples
 python3 scripts/render_cv.py --list
 python3 scripts/render_report.py scorecard.md --before scorecard-before.md
 ```
+
+**`--decisions` goes on every render from the moment the file exists.** It is what
+carries the removals, the person's own rewordings, the added lines, the order they put
+the lines in and any section they added. A render without it prints the markdown alone,
+so the deleted bullet comes back, the added lines are gone and the reorder is undone,
+and the line count still balances because the markdown really does account for every one
+of its own lines. Nothing on screen says the document is wrong. The path is written
+out in full in `SKILL.md`, against the person's own data folder.
+
+Where there is no decisions file, because the person handed their work back as the
+pasted block instead, the markdown has to already carry everything they decided, and
+that is worth saying out loud rather than assuming.
 
 `render_report.py` takes the scorecard, an optional `--before` and an optional `--out`.
 It has no `--palette`. Its own docstring used to advertise one, which is why it turns
@@ -579,14 +593,23 @@ whether the view is Working or Final.
 that file to a real browser and asks the browser to print it.
 
 ```bash
-python3 scripts/render_cv.py cv.md --letter cover-letter.md \
+python3 scripts/render_cv.py cv.md --letter cover-letter.md --decisions cv-decisions.json \
     --layout sidebar-dark --palette forest \
     --role "<the job title>" --employer "<the employer>" --pdf
-python3 scripts/render_cv.py cv.md --pdf --pdf-dir "<the folder they asked for>"
+python3 scripts/render_cv.py cv.md --decisions cv-decisions.json \
+    --pdf --pdf-dir "<the folder they asked for>"
 ```
 
 One run writes every document it was given. They are posted together, so they are
-printed together.
+printed together, and the layout, palette and typeset on this command are the ones the
+person chose for the CV. A letter on a different palette reads as somebody else's letter.
+
+**A `--letter` run writes the letter's HTML and does not rewrite the CV's.** Both PDFs
+are written, and the CV's named HTML file is left exactly as the last CV render made it.
+So a CV HTML produced earlier without `--decisions` sits in the person's folder with the
+deleted bullet still in it, beside a PDF that is correct, under a plainer name than the
+PDF has. Either render the CV on its own with `--decisions` so that file is right too, or
+take the stale HTML out of the folder before handing anything over.
 
 ### What the files are called
 

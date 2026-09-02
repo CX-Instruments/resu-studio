@@ -374,11 +374,49 @@ def safe_filename(text):
     return re.sub(r"\s+", " ", text).strip()[:70] or "Studio"
 
 
+def studio_filename(a, doc):
+    """<Role> - <Employer> - Studio.html, the way the PDFs are named.
+
+    The employer is in the name for the same reason `render_cv._pdf_names` puts it
+    in the PDF's: two applications for the same job title, built from the same
+    markdown, otherwise produce one filename, and `documents.protect` sees the same
+    role and the same source and lets the second write over the first. An evening of
+    marking up goes, and nothing on screen says so. A segment with nothing in it is
+    left out rather than printed as an empty gap between two hyphens.
+    """
+    bits = [safe_filename(a.role or doc["name"])]
+    if (a.employer or "").strip():
+        bits.append(safe_filename(a.employer))
+    return " - ".join(b for b in bits if b) + " - Studio.html"
+
+
 ID_RE = re.compile(r"^([A-Za-z][\w-]*)\b\s*(.*)$")
 
 
+#: A field name inside a fenced block. Two words are allowed, because
+#: `references/achievements.md` shows the field as `draws on` and the template shows
+#: it as `draws_on`, and a person copying either one is writing the same field.
+_KEY = r"([A-Za-z][\w]*(?: [A-Za-z][\w]*)?)"
+_KEY_RE = re.compile(r"^%s:\s*(.*)$" % _KEY)
+_SUBKEY_RE = re.compile(r"^\s+-?\s*%s:\s*(.*)$" % _KEY)
+
+
+def _field_name(raw):
+    """One spelling for a field written either way.
+
+    `draws on` and `draws_on` are the same field, so a space is read as an
+    underscore and everything downstream asks for one name. `draws_on:` stays the
+    spelling the template shows.
+    """
+    return raw.strip().replace(" ", "_")
+
+
 def _blocks(path):
-    """The fenced `id: ...` records in asks.md and facts.md, as dicts."""
+    """The fenced `id: ...` records in asks.md and facts.md, as dicts.
+
+    Keys are normalised: a field written `draws on:` is stored as `draws_on`, so a
+    reader asks for one name and gets it whichever way the person wrote it.
+    """
     if not path or not os.path.isfile(path):
         return {}
     out, cur, key = {}, None, None
@@ -392,15 +430,15 @@ def _blocks(path):
             continue
         if cur is None:
             continue
-        m = re.match(r"^(\w[\w_]*):\s*(.*)$", line)
+        m = _KEY_RE.match(line)
         if m:
-            key = m.group(1)
+            key = _field_name(m.group(1))
             cur[key] = m.group(2).strip().strip('"')
             continue
-        m = re.match(r"^\s+-?\s*(\w[\w_]*):\s*(.*)$", line)
+        m = _SUBKEY_RE.match(line)
         if m:
             # nested source lines: keep the first text/section we meet
-            k, v = m.group(1), m.group(2).strip().strip('"')
+            k, v = _field_name(m.group(1)), m.group(2).strip().strip('"')
             if k in ("text", "section", "cv") and k not in cur:
                 cur[k] = v
     if cur and cur.get("id"):
@@ -526,6 +564,15 @@ def proposals_block(path, known=None):
     disguise, and it used to pass: it was loaded, counted in the total, drawn against
     an empty stub, and Use this wrote a mark against an id the renderer would never
     meet. It is checked against the ids the CV actually produced and reported by id.
+
+    An entry with a `Line:` and no `Suggested:` is not malformed. `rewriting.md` says
+    that where the stronger line needs a fact nobody has, the correct output is the
+    question and not the rewrite, and the skill duly produces entries with nothing
+    suggested. Those used to be dropped on the same path as an entry with no `Line:`,
+    so the question never reached the person and the fact was never asked for. They
+    are carried into the studio as a question against their line, with `kind: "ask"`
+    and the question itself in `q`, taken from `Question:` where the entry has one and
+    from `Why:` where it does not.
     """
     if not path or not os.path.isfile(path):
         return {}, [], []
@@ -546,19 +593,27 @@ def proposals_block(path, known=None):
                 return
         cur_txt = (c.get("cur") or "").strip()
         sug = (c.get("sug") or "").strip()
+        why = (c.get("why") or "").strip()
+        question = (c.get("ask") or "").strip()
         kind = "edit"
         if cur_txt.lower().startswith("not on the cv"):
             kind = "add"
         if sug.lower().startswith("delete this"):
             kind = "remove"
         if kind != "remove" and not sug:
-            skipped.append(c["p"])
-            return
-        out.setdefault(c["line"], []).append(
-            {"p": c["p"], "kind": kind, "cur": cur_txt, "sug": sug,
-             "where": c.get("where", ""), "why": (c.get("why") or "").strip(),
-             "answers": c.get("answers", ""), "draws": c.get("draws", ""),
-             "costs": c.get("costs", "")})
+            # nothing to propose, because the wording waits on a fact only they have
+            kind = "ask"
+            question = question or why
+            if not question:
+                skipped.append(c["p"])
+                return
+        rec = {"p": c["p"], "kind": kind, "cur": cur_txt, "sug": sug,
+               "where": c.get("where", ""), "why": why,
+               "answers": c.get("answers", ""), "draws": c.get("draws", ""),
+               "costs": c.get("costs", "")}
+        if kind == "ask":
+            rec["q"] = question
+        out.setdefault(c["line"], []).append(rec)
 
     field, buf = None, []
 
@@ -579,8 +634,10 @@ def proposals_block(path, known=None):
         low = raw.strip().lower()
         hit = None
         for key, name in (("**currently:**", "cur"), ("**suggested:**", "sug"),
+                          ("**question:**", "ask"),
                           ("**why:**", "why"), ("**answers:**", "answers"),
-                          ("**draws on:**", "draws"), ("**costs:**", "costs"),
+                          ("**draws on:**", "draws"), ("**draws_on:**", "draws"),
+                          ("**costs:**", "costs"),
                           ("**line:**", "line"), ("**decision:**", None)):
             if low.startswith(key):
                 hit = (name, raw.strip()[len(key):].strip())
@@ -612,8 +669,10 @@ def achievements_block(path):
         text = (rec.get("text") or "").strip()
         if not text:
             continue
-        roles = [x.strip() for x in
-                 (rec.get("draws on") or rec.get("draws_on") or "").split(",")
+        # `draws on` and `draws_on` are one field by the time _blocks has read it,
+        # so a person who copied the spelling out of references/achievements.md and
+        # a person who copied the template both land here.
+        roles = [x.strip() for x in (rec.get("draws_on") or "").split(",")
                  if x.strip()]
         out.append({"id": rec.get("id", "k%d" % (len(out) + 1)), "t": text,
                     "w": (rec.get("answers") or "").strip() or "no ask named",
@@ -710,14 +769,19 @@ def main():
     s = swap_const(s, "PROPOSED", proposed)
     if a.proposals:
         n = sum(len(v) for v in proposed.values())
-        print("%d suggestion%s loaded onto %d line%s"
+        asked = sum(1 for v in proposed.values() for x in v if x["kind"] == "ask")
+        print("%d suggestion%s loaded onto %d line%s%s"
               % (n, "" if n == 1 else "s", len(proposed),
-                 "" if len(proposed) == 1 else "s"))
+                 "" if len(proposed) == 1 else "s",
+                 "" if not asked
+                 else ", %d of them a question rather than a rewrite" % asked))
         if skipped:
             sys.stderr.write(
-                "these proposals have no `Line:` so they cannot be shown against "
-                "anything on the page, and are not in the studio: %s\n"
-                % ", ".join(skipped))
+                "these proposals have no `Line:`, or nothing at all to say about the "
+                "line they name, so they cannot be shown against anything on the page "
+                "and are not in the studio: %s. An entry with a `Line:` and no "
+                "`Suggested:` is carried as a question, so it needs a `Question:` or a "
+                "`Why:` for the person to answer.\n" % ", ".join(skipped))
         if unmatched:
             sys.stderr.write(
                 "these proposals name a `Line:` that is not on this CV, so there is "
@@ -792,15 +856,17 @@ def main():
     s = s.replace('localStorage.getItem("cvwb")', 'localStorage.getItem("cvwb:%s")' % key)
     s = s.replace('localStorage.setItem("cvwb"', 'localStorage.setItem("cvwb:%s"' % key)
 
-    out = a.out or os.path.join(paths.documents_dir(),
-                                "%s - Studio.html" % safe_filename(a.role or doc["name"]))
+    out = a.out or os.path.join(paths.documents_dir(), studio_filename(a, doc))
     # `--out studio.html` gives a bare filename, whose dirname is "", and makedirs
     # of "" raises. Writing beside the working directory is what was asked for.
     if os.path.dirname(out):
         os.makedirs(os.path.dirname(out), exist_ok=True)
-    kept = documents.protect(out, a.role, a.cv)
+    # The employer travels into the ledger as well as into the name. Without it the
+    # record cannot tell two employers hiring the same job title apart, which is the
+    # commoner case and the one that costs somebody their work.
+    kept = documents.protect(out, a.role, a.cv, employer=a.employer)
     io.open(out, "w", encoding="utf-8", newline="").write(s)
-    documents.note(out, a.role, "studio", a.cv)
+    documents.note(out, a.role, "studio", a.cv, employer=a.employer)
 
     print("wrote %s" % out)
     if kept:

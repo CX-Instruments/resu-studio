@@ -30,8 +30,12 @@ import datetime
 import html
 import json
 import os
+import pathlib
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -1984,6 +1988,90 @@ def _record(path, role, tag, source, employer=""):
         pass
 
 
+def _last_sheet_fill(html_path, browser):
+    """How full the last sheet came out: (pages, fill, lines), or None.
+
+    Asked of the browser rather than worked out here, because the browser is the only
+    thing that knows. paginate.js has just decided what landed on which sheet and can
+    measure the ink against the writable column while the page is still in front of
+    it; Python has a file of markdown and no idea how many lines a bullet wraps to.
+    So the paginator writes the answer onto <html> and this reads it back.
+
+    It costs a second run of the browser, which is why the caller only asks when the
+    document came out longer than one page. A one page CV cannot have a thin last
+    page, so the common case pays nothing.
+
+    Returns None on any trouble at all. This is a courtesy message; it must never be
+    the reason a finished PDF fails to arrive.
+    """
+    profile = tempfile.mkdtemp(prefix="cvfill-")
+    argv = [
+        browser, "--headless=new", "--disable-gpu", "--no-sandbox",
+        "--disable-dev-shm-usage", "--no-first-run", "--no-default-browser-check",
+        "--disable-extensions", "--user-data-dir=" + profile,
+        # The same window and the same font budget the print used. A different
+        # viewport would lay the CV out differently and report a fill that belongs
+        # to a page nobody has.
+        "--window-size=794,1123",
+        "--virtual-time-budget=12000",
+        "--run-all-compositor-stages-before-draw",
+        "--dump-dom",
+        pathlib.Path(os.path.abspath(html_path)).as_uri(),
+    ]
+    try:
+        proc = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=120)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    finally:
+        shutil.rmtree(profile, ignore_errors=True)
+
+    # Everything wanted is on the opening <html> tag, so only the head of the dump is
+    # searched. The body is the whole CV and there is no reason to walk it.
+    head = (proc.stdout or b"")[:4000].decode("utf-8", "replace")
+    pages = re.search(r'data-pages="(\d+)"', head)
+    fill = re.search(r'data-lastfill="([0-9.]+)"', head)
+    lines = re.search(r'data-lastlines="(\d+)"', head)
+    if not pages or not fill:
+        return None
+    try:
+        return int(pages.group(1)), float(fill.group(1)), int(lines.group(1) if lines
+                                                              else 0)
+    except ValueError:
+        return None
+
+
+# Under this much of the writable column in use, the last sheet is carrying a few
+# lines and a lot of paper. A quarter is the point where it stops reading as a page
+# that ran on and starts reading as a page nobody meant to send: a third would nag
+# about pages that are honestly half used, and a tenth would stay quiet about the
+# single stranded role this exists to catch.
+THIN_LAST_PAGE = 0.25
+
+
+def _say_if_thin(html_path, browser, pages):
+    """Say, once, that the last page is nearly empty. Change nothing."""
+    if pages < 2:
+        return
+    got = _last_sheet_fill(html_path, browser)
+    if not got:
+        return
+    seen, fill, lines = got
+    # The browser laid the page out twice and got two answers, so the number on
+    # screen is not the number on paper. Better to say nothing than to quote a
+    # figure for a document the person is not holding.
+    if seen != pages or fill >= THIN_LAST_PAGE:
+        return
+    back = pages - 1
+    sys.stderr.write(
+        "the last page of the CV is only %d%% full: about %d line%s on a sheet of "
+        "%s own.\n"
+        "  Trimming about that much from earlier in the document would bring the CV "
+        "back to %d page%s. Nothing has been changed.\n"
+        % (int(round(fill * 100)), lines, "" if lines == 1 else "s",
+           "its" if lines == 1 else "their", back, "" if back == 1 else "s"))
+
+
 def write_pdfs(a, doc, letter, skins, cv_html):
     """Print the finished documents, then check the file before handing it over.
 
@@ -2079,6 +2167,8 @@ def write_pdfs(a, doc, letter, skins, cv_html):
                              "The PDF is written; shorten the letter and run it "
                              "again.\n" % pages)
         print("wrote %s, %d page%s" % (dest, pages, "" if pages == 1 else "s"))
+        if tag == "cv":
+            _say_if_thin(src, browser, pages)
 
     side = os.path.join(outdir, ".cv-print.html")
     if os.path.exists(side):

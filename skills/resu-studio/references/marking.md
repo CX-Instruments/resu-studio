@@ -143,10 +143,25 @@ list." This file is routinely hand saved out of a pasted block, so a small shape
 is likely, and it used to arrive as a Python traceback in the middle of a render.
 
 `--decisions` applies the order, the removals, the rewritten wording and the added
-lines, and **reports every one of them by id and by wording**, then says the markdown was not
-touched. `--marks` puts the toolbar in the rendered page; it is off by default, so what
-gets printed is clean. Marks made in a rendered file stay in that file: only the
-studio feeds the queues.
+lines, then says the markdown was not touched. `--marks` puts the toolbar in the rendered
+page; it is off by default, so what gets printed is clean. Marks made in a rendered file
+stay in that file: only the studio feeds the queues.
+
+**Three of the four kinds are reported and one is not.**
+
+| kind | what the run prints |
+|---|---|
+| a removal | `taken off by your decisions`, then each line by id and by its full wording |
+| an addition | `added by you`, then each line by id and by its wording, truncated to fit the terminal |
+| a reorder | `put in the order you chose`, then each list by id, as the original line numbers in the order they now print |
+| a rewrite | nothing. The new wording is applied and the run says nothing about it |
+
+So a run that applied four rewrites and one removal reports one line, and the count above
+it still reads "31 content lines in, 31 out", because a rewrite changes no line's
+existence. **Do not tell the person the render listed every change**, and do not read the
+report as a full account of what the decisions file did. Open the decisions file itself
+when you need that, or read the studio's archive, which holds the wording of everything
+including the rewrites.
 
 The line count above the report is still the parse. Decisions are applied after it, which
 is why they are reported separately rather than folded into the number.
@@ -158,11 +173,18 @@ The heading is not special. The name is `name/0` and each line of the contact bl
 the person's own words, taken off a version, or followed by a new line, exactly like a
 role bullet.
 
-This is what a version needs when something in the heading belongs on the application
-form rather than the CV. Citizenship is the usual one: the agency asks for it in the
-form, so printing it on the page spends a line and tells a reader something they did
-not ask you for. Taking it off is one press, the wording goes to the archive intact,
-and the markdown still has it for the next application that does want it.
+This is what a version needs when something in the heading belongs on this application
+and not the next one. Citizenship is the usual one. **Whether it prints is the person's
+decision and it is put to them with the trade stated**, like every other change in this
+skill. On one side, the line costs space a criterion could have used and the form
+usually asks for the same thing in a field of its own. On the other, where the
+advertisement makes it a condition of employment, a screener reading only the CV can see
+it answered without opening anything else. Never take it off on their behalf and never
+add it on their behalf: both are silent edits to what the employer is told about them.
+
+Taking it off is one press, the wording goes to the archive intact, and the markdown
+still has it for the next application that does want it. `templates/cv.md`,
+`references/assembling.md` and `references/achievements.md` all say this the same way.
 
 **Each line of the contact block is its own line.** Consecutive lines under the name
 are separate contact entries even with no blank line between them, so one can come off
