@@ -1,5 +1,6 @@
 {
   "name": "resu-studio",
+  "description": "Resu Studio, from CX Instruments. Tools for the person applying for the job rather than the employer screening for one.",
   "owner": {
     "name": "CX Instruments",
     "url": "https://github.com/CX-Instruments"
