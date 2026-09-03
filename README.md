@@ -144,6 +144,18 @@ The typefaces are carried inside the plugin, so your documents print the same wh
 or not the machine doing the printing has ever been online. The studio you look at on
 screen carries the same ones, so the page breaks you see are the page breaks you get.
 
+## Support
+
+Questions, bugs and requests go to
+[Issues](https://github.com/CX-Instruments/resu-studio/issues). That is the
+support channel and it is read. Please include the version, which is printed at
+the top left of any studio page you have open.
+
+## Privacy
+
+Resu Studio collects nothing. No account, no server, no analytics. Your CV and
+your finished documents stay in your own folder. See [PRIVACY.md](PRIVACY.md).
+
 ## Licence
 
 Resu Studio is free software under the GNU Affero General Public License, version 3
