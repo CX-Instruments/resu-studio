@@ -27,6 +27,7 @@ built from `cv-<variant>.md`, where the ids and the page agree again.
 The `## P1.` heading carries the location, in words. Everything else is a bold field:
 
 ```
+Kind          which kind of change this is, from the list below
 Line          the studio's id for the line this lands on
 Currently     the full existing text, verbatim, or `Not on the CV.`
 Suggested     the full replacement text, or `Delete this bullet.`
@@ -37,12 +38,35 @@ Costs         on an addition, which line comes out or how the budget rises
 Decision      left blank for the person
 ```
 
----
+**The entries run in page order, top to bottom.** Sections in the order the CV sets
+them out, roles in the order they appear inside a section, bullets in the order they
+appear inside a role, skills groups in the order they are drawn. They are numbered P1
+upward in that same order, so the number in the chat and the position on the page agree.
+Every suggestion is read in the studio on the line it would change, and a file in any
+other order makes the person hunt.
 
-# 1. FIX BEFORE SENDING
+The kinds, which `Kind:` names and which no longer decide where an entry sits:
+
+- `fix before sending`, a factual error, a tense left behind after a date change, or a
+  claim the record does not support.
+- `decide`, a place where a fact only the person has is needed. State both options in
+  full where there are two.
+- `same claim twice`, where the claim is on the page twice and `Why:` quotes the other
+  copy.
+- `cut this to make room`, where the claim appears once, is true, and is spending a slot
+  a line answering a criterion needs.
+- `missing and worth adding`, with where it goes.
+- `wording`, where the claim and its evidence stand and the line says them less well
+  than it could.
+- `no change needed`, which takes no number and goes at the foot of this file.
+
+Full rules for all seven: `references/proposing-changes.md`.
+
+---
 
 ## P1. Section, role, which bullet
 
+**Kind:** fix before sending
 **Line:** professional-experience/0/b2
 **Currently:**
 The complete existing text, verbatim.
@@ -58,67 +82,9 @@ The complete replacement text, ready to paste.
 
 ---
 
-# 2. DECIDE
+## P2. Section, role, where the new line goes
 
-Places where a fact only the person has is needed. State both options in full where
-there are two.
-
----
-
-# 3. SAME CLAIM TWICE
-
-## P8. Section, role, which bullet
-
-**Line:** professional-experience/1/b0
-**Currently:**
-The complete existing text.
-
-**Suggested:**
-Delete this bullet.
-
-**Why:** Names the other place the claim already appears, quoted, and says why that
-copy is the one to keep.
-
-**Decision:**
-
----
-
-# 4. CUT THIS TO MAKE ROOM
-
-A line that answers nothing this advertisement asks for, on a page that is full.
-`references/rewriting.md` names this as one of the three shapes a useful change takes,
-and it is the only one that produces a proposal with no replacement text.
-
-**This is not the same as group 3.** There the claim is on the page twice and one copy
-goes. Here the claim appears once, it is true, and it is spending a slot that a line
-answering a criterion needs. So the reason has to name what goes in its place, and the
-person can accept the cut and refuse the replacement, or the other way round.
-
-Where the page has room, there is no cut to propose. Say so in group 7 rather than
-finding one.
-
-## P10. Section, role, which bullet
-
-**Line:** professional-experience/1/b2
-**Currently:**
-The complete existing text.
-
-**Suggested:**
-Delete this bullet.
-
-**Why:** What this advertisement asks for that this line does not touch, and which
-proposal takes the slot.
-
-**Costs:** frees one bullet in this role, taken by P12
-
-**Decision:**
-
----
-
-# 5. MISSING AND WORTH ADDING
-
-## P12. Section, role, where the new line goes
-
+**Kind:** missing and worth adding
 **Line:** professional-experience/0/b3
 **Currently:** Not on the CV.
 
@@ -135,10 +101,45 @@ The complete new line.
 
 ---
 
-# 6. WORDING
+## P3. Section, role, which bullet
+
+**Kind:** same claim twice
+**Line:** professional-experience/1/b0
+**Currently:**
+The complete existing text.
+
+**Suggested:**
+Delete this bullet.
+
+**Why:** Names the other place the claim already appears, quoted, and says why that
+copy is the one to keep.
+
+**Decision:**
 
 ---
 
-# 7. NO CHANGE NEEDED
+## P4. Section, role, which bullet
 
-What was checked and deliberately left alone, so nothing looks overlooked.
+**Kind:** cut this to make room
+**Line:** professional-experience/1/b2
+**Currently:**
+The complete existing text.
+
+**Suggested:**
+Delete this bullet.
+
+**Why:** What this advertisement asks for that this line does not touch, and which
+proposal takes the slot.
+
+**Costs:** frees one bullet in this role, taken by P2
+
+**Decision:**
+
+---
+
+# NO CHANGE NEEDED
+
+What was checked and deliberately left alone, so nothing looks overlooked. These have no
+change to sit on a line, so they take no `P` number and stay here at the foot of the
+file. Where the page had room and there was no cut to propose, say that here rather than
+finding one.

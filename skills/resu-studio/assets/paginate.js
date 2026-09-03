@@ -99,8 +99,14 @@
       var lis = ul ? Array.prototype.slice.call(ul.children) : [];
       if (ul) {
         var u = ul.cloneNode(false);
-        if (lis.length) u.appendChild(lis.shift());
-        head.appendChild(u);
+        /* Fold the first bullet into the head only when the head would otherwise be
+           a bare heading. A role that already carries an intro paragraph has enough
+           under its heading to end a sheet on, and making that head carry the first
+           bullet as well is what pushed whole roles onto the next page: a head of
+           178 pixels would not go into 206 pixels of space, so the sheet before it
+           finished five centimetres short. */
+        if (head.children.length < 2 && lis.length) u.appendChild(lis.shift());
+        if (u.children.length) head.appendChild(u);
       }
       out.push(head);
       lis.forEach(function (li) {

@@ -60,6 +60,42 @@ asked before anything of theirs gets rewritten.
 Never present this as a menu of seven phases. One or two sentences, in their language,
 about the thing in front of them.
 
+## Rebuild the studio every time the page changes
+
+**The studio is the only place the person sees their CV drawn.** Everything else this
+skill writes is working papers. So a studio that no longer matches what they have
+decided is worse than no studio at all: they open it, read it as the state of their
+application, and it is out of date.
+
+The four builds named in the phases are the minimum. One at the end of Phase 3, one in
+Phase 4 with the proposals in it, one in Phase 6 from the assembled CV, and one in
+Phase 7 with the letter. **The rule is larger than those four: any time something that
+would appear on the page changes, build the studio again and hand the file back in the
+same reply.**
+
+What counts as a change: a suggestion they accepted, a line they rewrote in their own
+words, a line taken off, a line added, a section added, a reorder of bullets or
+sections, a fresh score, a different skin, and anything they asked for in the chat that
+you then carried out.
+
+**Do not wait to be asked.** They do not know the studio can be rebuilt, so it will not
+occur to them to ask for one. Somebody who has just approved four changes and been
+handed nothing back has no way of seeing what those four changes did to their page, and
+is left taking your description of it on trust.
+
+**Pass the same `--role` and `--employer` on every rebuild**, so it replaces the page
+they already have instead of leaving them holding two, and pass the ledgers as well or
+the Score tab opens empty. Phase 6, *Pass the ledgers on this rebuild too*, has the
+flags and says what goes missing without them.
+
+Say one line with the file when you hand it back: what changed, and that this is the
+same studio with the change in it.
+
+**One moment holds a rebuild back**, and it is the one in Phase 5 where the person has
+been through the suggestions and the hand-to-Claude block has not come out yet. Their
+decisions are in their own browser until then. Get the block out first, apply what it
+says, and hand the rebuilt studio back with it.
+
 ## Assume nothing about their work until their CV arrives
 
 **You do not know what they do.** Not the trade, not the seniority, not the country,
@@ -391,12 +427,12 @@ report both use, so all three describe an ask the same way:
 Two counts, not one: what the person has, and what a reader would find on the current
 page. The gap between those two numbers is the entire value of the exercise.
 
-**Then build the studio, at the end of Phase 3.** This is where it first exists. It is
-rebuilt in Phase 4 with the proposals in it, and again in Phase 6 from the assembled
-CV. A rebuild for the same role, employer and CV file replaces this same page. The
-Phase 6 rebuild reads a different CV file, so it keeps this one under a dated name and
-says where it went, which is what you want: the score before and the score after are
-both still on disk.
+**Then build the studio, at the end of Phase 3.** This is where it first exists, and
+from here on it is rebuilt whenever the page changes, under *Rebuild the studio every
+time the page changes* above. A rebuild for the same role, employer and CV file
+replaces this same page. The Phase 6 rebuild reads a different CV file, so it keeps
+this one under a dated name and says where it went, which is what you want: the score
+before and the score after are both still on disk.
 
 A table of rows is not a score anybody can take in, and this is the first moment the
 person has something real to look at: their own CV, drawn, with the score beside it.
@@ -444,6 +480,7 @@ carries the location in words. Every entry then carries these fields, which are 
 ones `templates/proposals.md` shows and `build_studio.py` reads:
 
 ```
+Kind          which kind of change this is, one of the seven below
 Line          the studio's id for the line this lands on
 Currently     the full existing text, verbatim, or `Not on the CV.`
 Suggested     the full replacement text, ready to paste, or `Delete this bullet.`
@@ -453,6 +490,19 @@ Draws on      which fact ids this rests on
 Costs         on an addition, which line comes out or how the budget rises
 Decision      left blank, for the person
 ```
+
+**The entries run in page order.** Sections in the order the CV sets them out, roles in
+the order they appear inside a section, bullets in the order they appear inside a role,
+skills groups in the order they are drawn. Number them P1 upward in that same order, so
+P1 is the first suggestion on the page and the number in the chat agrees with where the
+suggestion sits. In the studio every suggestion already sits on the line it would
+change, so a person working down their own CV meets each one where it lives.
+
+**`Kind:` is what the entry is, and it no longer decides where the entry sits.** The
+seven are `fix before sending`, `decide`, `same claim twice`, `cut this to make room`,
+`missing and worth adding`, `wording` and `no change needed`, each explained in
+`references/proposing-changes.md`. The last of those takes no number and goes at the
+foot of the file, because it is the absence of a change and has no line to sit on.
 
 **`Line:` is not optional.** It is the id `render_cv.py` and the studio both build
 from the markdown, such as `professional-experience/2/b3`, `profile/0` or
@@ -468,8 +518,8 @@ after. Removals say `Suggested: delete this bullet` and always carry a reason.
 Run the budget check and the duplication check before writing the file, not after.
 
 **Then rebuild the studio with the proposals in it.** Same command as Phase 3 with
-`--proposals` added, same `--role` and same `--employer`, so it replaces the studio
-they already have rather than making a second one. Their marks live in the browser
+`--proposals` added, and the same `--role` and `--employer` for the reason given under
+*Rebuild the studio every time the page changes* above. Their marks live in the browser
 keyed to that role and employer, so nothing they have already decided is lost.
 
 **Draft the key achievements too, into `achievements.md`.** Draft six lines at career
@@ -644,8 +694,9 @@ rebuild below gives them.
 
 Then rescore: keep the first `scorecard.md` as `scorecard-before.md`, write the new
 one against the assembled CV, and rebuild the studio from it with the assembled CV as
-`--cv`. Same `--role` and same `--employer`, so it is written under the same filename
-and their marks, which are keyed to that role and employer, are all still there. The
+`--cv`. Same `--role` and same `--employer`, for the reason given under *Rebuild the
+studio every time the page changes* above, so it is written under the same filename and
+their marks, which are keyed to that role and employer, are all still there. The
 Score tab they have been reading all along now shows the new numbers, and they watch
 it move rather than being told it moved.
 
@@ -952,6 +1003,11 @@ Then build the studio once more with `--letter` added, so the letter can be mark
 the same way the CV was. The studio has a Resume and Cover letter chooser under
 Document in the Skin tab. Both documents wear the same skin, because they are posted
 together, and every line of the letter can be marked up exactly like a line on the CV.
+
+**The rebuild rule holds through this phase as well.** A paragraph of the letter
+rewritten, taken off or added brings a fresh studio back in the same reply, on the same
+`--role` and `--employer`, exactly as a change to the CV does. See *Rebuild the studio
+every time the page changes* above.
 
 **Done when:** it is one page, every claim in it traces to the record, and there is not
 one defensive sentence in it.

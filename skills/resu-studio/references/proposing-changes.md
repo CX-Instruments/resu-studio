@@ -10,6 +10,7 @@ Every entry, without exception:
 ```
 ## P12. Current employer, Key Responsibilities, bullet 5
 
+**Kind:** same claim twice
 **Line:** professional-experience/0/b4
 **Currently:**
 The complete existing text of that bullet, verbatim, however long it runs.
@@ -31,6 +32,7 @@ The fields, in the order `templates/proposals.md` sets them out:
 
 | Field | When it appears |
 |---|---|
+| `Kind:` | every entry. Which of the kinds below this change is. It sits directly under the heading, above `Line:` |
 | `Line:` | every entry, without exception. The studio's id for the line it lands on, from `references/marking.md` |
 | `Currently:` | every entry. The complete existing text, or `Not on the CV.` for an addition |
 | `Suggested:` | every entry. The complete replacement text, or `Delete this bullet.` for a removal |
@@ -40,9 +42,9 @@ The fields, in the order `templates/proposals.md` sets them out:
 | `Draws on:` | every entry that adds or changes text. Fact ids from `facts.md` |
 | `Decision:` | every entry, left blank. It is the person's to fill in |
 
-A removal carries `Line:`, `Currently:`, `Suggested:`, `Why:` and `Decision:` and needs
-no `Answers:` or `Draws on:`, because it rests on the claim already being somewhere
-else on the page and `Why:` is where that other place is named.
+A removal carries `Kind:`, `Line:`, `Currently:`, `Suggested:`, `Why:` and `Decision:`
+and needs no `Answers:` or `Draws on:`, because it rests on the claim already being
+somewhere else on the page and `Why:` is where that other place is named.
 
 **An entry without a `Line:` never reaches the person.** `build_studio.py` drops it,
 silently as far as the page is concerned, because there is no line to draw it against.
@@ -67,28 +69,55 @@ For a removal: `**Suggested:** Delete this bullet.` and a reason. Always a reaso
 line dropped quietly is how somebody sends a CV missing the thing they were proudest
 of.
 
-## Group and order
+## Order them by where they land on the page
 
-Group by urgency, not by page order, and say what each group is:
+**Suggestions run in the order the person's own document runs.** Sections in the order
+the CV sets them out, roles in the order they appear inside a section, bullets in the
+order they appear inside a role, skills groups in the order they are drawn.
 
-1. **Fix before sending.** Factual errors, tense left behind after a date change,
-   claims the record does not support.
-2. **Decide.** Places where you need a fact only the person has.
-3. **Same claim twice.** Duplications, with which copy to keep.
-4. **Cut this to make room.** A line that answers nothing this advertisement asks for,
-   on a page with no room left. `rewriting.md` names this as one of the three shapes a
-   useful change takes, and it is the only one whose `Suggested:` is a deletion with
-   nothing replacing it in place. The reason names which proposal takes the slot, so
-   the person can accept the cut and refuse the replacement, or the other way round.
-   Where the page has room, this group is empty and says so.
-5. **Missing and worth adding.** With where each goes.
-6. **Wording.**
-7. **No change needed.** Name what you checked and left alone, so the person is not
-   left wondering whether you simply did not get to it.
+**Number them P1 upward in that same order.** P1 is the first suggestion on the page, so
+the number in the chat and the position on the page agree, and either one finds the
+other.
 
-Groups 3 and 4 both end in a deleted line and they are different arguments. In 3 the
-claim is on the page twice and the reason quotes the other copy. In 4 the claim appears
-once and is true, and the reason is that this advertisement does not ask for it.
+The reason is the studio. Every suggestion already sits on the line it would change, so
+a person working down their own CV meets each one where it lives. A file ordered any
+other way makes them hunt for the line each number belongs to.
+
+## The kinds
+
+**The seven kinds are still here.** Each one keeps its meaning, and each entry records
+its own in a `Kind:` field, so nothing is lost about why a change is being proposed:
+
+| `Kind:` | what it is |
+|---|---|
+| `fix before sending` | A factual error, a tense left behind after a date change, a claim the record does not support. |
+| `decide` | A place where you need a fact only the person has. Where there are two options, state both in full. |
+| `same claim twice` | The claim is on the page twice. `Why:` quotes the other copy and says which one to keep. |
+| `cut this to make room` | The claim appears once and is true, and this advertisement does not ask for it, on a page with no room left. `Why:` names which proposal takes the slot. |
+| `missing and worth adding` | Nothing on the CV says this and it is worth a slot. `Currently:` is `Not on the CV.` and `Line:` names the line it goes in after. |
+| `wording` | The claim and its evidence stand. The line says them less well than it could. |
+| `no change needed` | Something you checked and deliberately left alone. |
+
+`same claim twice` and `cut this to make room` both end in a deleted line and they are
+different arguments. In the first the claim is on the page twice and the reason quotes
+the other copy. In the second the claim appears once and is true, and the reason is that
+this advertisement does not ask for it, which is why that reason also has to name what
+goes in the freed slot: the person can accept the cut and refuse the replacement, or the
+other way round. `rewriting.md` names the cut as one of the three shapes a useful change
+takes, and it is the only one whose `Suggested:` is a deletion with nothing replacing it
+in place. Where the page has room there is no cut to propose, and saying so out loud
+belongs at the foot of the file with the rest of what you left alone.
+
+**`no change needed` is the one kind that does not take a number.** Everything else is a
+change sitting on the line it would alter, and this is the absence of one, so page order
+has nothing to hang it on. It goes in a short closing block at the foot of
+`proposals.md`, under the last numbered proposal, naming what you checked and left
+alone, by line where a line is meant. Keep it: it is what tells the person you read the
+rest of their CV, and without it they are left wondering what you did not get to.
+Writing one as a numbered entry does something worse than look untidy, because an entry
+with a `Line:` and no `Suggested:` is read by `build_studio.py` as a question waiting on
+a fact, and the person is shown a card asking them for something on a line where nothing
+is being proposed.
 
 ## The budget check, before writing anything
 
