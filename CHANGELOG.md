@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.1, 3 September 2026
+
+Fixed the extra white space at the foot of every printed page.
+
+The paginator measures the page on screen and then the document is printed with the
+print stylesheet. That stylesheet set `line-height: normal` on the sheet, which cascaded
+into every paragraph and every bullet, so the text set tighter on paper than in the
+layout the paginator had measured. Each page therefore ended about a tenth of a page
+above where the preview showed it ending, and the effect was the same whatever paper
+size was chosen.
+
+Measured on one document before and after: the last ink on each page moved from 76, 79
+and 82 percent down the page to 85, 88 and 91 percent, and the screen and print layouts
+now measure identically at 883, 958, 991 and 1034 pixels rather than the print falling
+back to 814, 856, 894 and 931.
+
+The same rule was in the studio, so the preview and the studio's own Save as PDF were
+both affected. Both are fixed.
+
 ## 0.4.0, 2 September 2026
 
 A correctness pass. An audit of 0.3.0 found 25 code defects and about 30 places where

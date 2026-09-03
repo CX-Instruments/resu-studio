@@ -1,6 +1,6 @@
 {
   "name": "resu-studio",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Tailor a CV and cover letter to one job advertisement, honestly. Scores what the advertisement asks for against what the person has actually done, proposes every change as current text, suggested text and a reason for them to accept or reject one at a time, and prints a finished PDF exactly as the studio shows it.",
   "keywords": [
     "cv",

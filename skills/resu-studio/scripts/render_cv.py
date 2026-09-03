@@ -1537,7 +1537,7 @@ ul.bul.cols2{padding-left:15px}
      and looks right, which is why this only ever showed up on paper. Chrome honours
      break-after on a flex container, so nothing is lost by keeping it. */
   .sheet{margin:0;box-shadow:none;break-after:page;page-break-after:always;
-         display:flex;flex-direction:column;line-height:normal}
+         display:flex;flex-direction:column;line-height:1.42}
   .sheet:last-child{break-after:auto;page-break-after:auto}
   @page{size:A4;margin:0}
 }
