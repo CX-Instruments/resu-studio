@@ -10,6 +10,10 @@
     "selection-criteria"
   ],
   "license": "AGPL-3.0-or-later",
-  "homepage": "https://github.com/JenRoyce/resu-studio",
-  "repository": "https://github.com/JenRoyce/resu-studio"
+  "homepage": "https://github.com/CX-Instruments/resu-studio",
+  "repository": "https://github.com/CX-Instruments/resu-studio",
+  "author": {
+    "name": "CX Instruments",
+    "url": "https://github.com/CX-Instruments"
+  }
 }

@@ -1,7 +1,8 @@
 {
   "name": "resu-studio",
   "owner": {
-    "name": "JenRoyce"
+    "name": "CX Instruments",
+    "url": "https://github.com/CX-Instruments"
   },
   "plugins": [
     {
@@ -18,7 +19,12 @@
         "job-application",
         "selection-criteria"
       ],
-      "category": "productivity"
+      "category": "productivity",
+      "homepage": "https://github.com/CX-Instruments/resu-studio",
+      "repository": "https://github.com/CX-Instruments/resu-studio",
+      "author": {
+        "name": "CX Instruments"
+      }
     }
   ]
 }
