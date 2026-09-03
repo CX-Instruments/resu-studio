@@ -82,3 +82,12 @@ screen carries the same ones, so the page breaks you see are the page breaks you
 
 The facts ledger is built once and reused. A second advertisement reads it rather
 than asking you for your CV again.
+
+## Licence
+
+Resu Studio is free software under the GNU Affero General Public License, version 3
+or later. You can read it, run it, change it and pass it on. If you run a changed
+version as a service that other people use over a network, you have to make your
+changes available to them under the same licence.
+
+The full text is in `LICENSE`.

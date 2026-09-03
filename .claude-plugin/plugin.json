@@ -9,5 +9,7 @@
     "job-application",
     "selection-criteria"
   ],
-  "license": "UNLICENSED"
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/JenRoyce/resu-studio",
+  "repository": "https://github.com/JenRoyce/resu-studio"
 }
