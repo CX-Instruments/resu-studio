@@ -80,6 +80,26 @@ in them. A reader decides whether to keep reading from the first two lines.
 - **Name the contact only if the advertisement names them**, and spell it as the
   advertisement spells it.
 
+## The shape, when there is no advertisement
+
+A general resume has no job pack to address, and the letter is still worth having: it
+is the page somebody attaches to a speculative application or hands to a recruiter.
+
+So the studio always has a letter. Where there is no letter file, it shows a scaffold
+of prompts, one per line, set in grey italic inside a dashed box. They are there to be
+clicked, filled in or taken off, and they are the only thing on that page that is not
+this person's own wording.
+
+**A prompt never prints.** It does not appear in Final view, it is not in the PDF, and
+it is not in the markdown the studio hands over. A letter that still says "Role title,
+exactly as the advertisement writes it" has not been written, and Save as PDF says so
+rather than printing a sheet of instructions with somebody's name at the bottom.
+
+**A prompt stays a prompt until the person deals with it.** Not Claude. Filling the
+letter in unasked is writing on somebody's behalf without being asked to, and it is the
+one thing this scaffold must not invite. The letter is written in Phase 7, when they
+ask for one.
+
 ## In the studio
 
 The Skin tab has a Resume / Cover letter toggle. The letter wears whatever skin is
@@ -89,6 +109,28 @@ to be posted together.
 Every line of the letter can be pointed at exactly like a line on the CV: flag it,
 ask for a rewrite, put it in your own words, take it off this version, or add a
 paragraph after it. Nothing touches the markdown.
+
+**Write the letter** at the top of the page opens one box for the whole thing. Paste a
+letter already written, or type one, with a blank line between paragraphs. It is read
+by shape and not by markup, the same way `parse_letter` reads the file, so a date, an
+address block, a `RE:` line, a `Dear ...` line and a sign-off each land in their own
+place. Anything not in the paste stays a prompt. Six paragraphs through six separate
+little editors is not writing, which is what that box is for.
+
+**What the person writes there stays.** It is saved against that application in their
+browser and it survives a rebuild. A rebuild that brings a written letter file with it
+does not replace what they wrote: a banner at the top of the page says the other letter
+arrived and offers it, and the choice is theirs.
+
+**The subject line has an id of its own.** `cover-letter/re` sits above the salutation
+and carries the role title as the advertisement writes it, which is the first thing a
+screener matches on. It prints in the body and not in the address block, so a sidebar
+skin cannot put it down the side of the page in eight point.
+
+**The studio hands the letter back as markdown.** Copy settings and Save as PDF both
+write the finished letter out under the render command, to be saved as
+`cover-letter-<variant>.md` and printed from. The markdown stays the master, and the
+page and the print keep one reader between them.
 
 `render_cv.py --letter <file.md>` renders the same thing from the markdown, on the
 same skin, taking the name and contact block from the CV file.

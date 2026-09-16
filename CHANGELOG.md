@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.4.4, 16 September 2026
+
+The cover letter could not be written in the studio, and on a general resume there was
+no letter at all.
+
+**The letter page was empty and inert.** With no letter file, every line of it was built
+with no text in it, so there was nothing on the page with any height to it. The toolbar
+inside the sheet attaches to a line you click, and there was no line to click, so every
+action on the cover letter did nothing. The letter is now a scaffold of prompts: an
+addressee block, a `RE:` line, a salutation, five body paragraphs and a sign-off, each a
+line that can be clicked, filled in or taken off like any line on the CV.
+
+**A prompt never reaches paper.** It shows in Working view in grey italic inside a
+dashed box, and it is absent from Final view, from the PDF and from the markdown the
+studio hands over. Save as PDF on a letter that is still prompts prints the resume alone
+and says why. Wording the person puts on a prompt prints like any other line.
+
+**One box for the whole letter.** Write the letter at the top of the page takes a
+letter pasted or typed in full. It is read by shape rather than by markup, the same way
+`parse_letter` reads the file, so a date, an address block, a `RE:` line, a `Dear ...`
+line and a sign-off each land in their own place, and whatever is not in the paste stays
+a prompt.
+
+**What is written there stays written.** The letter is saved against that application
+and survives a rebuild. A rebuild carrying a written letter file no longer replaces it:
+a banner at the top of the page says the other letter arrived and offers it, and the
+person chooses.
+
+**The studio hands the letter back as markdown.** Copy settings and Save as PDF write
+the finished letter out under the render command, to be saved as
+`cover-letter-<variant>.md`. So a letter written in the browser prints on the same
+layout, palette and typeset as the resume, which is what a general resume never had.
+
+**A subject line of its own.** `cover-letter/re` is a new addressable line above the
+salutation, carrying the role title as the advertisement writes it. `parse_letter` reads
+`RE:` and `Subject:` on either side of the salutation, and a subject line ending in a
+comma is no longer mistaken for the salutation and no longer swallows the real one.
+
 ## 0.4.3, 3 September 2026
 
 Two instruction changes. The seven phases and everything they do are unchanged.

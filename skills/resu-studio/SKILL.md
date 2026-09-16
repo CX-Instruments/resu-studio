@@ -999,6 +999,18 @@ printed at different moments. `--decisions` is on it for the same reason it is o
 other render: this run reprints the CV as well as the letter, and without it the CV PDF
 reverts to the markdown.
 
+**Where there is no advertisement, the letter is still there to write.** A studio built
+without `--letter` shows the letter as a scaffold of prompts: the addressee block, a
+`RE:` line, a salutation, four to six body paragraphs and a sign-off, each one a line
+that can be clicked, filled in or taken off. Write the letter at the top of the page
+takes a whole letter at once, pasted or typed, and the studio hands it back as markdown
+under the render command so it prints on the CV's own skin.
+
+**Leave the prompts alone until they ask.** A prompt is a question the page is asking
+the person, and filling it in for them is writing a letter nobody asked for. Phase 7
+runs when they want a letter. Until then the prompts stay, they never print, and Save
+as PDF prints the resume on its own and says why.
+
 Then build the studio once more with `--letter` added, so the letter can be marked up
 the same way the CV was. The studio has a Resume and Cover letter chooser under
 Document in the Skin tab. Both documents wear the same skin, because they are posted

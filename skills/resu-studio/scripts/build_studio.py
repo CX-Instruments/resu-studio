@@ -208,12 +208,17 @@ def letter_block(path, doc):
     to = list(L.get("to") or [])
     ref = ""
     for line in list(to):
-        if re.match(r"^\s*(ref|reference|position number)\b", line, re.I):
+        if re.match(r"^\s*(ref|reference|position number|vacancy)\b", line, re.I):
             ref = line
             to.remove(line)
+    # `ph` is empty and `src` says file: a letter somebody wrote has no prompts in
+    # it, and the studio needs to know this one came from a file so that a rebuild
+    # carrying it can offer it rather than write over a letter typed in the browser.
     return {"date": L.get("date", ""), "to": to, "ref": ref,
-            "sal": L.get("sal", ""), "paras": L.get("paras") or [],
-            "close": L.get("close", ""), "sign": L.get("sign", "")}
+            "re": L.get("re", ""), "sal": L.get("sal", ""),
+            "paras": L.get("paras") or [],
+            "close": L.get("close", ""), "sign": L.get("sign", ""),
+            "ph": {}, "src": "file"}
 
 
 # ---------------------------------------------------------------- the swap
@@ -356,8 +361,8 @@ def cv_ids(cv, letter=None):
     for i, _t in enumerate(cv.get("training") or []):
         ids.add("%s/%d" % (sid["training"], i))
     if letter:
-        ids.update({"cover-letter/date", "cover-letter/ref", "cover-letter/sal",
-                    "cover-letter/close", "cover-letter/sign"})
+        ids.update({"cover-letter/date", "cover-letter/ref", "cover-letter/re",
+                    "cover-letter/sal", "cover-letter/close", "cover-letter/sign"})
         for i, _x in enumerate(letter.get("to") or []):
             ids.add("cover-letter/to%d" % i)
         for i, _x in enumerate(letter.get("paras") or []):
@@ -420,7 +425,8 @@ def fingerprint(cv, letter=None):
         "training": [_norm(t) for t in cv.get("training") or []],
         "letter": None if not letter else [
             _norm(letter.get("date")), [_norm(x) for x in letter.get("to") or []],
-            _norm(letter.get("ref")), _norm(letter.get("sal")),
+            _norm(letter.get("ref")), _norm(letter.get("re")),
+            _norm(letter.get("sal")),
             [_norm(p) for p in letter.get("paras") or []],
             _norm(letter.get("close")), _norm(letter.get("sign"))],
     }

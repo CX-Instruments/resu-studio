@@ -371,6 +371,11 @@ def parse(md):
     return doc
 
 
+#: A subject line. It sits above the salutation and is the first thing a reader
+#: reads, so it is a line of its own with an id of its own, not part of the address
+#: block. Written `RE:` or `Subject:`, either side of the salutation.
+RE_LINE = re.compile(r"^(re|subject)\s*[:\u2013-]\s*\S", re.I)
+
 SIGNOFFS = ("yours sincerely", "yours faithfully", "kind regards", "regards",
             "sincerely", "best regards", "many thanks", "with thanks")
 
@@ -394,7 +399,8 @@ def parse_letter(md, doc):
     if buf:
         blocks.append(buf)
 
-    out = {"date": "", "to": [], "sal": "", "paras": [], "close": "", "sign": ""}
+    out = {"date": "", "to": [], "re": "", "sal": "", "paras": [], "close": "",
+           "sign": ""}
     if not blocks:
         return out
     rest = blocks[1:]                      # block 0 is the letterhead
@@ -404,7 +410,10 @@ def parse_letter(md, doc):
             r"^\d{1,2}\s+[A-Za-z]+\s+\d{4}$|^[A-Za-z]+\s+\d{1,2},?\s+\d{4}$", b[0])
 
     def is_sal(b):
+        # `RE: Application for Assistant Director, Data Reporting` ends in a comma
+        # and is short, which made it the salutation and swallowed the real one.
         return len(b) == 1 and b[0].endswith(",") and len(b[0]) < 90 \
+            and not RE_LINE.match(b[0]) \
             and not b[0].lower().startswith(SIGNOFFS)
 
     i = 0
@@ -412,13 +421,23 @@ def parse_letter(md, doc):
         out["date"] = rest[i][0]
         i += 1
     while i < len(rest) and not is_sal(rest[i]):
-        out["to"].extend(rest[i])
+        for ln in rest[i]:
+            if not out["re"] and RE_LINE.match(ln):
+                out["re"] = ln
+            else:
+                out["to"].append(ln)
         i += 1
     if i < len(rest):
         out["sal"] = rest[i][0]
         i += 1
     while i < len(rest):
         line = " ".join(rest[i])
+        # A subject line written under the salutation rather than above it.
+        if not out["re"] and not out["paras"] and len(rest[i]) == 1 \
+                and RE_LINE.match(line):
+            out["re"] = line
+            i += 1
+            continue
         if line.lower().startswith(SIGNOFFS):
             out["close"] = line
             i += 1
@@ -459,6 +478,8 @@ def letter_body_html(L):
             out.append(_tag("p", "lp added", "%s/+%d" % (i, k), t))
             d_note("added", "%s/+%d" % (i, k), t)
 
+    if L.get("re"):
+        put("lre", "cover-letter/re", L["re"])
     if L["sal"]:
         put("lsal", "cover-letter/sal", L["sal"])
     for n, t in enumerate(L["paras"]):
@@ -1431,6 +1452,8 @@ body{background:#e6e7ea;color:var(--text);font-family:var(--body);
 .lto{margin:0 0 16px}
 .lto p{margin:0 0 1px;font-size:calc(9.8pt * var(--scale));line-height:1.4}
 .lto p:first-child{font-weight:700;color:var(--accent)}
+.lre{margin:0 0 12px;font-weight:700;font-family:var(--head);
+     font-size:calc(10pt * var(--scale));line-height:1.35}
 .lsal{margin:0 0 11px}
 .lp{margin:0 0 9px;line-height:1.58;text-align:left}
 .lclose{margin:16px 0 0}

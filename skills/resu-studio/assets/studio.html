@@ -528,6 +528,9 @@ button,input,select{font:inherit;color:inherit}
          the top of the page rather than inside a drawer because a person who does
          not open the drawer is exactly the person this has to reach. -->
     <div class="rebuilt" id="rebuilt" hidden></div>
+    <!-- A rebuild that carried a written cover letter with it, when there is already
+         one here that this person wrote. Theirs stays; this offers the other. -->
+    <div class="rebuilt" id="lclash" hidden></div>
     <div class="stagebar">
       <span class="now" id="now"></span>
       <div class="seg viewsw" id="c-view"></div>
@@ -538,6 +541,7 @@ button,input,select{font:inherit;color:inherit}
         <button class="ico" id="zin" title="Bigger">+</button>
       </div>
       <button class="cta" id="pdf" title="Both documents, one file each, printed exactly as they look here">Save as PDF</button>
+      <button class="cta ghost" id="lpaste" hidden title="Paste a letter you have already written, or type one here">Write the letter</button>
       <button class="cta ghost" id="copy">Copy settings</button>
     </div>
     <div class="paperouter">
@@ -710,8 +714,51 @@ const SKILLMODES = {
 /* ================================================================== state */
 /* The cover letter. One page, her wording, addressed to this advertisement. Every
    line has an id, so it can be pointed at, rewritten and taken off exactly like a
-   line on the CV. */
-const LETTER = {date:"",to:[],ref:"",sal:"",paras:[],close:"",sign:""};
+   line on the CV.
+
+   Until a letter file is built in, this is a scaffold of prompts rather than an empty
+   object. An empty letter drew an empty page: no line to point at, so the toolbar
+   inside the sheet had nothing to attach itself to and every action on it did
+   nothing. A prompt you can click, fill in or take off is a page you can work on, and
+   it is the whole letter for somebody writing a general resume with no advertisement
+   in front of them.
+
+   `ph` names the lines that are still prompts. A prompt shows while you are working
+   and never prints: nobody posts a letter that says "Role title as advertised". The
+   moment your own wording goes on one it stops being a prompt and prints like any
+   other line. `src` says where the letter came from, so a rebuild carrying a real
+   letter can say so rather than quietly writing over what you wrote. */
+const LETTER_PROMPTS = {
+  to:["Role title, exactly as the advertisement writes it",
+      "Section and branch",
+      "Employer"],
+  ref:"Position number / vacancy number",
+  re:"RE: Application for [role title]",
+  sal:"Dear [the name the advertisement gives, or Hiring Panel],",
+  paras:["Why this job and this employer, in a first sentence that is not \"I am writing to apply for\".",
+         "The thread that runs through your career, which a reverse-chronological CV hides.",
+         "One piece of evidence off your record, with the names and the numbers in it.",
+         "The standard you hold yourself to, shown rather than claimed.",
+         "One thing you would want to talk about, which invites the conversation."],
+  close:"Yours sincerely,"
+};
+function _today(){
+  const d=new Date(), M=["January","February","March","April","May","June","July",
+    "August","September","October","November","December"];
+  return d.getDate()+" "+M[d.getMonth()]+" "+d.getFullYear();
+}
+/* The date, the sign-off and the name are not prompts. They are right as they stand
+   for almost every letter anybody sends, and a prompt is a thing you have to deal
+   with. */
+function blankLetter(){
+  const P=LETTER_PROMPTS, ph={};
+  P.to.forEach((_x,i)=>{ ph["cover-letter/to"+i]=1; });
+  P.paras.forEach((_x,i)=>{ ph["cover-letter/p"+i]=1; });
+  ["ref","re","sal"].forEach(k=>{ ph["cover-letter/"+k]=1; });
+  return {date:_today(), to:P.to.slice(), ref:P.ref, re:P.re, sal:P.sal,
+          paras:P.paras.slice(), close:P.close, sign:CV.name, ph:ph, src:"blank"};
+}
+const LETTER = blankLetter();
 const SEC = [
   {id:"profile",name:"Profile",slug:"profile"},
   {id:"skills",name:"Key skills",slug:"key-skills"},
@@ -879,14 +926,16 @@ function wordingByLine(){
   (CV.education||[]).forEach((e,i)=>{
     out[SID.education+"/"+i]=normText(e.lab+" "+e.txt); });
   (CV.training||[]).forEach((t,i)=>{ out[SID.training+"/"+i]=normText(t); });
-  if(LETTER){
-    out["cover-letter/date"]=normText(LETTER.date);
-    (LETTER.to||[]).forEach((t,i)=>{ out["cover-letter/to"+i]=normText(t); });
-    out["cover-letter/ref"]=normText(LETTER.ref);
-    out["cover-letter/sal"]=normText(LETTER.sal);
-    (LETTER.paras||[]).forEach((t,i)=>{ out["cover-letter/p"+i]=normText(t); });
-    out["cover-letter/close"]=normText(LETTER.close);
-    out["cover-letter/sign"]=normText(LETTER.sign);
+  const L=LT();
+  if(L){
+    out["cover-letter/date"]=normText(L.date);
+    (L.to||[]).forEach((t,i)=>{ out["cover-letter/to"+i]=normText(t); });
+    out["cover-letter/ref"]=normText(L.ref);
+    out["cover-letter/re"]=normText(L.re);
+    out["cover-letter/sal"]=normText(L.sal);
+    (L.paras||[]).forEach((t,i)=>{ out["cover-letter/p"+i]=normText(t); });
+    out["cover-letter/close"]=normText(L.close);
+    out["cover-letter/sign"]=normText(L.sign);
   }
   return out;
 }
@@ -1140,6 +1189,8 @@ body{background:#e6e7ea;color:var(--text);font-family:var(--body);
 .lto p:first-child{font-weight:700;color:var(--accent)}
 .lref{margin-top:5px !important;color:var(--muted);
       font-size:calc(9pt * var(--scale)) !important}
+.lre{margin:0 0 12px;font-weight:700;font-family:var(--head);
+     font-size:calc(10pt * var(--scale));line-height:1.35}
 .lsal{margin:0 0 11px}
 .lp{margin:0 0 9px;line-height:1.58;text-align:left}
 .lclose{margin:16px 0 0}
@@ -1216,6 +1267,15 @@ ul.bul.cols2{padding-left:15px}
 /* marking, and only while you are working */
 [data-id]{position:relative}
 .cvsel{outline:2px solid #2f6f8f;outline-offset:2px;border-radius:2px}
+/* A prompt. Grey, set in italic, and boxed so it cannot be mistaken for something
+   already written. It is here to be clicked: an empty paragraph has no height and
+   nothing to aim at, which is what left the toolbar inert on an empty letter. */
+.ph{color:#8a96a5 !important;font-style:italic;font-weight:400 !important;
+    outline:1px dashed #b7c0cc;outline-offset:2px;min-height:1em}
+/* The address block sets its lines a pixel apart, which drew four dashed boxes
+   through each other. A prompt needs room around it to read as one thing. */
+.lto .ph{margin-bottom:6px !important}
+.lto .ph:first-child{color:#8a96a5 !important}
 .mk{box-shadow:-7px 0 0 -4px var(--mkc,#999)}
 .mk-keep{--mkc:#8a96a5}
 .mk-flag{--mkc:#b07d17}
@@ -1233,7 +1293,7 @@ ul.bul.cols2{padding-left:15px}
   /* Save as PDF drops background colour by default in most browsers, which would
      print a dark sidebar as white paper. This is the instruction not to. */
   *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
-  .cvbar,.cvsel{display:none}
+  .cvbar,.cvsel,.ph{display:none}
   .mk{box-shadow:none}
   html,body{overflow:visible;margin:0;padding:0}
   body{background:#fff}
@@ -1674,6 +1734,53 @@ function setFlag(id, note){
 }
 function clearFlag(id){ if(S.flags) delete S.flags[id]; save(); draw(); }
 
+/* The letter as it stands.
+
+   `LETTER` is what the studio was built with. `S.letter` is what the person pasted
+   or typed over the top of it, and it wins, because what somebody wrote is not
+   something a rebuild gets to throw away. It is saved with the rest of the state,
+   against this application only, so it is still there tomorrow. */
+function LT(){ return (S.letter && typeof S.letter==="object") ? S.letter : LETTER; }
+
+/* A prompt is a line that is still asking to be written. Your own wording on it, by
+   any route, ends that. */
+function isPh(id){
+  const L=LT();
+  if(!L || !L.ph || !L.ph[id]) return false;
+  const m=S.marks[id];
+  if(m && m.a==="edit" && String(m.text||"").trim()) return false;
+  return true;
+}
+/* Shown while you work, gone from the paper. Final view is what prints, so this is
+   the one place that decides it. */
+function phSkip(id){ return isPh(id) && S.view!=="working"; }
+
+/* Has anything been said in this letter yet? A page of prompts is not a letter, and
+   the button that prints one should say so rather than hand somebody a blank sheet. */
+function letterWritten(){
+  /* The sign-off and the name are not the letter. They stand in the scaffold ready
+     written, so counting them made a page of prompts look like a finished letter,
+     which put `--letter` on a command with nothing behind it. */
+  const L=LT(), keys=["cover-letter/re","cover-letter/sal"];
+  (L.paras||[]).forEach((_x,i)=>keys.push("cover-letter/p"+i));
+  (L.to||[]).forEach((_x,i)=>keys.push("cover-letter/to"+i));
+  keys.push("cover-letter/ref");
+  for(const k of keys){
+    if(removed(k) || isPh(k)) continue;
+    if(String(textOf(k, phText(k))).trim()) return true;
+  }
+  return Object.keys(S.adds||{}).some(k=>k.indexOf("cover-letter/")===0
+    && (S.adds[k]||[]).length);
+}
+
+/* What the letter itself holds for one id, whatever it came from. */
+function phText(id){
+  const L=LT(), m=/^cover-letter\/(to|p)(\d+)$/.exec(id);
+  if(m) return (m[1]==="to" ? (L.to||[]) : (L.paras||[]))[+m[2]] || "";
+  const k=String(id).replace("cover-letter/","");
+  return L[k] || "";
+}
+
 function removed(id){ const m=S.marks[id]; return !!(m && m.a==="remove"); }
 function textOf(id, fallback){
   const m=S.marks[id];
@@ -1687,6 +1794,7 @@ function line(tag, cls, id, text){
   const m=S.marks[id];
   const c=[cls]; if(m && S.view==="working") c.push("mk mk-"+m.a);
   if(id.indexOf("/+")>=0 && S.view==="working") c.push("mk mk-add");
+  if(isPh(id)) c.push("ph");
   const a=c.filter(Boolean).join(" ");
   return '<'+tag+(a?' class="'+a+'"':'')+mv(id)+' data-id="'+id+'">'
     +esc(text)+'</'+tag+'>';
@@ -1697,13 +1805,15 @@ function letterAtoms(){
   const out=[];
   out.push({id:"name/0", where:"Letterhead", text:CV.name});
   CV.contact.forEach((c,i)=>out.push({id:"contact/"+i, where:"Letterhead", text:c}));
-  out.push({id:"cover-letter/date", where:"Cover letter", text:LETTER.date});
-  LETTER.to.forEach((t,i)=>out.push({id:"cover-letter/to"+i, where:"Addressed to", text:t}));
-  out.push({id:"cover-letter/ref", where:"Addressed to", text:LETTER.ref});
-  out.push({id:"cover-letter/sal", where:"Cover letter", text:LETTER.sal});
-  LETTER.paras.forEach((t,i)=>out.push({id:"cover-letter/p"+i, where:"Cover letter", text:t}));
-  out.push({id:"cover-letter/close", where:"Cover letter", text:LETTER.close});
-  out.push({id:"cover-letter/sign", where:"Cover letter", text:LETTER.sign});
+  const L=LT();
+  out.push({id:"cover-letter/date", where:"Cover letter", text:L.date});
+  (L.to||[]).forEach((t,i)=>out.push({id:"cover-letter/to"+i, where:"Addressed to", text:t}));
+  out.push({id:"cover-letter/ref", where:"Addressed to", text:L.ref});
+  out.push({id:"cover-letter/re", where:"Cover letter", text:L.re});
+  out.push({id:"cover-letter/sal", where:"Cover letter", text:L.sal});
+  (L.paras||[]).forEach((t,i)=>out.push({id:"cover-letter/p"+i, where:"Cover letter", text:t}));
+  out.push({id:"cover-letter/close", where:"Cover letter", text:L.close});
+  out.push({id:"cover-letter/sign", where:"Cover letter", text:L.sign});
   return out;
 }
 
@@ -1904,32 +2014,50 @@ function contactHTML(){
 
 /* The letter, laid out on whatever skin the CV is wearing. */
 function letterPut(out,tag,cls,key,text){
-  if(!removed(key)) out.push(line(tag,cls,key,textOf(key,text)));
-  adds(key).forEach((t,n)=>{ if(!removed(key+"/+"+n))
-    out.push(line('p','lp added',key+"/+"+n,t)); });
+  const t=textOf(key,text);
+  /* Three reasons a line is not on the page: taken off, still a prompt in a view
+     that prints, or simply not in this letter at all. A letter with no reference
+     number should not print an empty line where one would have been. */
+  if(!removed(key) && !phSkip(key) && String(t).trim()!=="")
+    out.push(line(tag,cls,key,t));
+  adds(key).forEach((x,n)=>{ if(!removed(key+"/+"+n))
+    out.push(line('p','lp added',key+"/+"+n,x)); });
 }
 
 /* Who it is to, and when. On a sidebar skin this rides in the column with the name,
    the way a letterhead does, which is also what stops the letter running to a second
    page in a two thirds wide body. */
+/* Final view is the paper. A letter nobody has written yet has nothing on it: not
+   the address block, not the sign-off, not the name under the sign-off. A sheet
+   carrying only "Yours sincerely" and a signature is not an honest preview of
+   anything. */
+function letterBlank(){ return S.view!=="working" && !letterWritten(); }
+
 function letterMeta(){
-  const out=[];
-  letterPut(out,'p','ldate',"cover-letter/date",LETTER.date);
+  if(letterBlank()) return "";
+  const L=LT(), out=[];
+  letterPut(out,'p','ldate',"cover-letter/date",L.date);
   const to=[];
-  LETTER.to.forEach((t,i)=>{ const k="cover-letter/to"+i;
-    if(!removed(k)) to.push(line('p','',k,textOf(k,t))); });
-  if(!removed("cover-letter/ref"))
-    to.push(line('p','lref',"cover-letter/ref",textOf("cover-letter/ref",LETTER.ref)));
+  const put=(cls,k,v)=>{ const t=textOf(k,v);
+    if(!removed(k) && !phSkip(k) && String(t).trim()!=="")
+      to.push(line('p',cls,k,t)); };
+  (L.to||[]).forEach((t,i)=>put('',"cover-letter/to"+i,t));
+  put('lref',"cover-letter/ref",L.ref);
   if(to.length) out.push('<div class="lto">'+to.join("")+'</div>');
   return out.join("");
 }
 
 function letterBody(){
-  const out=[];
-  letterPut(out,'p','lsal',"cover-letter/sal",LETTER.sal);
-  LETTER.paras.forEach((t,i)=>letterPut(out,'p','lp',"cover-letter/p"+i,t));
-  letterPut(out,'p','lclose',"cover-letter/close",LETTER.close);
-  letterPut(out,'p','lsign',"cover-letter/sign",LETTER.sign);
+  if(letterBlank()) return "";
+  const L=LT(), out=[];
+  /* The subject line sits in the body and not in the address block, because it is
+     the first thing the reader reads and a sidebar skin would otherwise print it
+     down the side of the page in eight point. */
+  letterPut(out,'p','lre',"cover-letter/re",L.re);
+  letterPut(out,'p','lsal',"cover-letter/sal",L.sal);
+  (L.paras||[]).forEach((t,i)=>letterPut(out,'p','lp',"cover-letter/p"+i,t));
+  letterPut(out,'p','lclose',"cover-letter/close",L.close);
+  letterPut(out,'p','lsign',"cover-letter/sign",L.sign);
   return out.join("");
 }
 
@@ -3058,8 +3186,11 @@ async function savePdfs(btn){
     if(S.view!=="final"){ S.view="final"; draw(); await rendered(); }
     if(canPrintHere()){
       btn.textContent="Printing";
+      /* A page of prompts is not a letter. Printing one would hand somebody a sheet
+         of instructions to themselves with their own name at the bottom of it. */
+      const docs = letterWritten() ? ["cv","letter"] : ["cv"];
       let printed=0;
-      for(const which of ["cv","letter"]){
+      for(const which of docs){
         S.doc=which; S.view="final";
         const wait=rendered(); draw(); await wait;
         if(!intoPrintArea()) break;
@@ -3070,9 +3201,11 @@ async function savePdfs(btn){
         await new Promise(r=>setTimeout(r,700));
       }
       S.doc=wantDoc; draw();
-      if(printed>=2){
-        btn.textContent="Done";
-        setTimeout(()=>{ btn.textContent=was; btn.title=""; }, 4000);
+      if(printed>=docs.length){
+        btn.textContent = docs.length>1 ? "Done" : "Resume done";
+        if(docs.length===1) btn.title="The cover letter is still prompts, so there was "
+          +"nothing to print. Write it and press this again.";
+        setTimeout(()=>{ btn.textContent=was; btn.title=""; }, 5000);
         return;
       }
     }
@@ -3223,7 +3356,7 @@ function paintRebuilt(){
 }
 
 function draw(){
-  paintRebuilt();
+  paintRebuilt(); paintLetterClash(); paintLetterBtn();
   paintSkin(); paintSkills(); paintOrder(); paintScore();
   paintView(); paintRails(); if(S.drawer) paintDrawer(); save();
   paper.srcdoc=buildDoc();
@@ -4353,7 +4486,7 @@ function settingsCommand(withPdf){
   let cmd="# run this from the resu-studio folder, with your markdown files beside it"
     +(EMPLOYER ? "\n# this application: "+(ROLE?ROLE+", ":"")+EMPLOYER : "")
     +"\npython3 scripts/render_cv.py "+CVMD
-    +((withPdf||S.doc==="letter") ? " --letter "+LTMD : "")
+    +((withPdf||S.doc==="letter") && letterWritten() ? " --letter "+LTMD : "")
     +role+emp
     +" --layout "+S.layout+" --palette "+S.palette
     +" --head-font "+S.headFont+" --body-font "+S.bodyFont+" --size "+S.size;
@@ -4404,11 +4537,259 @@ function settingsCommand(withPdf){
         +  " from the markdown alone and none of that appears."
         +  "\n\n" + decisionsFile();
   }
+  /* The letter travels as markdown, because markdown is what the renderer reads, and
+     one reader is the only way the page and the print cannot disagree. Everything the
+     studio knows about the letter is in here: the wording, the paragraphs added to it,
+     and nothing that is still a prompt. */
+  if(letterWritten() && (withPdf || S.doc==="letter")){
+    cmd += "\n\n# Claude: save the markdown below as "+LTMD+" beside the CV markdown,"
+        +  "\n# then run the command above. It is the letter exactly as this studio"
+        +  "\n# shows it, and nothing that is still a prompt is in it."
+        +  "\n\n" + letterMarkdown();
+  }
+
   const hidden=S.order.filter(o=>!o.show).map(o=>secName(o.id));
   if(hidden.length) cmd += "\n\n# "+hidden.join(" and ")+" "
     +(hidden.length>1?"are":"is")+" hidden in the preview only. The renderer never drops "
     +"a section. To take one off the page for real, take it out of the markdown.";
   return cmd;
+}
+
+
+/* ====================================================== writing the letter
+
+   The studio marks lines up one at a time, which is right for a CV that already
+   exists and wrong for a letter that does not. Nobody writes six paragraphs through
+   six separate little editors. So the letter has one box: paste what you have
+   written, or type it here, and the page takes it apart into the lines it addresses
+   afterwards.
+
+   It is read by shape and not by markup, exactly as `render_cv.parse_letter` reads
+   it, so what you paste here and what the printer reads out of the markdown are the
+   same letter. Blocks are separated by blank lines. */
+
+const SIGNOFF_RX=/^(yours (sincerely|faithfully|truly)|kind(est)? regards|warm(est)? regards|best (regards|wishes)|regards|sincerely|respectfully|many thanks|thank you|thanks)\b[\s,.]*$/i;
+const RE_RX=/^(re|subject)\s*[:–-]\s*\S/i;
+const REF_RX=/^(ref|reference|position (number|no)|vacancy|requisition|job (ref|reference|number))\b/i;
+const DATE_RX=/^(\d{1,2}\s+[A-Za-z]+\s+\d{4}|[A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2})$/;
+
+function parseLetterText(md){
+  const blocks=[]; let buf=[];
+  String(md||"").replace(/\r\n/g,"\n").split("\n").forEach(raw=>{
+    const t=raw.trim();
+    if(t) buf.push(t); else if(buf.length){ blocks.push(buf); buf=[]; }
+  });
+  if(buf.length) blocks.push(buf);
+
+  /* A letterhead pasted in with the letter is dropped. The letter wears the CV's own
+     name and contact block, from the CV file, so that the two documents cannot end
+     up looking like they came from different people. Two letterheads on one page is
+     what happens when nobody drops it. */
+  const nm=normText(CV.name).toLowerCase();
+  if(blocks.length && nm && normText(blocks[0][0]).toLowerCase()===nm) blocks.shift();
+
+  const out={date:"",to:[],ref:"",re:"",sal:"",paras:[],close:"",sign:""};
+  if(!blocks.length) return out;
+
+  /* Where the salutation is decides what everything above it means. A paste with no
+     "Dear" in it is not an address block followed by a letter, it is the letter, and
+     reading the first two paragraphs as an employer's address is the kind of quiet
+     wrong that reaches an envelope. */
+  let salAt=-1;
+  blocks.forEach((b,i)=>{ if(salAt<0 && b.length===1 && /^dear\b/i.test(b[0])) salAt=i; });
+  if(salAt<0) blocks.forEach((b,i)=>{ if(salAt<0 && b.length===1 && b[0].length<90
+    && /,$/.test(b[0]) && !SIGNOFF_RX.test(b[0]) && !RE_RX.test(b[0])) salAt=i; });
+
+  let i=0;
+  if(blocks[0].length===1 && DATE_RX.test(blocks[0][0])){ out.date=blocks[0][0]; i=1; }
+  if(salAt>=i){
+    for(; i<salAt; i++) blocks[i].forEach(t=>{
+      if(!out.re && RE_RX.test(t)) out.re=t;
+      else if(!out.ref && REF_RX.test(t)) out.ref=t;
+      else out.to.push(t);
+    });
+    out.sal=blocks[salAt][0]; i=salAt+1;
+  }
+  for(; i<blocks.length; i++){
+    const one=blocks[i].join(" ");
+    if(!out.re && blocks[i].length===1 && RE_RX.test(one)){ out.re=one; continue; }
+    if(SIGNOFF_RX.test(one)){
+      out.close=one;
+      if(i+1<blocks.length) out.sign=blocks[i+1].join(" ");
+      break;
+    }
+    out.paras.push(one);
+  }
+  return out;
+}
+
+/* What was found replaces the prompt. What was not found stays a prompt, so somebody
+   who pastes four paragraphs and no address block still has an address block waiting
+   rather than a hole where one should be. */
+function letterFrom(text){
+  const got=parseLetterText(text), base=blankLetter(), ph={};
+  const L={date:got.date||base.date, to:[], ref:"", re:"", sal:"", paras:[],
+           close:got.close||base.close, sign:got.sign||CV.name, ph:ph, src:"yours"};
+  if(got.to.length) L.to=got.to.slice();
+  else { L.to=base.to.slice(); L.to.forEach((_x,i)=>{ ph["cover-letter/to"+i]=1; }); }
+  ["ref","re","sal"].forEach(k=>{
+    if(got[k]) L[k]=got[k];
+    else { L[k]=base[k]; ph["cover-letter/"+k]=1; }
+  });
+  if(got.paras.length) L.paras=got.paras.slice();
+  else { L.paras=base.paras.slice(); L.paras.forEach((_x,i)=>{ ph["cover-letter/p"+i]=1; }); }
+  return L;
+}
+
+/* Marks are made about a line, and a letter that has been replaced has different
+   lines. Carrying them over would hang yesterday's rewrite request on a sentence
+   that was never written. */
+function letterMarkCount(){
+  let n=0;
+  [S.marks,S.checked,S.flags,S.adds].forEach(bag=>Object.keys(bag||{}).forEach(k=>{
+    if(k.indexOf("cover-letter/")===0) n++; }));
+  return n;
+}
+function clearLetterMarks(){
+  [S.marks,S.checked,S.flags,S.adds,S.bOrder].forEach(bag=>Object.keys(bag||{})
+    .forEach(k=>{ if(k.indexOf("cover-letter/")===0) delete bag[k]; }));
+}
+
+/* The letter as blocks, in the order `parse_letter` reads them back.
+
+   A prompt is never in here. It is a question this page asked, not a line anybody
+   wrote, and the one way it must never reach paper is through the file the printer
+   reads. */
+function letterBlocks(withHead){
+  const L=LT(), B=[];
+  if(withHead){
+    const h=[];
+    if(!removed("name/0")) h.push(textOf("name/0",CV.name));
+    CV.contact.forEach((c,i)=>{ const k="contact/"+i;
+      if(!removed(k)) h.push(textOf(k,c)); });
+    if(h.length) B.push(h.join("\n"));
+  }
+  const one=(k,v)=>{ const t=String(textOf(k,v)||"").trim();
+    return (!removed(k) && !isPh(k) && t) ? t : ""; };
+  const withAdds=(k,v)=>{ const t=one(k,v); if(t) B.push(t);
+    adds(k).forEach((x,i)=>{ const a=String(x||"").trim();
+      if(!removed(k+"/+"+i) && a) B.push(a); }); };
+
+  const d=one("cover-letter/date",L.date); if(d) B.push(d);
+  const to=[];
+  (L.to||[]).forEach((t,i)=>{ const v=one("cover-letter/to"+i,t); if(v) to.push(v); });
+  const rf=one("cover-letter/ref",L.ref); if(rf) to.push(rf);
+  if(to.length) B.push(to.join("\n"));
+  withAdds("cover-letter/re",L.re);
+  withAdds("cover-letter/sal",L.sal);
+  (L.paras||[]).forEach((t,i)=>withAdds("cover-letter/p"+i,t));
+  withAdds("cover-letter/close",L.close);
+  withAdds("cover-letter/sign",L.sign);
+  return B;
+}
+function letterPlainText(){ return letterBlocks(false).join("\n\n"); }
+function letterMarkdown(){ return letterBlocks(true).join("\n\n")+"\n"; }
+
+/* One box for the whole letter. */
+function openLetterWriter(){
+  const old=document.getElementById("lwrite"); if(old) old.remove();
+  const p=document.createElement("div");
+  p.id="lwrite";
+  p.style.cssText="position:fixed;inset:0;z-index:9999;background:rgba(16,22,32,.42);"
+    +"display:flex;align-items:center;justify-content:center;padding:20px;"
+    +"font:13px/1.5 system-ui,'Segoe UI',Arial,sans-serif;color:#1d232c";
+  const card=document.createElement("div");
+  card.style.cssText="background:#fff;border-radius:7px;padding:17px 19px;width:100%;"
+    +"max-width:720px;box-shadow:0 10px 40px rgba(16,22,32,.34);max-height:100%;"
+    +"display:flex;flex-direction:column";
+  const h=document.createElement("div");
+  h.style.cssText="font-weight:700;font-size:16px;margin:0 0 4px";
+  h.textContent="Your cover letter";
+  const sub=document.createElement("div");
+  sub.style.cssText="color:#4a5361;margin:0 0 10px";
+  sub.textContent="Paste a letter you have already written, or type one. A blank line "
+    +"between paragraphs. A date, an address block, a RE: line, a Dear ... line and a "
+    +"sign-off each go to their own place on the page. Anything you leave out stays a "
+    +"prompt you can fill in later, and prompts never print.";
+  const ta=document.createElement("textarea");
+  ta.value=letterWritten() ? letterPlainText() : "";
+  ta.placeholder="RE: Application for ...\n\nDear ...\n\nYour first paragraph.\n\n"
+    +"Your second paragraph.\n\nYours sincerely,\n\n"+(CV.name||"Your name");
+  ta.style.cssText="width:100%;flex:1;min-height:280px;box-sizing:border-box;"
+    +"font:13px/1.55 ui-monospace,Consolas,monospace;padding:10px;"
+    +"border:1px solid #c9cfd9;border-radius:4px;resize:vertical";
+  const note=document.createElement("div");
+  note.style.cssText="color:#8a5a12;margin:9px 0 0;min-height:18px";
+  const marked=letterMarkCount();
+  if(marked) note.textContent="Putting this on the page clears the "+marked
+    +" mark"+(marked===1?"":"s")+" you made on the letter, because they were made "
+    +"about lines this replaces. Nothing on the resume is touched.";
+  const row=document.createElement("div");
+  row.style.cssText="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap";
+  const mk=(label,primary)=>{
+    const b=document.createElement("button"); b.type="button"; b.textContent=label;
+    b.style.cssText="padding:6px 14px;border-radius:4px;cursor:pointer;font:inherit;"
+      +(primary ? "border:1px solid #14607f;background:#14607f;color:#fff"
+                : "border:1px solid #c9cfd9;background:#fff;color:#1d232c");
+    return b;
+  };
+  const ok=mk("Put it on the page", true);
+  ok.addEventListener("click",()=>{
+    const v=ta.value.trim();
+    clearLetterMarks();
+    S.letter = v ? letterFrom(v) : null;
+    if(!v) delete S.letter;
+    S.letterSeen=FINGERPRINT;
+    p.remove(); save(); draw();
+  });
+  const back=mk("Start again from the prompts", false);
+  back.addEventListener("click",()=>{
+    clearLetterMarks(); delete S.letter; S.letterSeen=FINGERPRINT;
+    p.remove(); save(); draw();
+  });
+  const no=mk("Cancel", false);
+  no.addEventListener("click",()=>p.remove());
+  row.append(ok,back,no);
+  card.append(h,sub,ta,note,row);
+  p.appendChild(card);
+  p.addEventListener("click",e=>{ if(e.target===p) p.remove(); });
+  document.body.appendChild(p);
+  setTimeout(()=>{ try{ ta.focus(); }catch(e){} },30);
+}
+
+function paintLetterBtn(){
+  const b=$("#lpaste"); if(!b) return;
+  b.hidden = S.doc!=="letter";
+  b.textContent = letterWritten() ? "Edit the letter" : "Write the letter";
+}
+
+/* A rebuild brought a written cover letter with it, and there is already one here
+   that this person wrote. The file does not win by being newer. */
+function letterClash(){
+  return !!(S.letter && LETTER.src==="file" && FINGERPRINT
+            && S.letterSeen!==FINGERPRINT);
+}
+function paintLetterClash(){
+  const box=$("#lclash"); if(!box) return;
+  if(!letterClash()){ box.hidden=true; box.textContent=""; return; }
+  box.hidden=false; box.textContent="";
+  const h=document.createElement("h2");
+  h.textContent="A written cover letter came with this rebuild.";
+  box.appendChild(h);
+  const p=document.createElement("p"); p.className="lead";
+  p.textContent="Your own letter is the one on the page and it stays there unless you "
+    +"say otherwise. If you want the one that arrived instead, it replaces what you "
+    +"wrote here, and the marks you made on your letter go with it.";
+  box.appendChild(p);
+  const row=document.createElement("div"); row.className="row";
+  const use=document.createElement("button"); use.type="button";
+  use.textContent="Use the letter that arrived";
+  use.addEventListener("click",()=>{
+    clearLetterMarks(); delete S.letter; S.letterSeen=FINGERPRINT; save(); draw(); });
+  const keep=document.createElement("button"); keep.type="button";
+  keep.textContent="Keep mine";
+  keep.addEventListener("click",()=>{ S.letterSeen=FINGERPRINT; save(); draw(); });
+  row.append(use,keep); box.appendChild(row);
 }
 
 /* Put the text in the person's hands.
@@ -4473,6 +4854,8 @@ async function handOver(text, btn, okLabel, alwaysShow){
   setTimeout(function(){ btn.textContent=was; }, 3000);
   return copied;
 }
+
+$("#lpaste").addEventListener("click",openLetterWriter);
 
 $("#copy").addEventListener("click",function(){
   handOver(settingsCommand(false), this, "Copied", false);
