@@ -6,7 +6,7 @@ compatibility: Runs its scripts with Python 3 (standard library only) and prints
 metadata:
   version: "0.5.0"
   author: CX Instruments
-  homepage: https://github.com/CX-Instruments/resu-studio
+  homepage: https://github.com/CX-Instruments/resu-studio/blob/main/README.md
 ---
 
 # Resu Studio

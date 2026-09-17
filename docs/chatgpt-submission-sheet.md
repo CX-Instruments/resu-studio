@@ -13,13 +13,13 @@ Resu Studio
 **Short description**
 
 ```
-Tailor a CV and cover letter to one job ad, honestly
+Build a tailored CV, resume and cover letter for every job
 ```
 
 **Long description**
 
 ```
-Resu Studio helps you apply for a job with a CV and cover letter written for that one advertisement. It reads the ad and your CV, scores what the employer asks for against what you have actually done, and shows you where you stand before it changes a word. Every suggested change comes with the current text, the suggested text and the reason, and you accept or reject each one yourself. It never invents experience or inflates a level. When your decisions are in, it rescores so you can see what moved, writes a one-page cover letter from your own record, and prints a PDF that applicant tracking systems can still read.
+Your real experience, matched to the job you want. Resu Studio scores your CV or resume against the job ad, suggests changes you approve one by one, and writes a cover letter from what you have actually done. It never invents experience.
 ```
 
 **Category:** Productivity (or the closest career or writing category in the list)
@@ -33,7 +33,7 @@ Note: the plugin files name the developer as "CX Instruments". If you verify as 
 
 | Field | Value |
 |---|---|
-| Website | `https://github.com/CX-Instruments/resu-studio` |
+| Website | `https://github.com/CX-Instruments/resu-studio/blob/main/README.md` |
 | Support | `https://github.com/CX-Instruments/resu-studio/issues` |
 | Privacy policy | `https://github.com/CX-Instruments/resu-studio/blob/main/PRIVACY.md` |
 | Terms | `https://github.com/CX-Instruments/resu-studio/blob/main/TERMS.md` |

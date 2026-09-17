@@ -1,6 +1,6 @@
 # Resu Studio
 
-Tailor a CV and a written application to one job advertisement, honestly.
+Build a tailored CV, resume and cover letter for every job.
 
 ![The studio: your CV drawn on A4, with every layout, palette and typeface as a control beside it](docs/images/studio.png)
 

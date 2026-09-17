@@ -1,12 +1,12 @@
 {
   "name": "resu-studio",
   "version": "0.5.0",
-  "description": "Tailor a CV and cover letter to one job advertisement, honestly. Scores what the advertisement asks for against what the person has actually done, proposes every change as current text, suggested text and a reason for them to accept or reject one at a time, and prints a finished PDF exactly as the studio shows it.",
+  "description": "Your real experience, matched to the job you want. Resu Studio scores your CV or resume against the job ad, suggests changes you approve one by one, and writes a cover letter from what you have actually done. It never invents experience.",
   "author": {
     "name": "CX Instruments",
     "url": "https://github.com/CX-Instruments"
   },
-  "homepage": "https://github.com/CX-Instruments/resu-studio",
+  "homepage": "https://github.com/CX-Instruments/resu-studio/blob/main/README.md",
   "repository": "https://github.com/CX-Instruments/resu-studio",
   "license": "AGPL-3.0-or-later",
   "keywords": [
@@ -19,12 +19,12 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Resu Studio",
-    "shortDescription": "Tailor a CV and cover letter to one job ad, honestly",
-    "longDescription": "Scores what the advertisement asks for against what you have actually done, before changing anything. Proposes every change as current text, suggested text and a reason, for you to accept or reject one at a time, then prints a PDF a screening system can still read.",
+    "shortDescription": "Build a tailored CV, resume and cover letter for every job",
+    "longDescription": "Your real experience, matched to the job you want. Resu Studio scores your CV or resume against the job ad, suggests changes you approve one by one, and writes a cover letter from what you have actually done. It never invents experience.",
     "developerName": "CX Instruments",
     "category": "Productivity",
     "capabilities": [],
-    "websiteURL": "https://github.com/CX-Instruments/resu-studio",
+    "websiteURL": "https://github.com/CX-Instruments/resu-studio/blob/main/README.md",
     "privacyPolicyURL": "https://github.com/CX-Instruments/resu-studio/blob/main/PRIVACY.md",
     "defaultPrompt": [
       "Help me tailor my CV to this job ad",
