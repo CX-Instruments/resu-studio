@@ -1,5 +1,7 @@
 # Multiple job ads and Resu Desk: build plan
 
+Progress and handoff notes: `docs/HANDOFF-multi-job.md`.
+
 Branch: `feature/multi-job-desk`, from `main` at 517b324 (v0.5.0).
 
 ## Decisions
@@ -65,7 +67,7 @@ Depth moves from `answers.md` frontmatter into `job.json`, because it is chosen 
 
 ## Moving existing data
 
-The first run that sees loose job files in the data folder copies them into `jobs/<id>/`, using the role and employer from `documents.json` or `scorecard.md`. Copy only. Nothing is moved or deleted, nothing already in the job folder is written over, and it says what it did. Same pattern as `paths._bring_forward`.
+Built as `jobs.py adopt`, run when the assistant asks (not automatically), after the person confirms the job. It copies loose job files from the data folder into `jobs/<id>/`, using the role and employer from `documents.json`, or `--role`/`--employer` when nothing is on record. The ad stays in `cv-source/`. Copy only. Nothing is moved or deleted, nothing already in the job folder is written over, and it says what it did. Same pattern as `paths._bring_forward`.
 
 ## Resu Desk
 
@@ -83,8 +85,8 @@ The first run that sees loose job files in the data folder copies them into `job
 
 ## Build order
 
-1. `jobs.py`, `templates/job.json`, `paths.py --job`
-2. Existing data copy-forward
+1. `jobs.py`, `templates/job.json`, `paths.py --job` (done)
+2. Existing data copy-forward, `jobs.py adopt` (done)
 3. `check.py`, `build_studio.py`, `render_cv.py`, `documents.py` output paths
 4. `build_desk.py` and `assets/desk.html`
 5. `SKILL.md` and references
