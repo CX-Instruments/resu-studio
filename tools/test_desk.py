@@ -18,10 +18,10 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILL = os.path.join(REPO, "skills", "resu-studio")
 SCR = os.path.join(tempfile.gettempdir(), "resu-test-desk")
 DATA = os.path.join(SCR, ".resu-studio")
-DOCS = os.path.join(DATA, "_Your Documents Are Here")
+DOCS = os.path.join(DATA, "4 Finished documents")
 DESK = os.path.join(DOCS, "Resu Desk.html")
 SHOTS = os.path.join(SCR, "shots")
-ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA)
+ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA, RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
 steps = []
 
 
@@ -51,7 +51,7 @@ def step(title, why, cmd=None, checks=(), shot=None, env=None):
 
 
 def job(jid):
-    return json.load(open(os.path.join(DATA, "jobs", jid, "job.json"), encoding="utf-8"))
+    return json.load(open(os.path.join(DATA, "3 Jobs", jid, "job.json"), encoding="utf-8"))
 
 
 def desk_data(path=DESK):
@@ -70,8 +70,8 @@ SCORE = "---\ndepth: essentials\ncounts:\n  asks_total: %d\n  must: %d\n  you_ha
 # ---------------------------------------------------------------- five fictional jobs
 shutil.rmtree(SCR, ignore_errors=True)
 os.makedirs(SHOTS)
-w(os.path.join(DATA, "facts.md"), "# Facts\n")
-CV = os.path.join(DATA, "cv-source", "Alex Morgan CV.md")
+w(os.path.join(DATA, "2 My record", "facts.md"), "# Facts\n")
+CV = os.path.join(DATA, "1 About me", "Alex Morgan CV.md")
 os.makedirs(os.path.dirname(CV))
 shutil.copy(os.path.join(REPO, "docs", "review", "sample-cv.md"), CV)
 
@@ -109,7 +109,7 @@ step("2. Build the Northside studio: the Desk updates",
      "build_studio.py rebuilds the Desk after it writes, and says where.",
      ["scripts/build_studio.py", "--cv", CV, "--job", "northside"],
      checks=[("exit code 0", lambda c, o: c == 0),
-             ("names the Desk it updated", lambda c, o: "desk   : ~/.resu-studio/_Your Documents Are Here/Resu Desk.html" in o),
+             ("names the Desk it updated", lambda c, o: "desk   : ~/.resu-studio/4 Finished documents/Resu Desk.html" in o),
              ("the Desk now lists the Northside studio",
               lambda c, o: [d["kind"] for d in next(j for j in desk_data()["jobs"] if j["id"] == A)["docs"]] == ["studio"])])
 run("scripts/build_studio.py", "--cv", CV, "--job", "riverbend")
@@ -292,11 +292,11 @@ step("12. A Desk that cannot be written does not fail the studio",
      ["scripts/build_studio.py", "--cv", CV, "--job", "riverbend"],
      checks=[("exit code 0", lambda c, o: c == 0),
              ("says in one line the Desk was not updated", lambda c, o: o.count("Resu Desk was not updated") == 1),
-             ("the studio was still written", lambda c, o: "wrote ~/.resu-studio/_Your Documents Are Here/Riverbend Events - Venue Manager/" in o),
+             ("the studio was still written", lambda c, o: "wrote ~/.resu-studio/4 Finished documents/Riverbend Events - Venue Manager/" in o),
              ("no temporary file left behind", lambda c, o: not os.path.exists(DESK + ".tmp"))])
 os.rmdir(DESK)
 
-EMPTY = dict(os.environ, CLAUDE_PLUGIN_DATA=os.path.join(SCR, "empty"))
+EMPTY = dict(os.environ, CLAUDE_PLUGIN_DATA=os.path.join(SCR, "empty"), RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
 step("13. A person with no jobs yet", "", ["scripts/build_desk.py"], env=EMPTY,
      checks=[("exit code 0", lambda c, o: c == 0),
              ("0 jobs on it", lambda c, o: "0 jobs on it" in o)])

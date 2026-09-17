@@ -15,8 +15,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILL = os.path.join(REPO, "skills", "resu-studio")
 SCR = os.path.join(tempfile.gettempdir(), "resu-test-build")
 DATA = os.path.join(SCR, ".resu-studio")
-ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA)
-DOCS = os.path.join(DATA, "_Your Documents Are Here")
+ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA, RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
+DOCS = os.path.join(DATA, "4 Finished documents")
 steps = []
 
 
@@ -66,7 +66,7 @@ def w(rel, text):
 
 def ledger():
     try:
-        return json.load(open(os.path.join(DATA, "documents.json"), encoding="utf-8"))
+        return json.load(open(os.path.join(DATA, ".resu", "documents.json"), encoding="utf-8"))
     except (IOError, ValueError):
         return {}
 
@@ -92,22 +92,22 @@ counts:
 """
 
 shutil.rmtree(SCR, ignore_errors=True)
-w("facts.md", "# Facts\n\n```\nid: fact-roster\ntext: Rostered 35 casual staff in Deputy\n```\n")
+w("2 My record/facts.md", "# Facts\n\n```\nid: fact-roster\ntext: Rostered 35 casual staff in Deputy\n```\n")
 w("answers.md", "---\ndepth: essentials\n---\n# Answers\n")
 shutil.copy(os.path.join(REPO, "docs", "review", "sample-cv.md"), os.path.join(DATA, "sample.md"))
-os.makedirs(os.path.join(DATA, "cv-source"), exist_ok=True)
-shutil.move(os.path.join(DATA, "sample.md"), os.path.join(DATA, "cv-source", "Alex Morgan CV.md"))
-CV = os.path.join(DATA, "cv-source", "Alex Morgan CV.md")
+os.makedirs(os.path.join(DATA, "1 About me"), exist_ok=True)
+shutil.move(os.path.join(DATA, "sample.md"), os.path.join(DATA, "1 About me", "Alex Morgan CV.md"))
+CV = os.path.join(DATA, "1 About me", "Alex Morgan CV.md")
 
 run("scripts/jobs.py", "new", "--role", "Operations Coordinator", "--employer", "Northside Community Care",
     "--closes", "2026-10-03")
 run("scripts/jobs.py", "new", "--role", "Venue Manager", "--employer", "Riverbend Events", "--closes", "2026-09-30")
 A, B = "northside-community-care-operations-coordinator-2026-09", "riverbend-events-venue-manager-2026-09"
-w("jobs/%s/scorecard.md" % A, SCORE % (3, 2, "\n".join([
+w("3 Jobs/%s/scorecard.md" % A, SCORE % (3, 2, "\n".join([
     "| Rostering a casual workforce | must | page | Built and maintained weekly rosters for 35 casual staff | |",
     "| Supplier and contract management | must | page | Managed relationships with 14 suppliers | |",
     "| Experience in community services | must | missing | | Nothing on the record yet |"])))
-w("jobs/%s/scorecard.md" % B, SCORE % (3, 3, "\n".join([
+w("3 Jobs/%s/scorecard.md" % B, SCORE % (3, 3, "\n".join([
     "| Running a function venue | must | page | Coordinated day-to-day operations for a 400-guest function venue | |",
     "| Budget tracking and reporting | must | page | Tracked event budgets against actual spend | |",
     "| Leading a casual team | must | buried | Built and maintained weekly rosters for 35 casual staff | Say lead |"])))
@@ -121,7 +121,7 @@ step("1. Two jobs for one fake person",
 step("2. Build the studio for the Northside job",
      "Only --job is passed. Role and employer are read from the job's record.",
      ["scripts/build_studio.py", "--cv", CV, "--job", "northside",
-      "--scorecard", os.path.join(DATA, "jobs", A, "scorecard.md")],
+      "--scorecard", os.path.join(DATA, "3 Jobs", A, "scorecard.md")],
      checks=[("exit code 0", lambda c, o: c == 0),
              ("written into the job's own documents folder",
               lambda c, o: "Northside Community Care - Operations Coordinator/Operations Coordinator - Northside Community Care - Studio.html" in o),
@@ -131,7 +131,7 @@ step("2. Build the studio for the Northside job",
 
 step("3. Build the studio for the Riverbend job",
      "", ["scripts/build_studio.py", "--cv", CV, "--job", "riverbend",
-          "--scorecard", os.path.join(DATA, "jobs", B, "scorecard.md")],
+          "--scorecard", os.path.join(DATA, "3 Jobs", B, "scorecard.md")],
      checks=[("exit code 0", lambda c, o: c == 0),
              ("written into Riverbend's folder", lambda c, o: "Riverbend Events - Venue Manager/" in o),
              ("its own browser store", lambda c, o: "cvwb:venue-manager-riverbend-events" in o)])
@@ -179,7 +179,7 @@ step("7. The documents list shows the job beside each application", "",
 step("8. check.py on one job finds the shared facts ledger",
      "The job folder has no facts.md of its own, which is normal now. check.py reads the person's one.",
      ["scripts/check.py", "--job", "riverbend"],
-     checks=[("reads facts.md from the person's folder", lambda c, o: "facts from ~/.resu-studio/facts.md" in o),
+     checks=[("reads facts.md from the person's folder", lambda c, o: "facts from ~/.resu-studio/2 My record/facts.md" in o),
              ("counts the fact", lambda c, o: "facts: 1" in o),
              ("does not say Phase 2 has not run for facts", lambda c, o: "No facts.md" not in o)])
 

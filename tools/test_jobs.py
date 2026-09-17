@@ -11,7 +11,7 @@ SKILL = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCR = os.path.join(tempfile.gettempdir(), "resu-test-jobs")
 os.makedirs(SCR, exist_ok=True)
 DATA = os.path.join(SCR, "fake-home", ".resu-studio")
-ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA)
+ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA, RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
 steps = []
 
 
@@ -73,10 +73,10 @@ def w(rel, text):
 
 # ---------------------------------------------------------------- a fake person, old layout
 shutil.rmtree(os.path.join(SCR, "fake-home"), ignore_errors=True)
-w("facts.md", "# Facts\n\nfact-1: Built monthly reporting pack for 40 clinics.\n")
-w("answers.md", "---\ndepth: essentials\n---\n# Answers\n")
-w("cv-source/Sam Rivera CV.md", "# Sam Rivera\n\nsam.rivera@example.com\n")
-w("cv-source/Harbourview advert.txt", "Senior Data Analyst, Harbourview Health\n")
+w("2 My record/facts.md", "# Facts\n\nfact-1: Built monthly reporting pack for 40 clinics.\n")
+w("2 My record/answers.md", "---\ndepth: essentials\n---\n# Answers\n")
+w("1 About me/Sam Rivera CV.md", "# Sam Rivera\n\nsam.rivera@example.com\n")
+w("1 About me/Harbourview advert.txt", "Senior Data Analyst, Harbourview Health\n")
 w("asks.md", "# Asks\n\nask-1: SQL\nask-2: Power BI\n")
 w("scorecard-before.md", "---\njob: harbourview-health-senior-data-analyst\ndepth: essentials\ncounts:\n  asks_total: 14\n  must: 9\n  you_have: 11\n  a_reader_would_find: 6\n  unscored: 5\n---\n")
 w("scorecard.md", "---\njob: harbourview-health-senior-data-analyst\ndepth: essentials\ncounts:\n  asks_total: 14\n  must: 9\n  you_have: 11\n  a_reader_would_find: 10\n  unscored: 5\n---\n")
@@ -86,22 +86,22 @@ w("cv-tailored.md", "# Sam Rivera\n\nTailored.\n")
 w("cv-tailored-archive.md", "# Archive\n")
 w("cover-letter-tailored.md", "Dear Hiring Manager,\n")
 w("my own notes.md", "Personal notes the person put here themselves.\n")
-w("_Your Documents Are Here/Senior Data Analyst - Harbourview Health - Studio.html", "<html></html>")
-w("_Your Documents Are Here/Sam Rivera - Senior Data Analyst - Harbourview Health - 20260910 - CV.pdf", "%PDF")
-w("_Your Documents Are Here/Sam Rivera - Reporting Lead - Old Mill Foods - 20260801 - CV.pdf", "%PDF")
-docs = os.path.join(DATA, "_Your Documents Are Here")
-w("documents.json", json.dumps({
-    "_Your Documents Are Here/Sam Rivera - Reporting Lead - Old Mill Foods - 20260801 - CV.pdf":
+w("4 Finished documents/Senior Data Analyst - Harbourview Health - Studio.html", "<html></html>")
+w("4 Finished documents/Sam Rivera - Senior Data Analyst - Harbourview Health - 20260910 - CV.pdf", "%PDF")
+w("4 Finished documents/Sam Rivera - Reporting Lead - Old Mill Foods - 20260801 - CV.pdf", "%PDF")
+docs = os.path.join(DATA, "4 Finished documents")
+w(".resu/documents.json", json.dumps({
+    "4 Finished documents/Sam Rivera - Reporting Lead - Old Mill Foods - 20260801 - CV.pdf":
         {"role": "Reporting Lead", "employer": "Old Mill Foods", "kind": "cv", "source": "cv-old.md",
          "name": "Sam Rivera - Reporting Lead - Old Mill Foods - 20260801 - CV.pdf",
          "path": os.path.join(docs, "Sam Rivera - Reporting Lead - Old Mill Foods - 20260801 - CV.pdf"),
          "written": "2026-08-01 10:00"},
-    "_Your Documents Are Here/Senior Data Analyst - Harbourview Health - Studio.html":
+    "4 Finished documents/Senior Data Analyst - Harbourview Health - Studio.html":
         {"role": "Senior Data Analyst", "employer": "Harbourview Health", "kind": "studio",
          "source": "cv-tailored.md", "name": "Senior Data Analyst - Harbourview Health - Studio.html",
          "path": os.path.join(docs, "Senior Data Analyst - Harbourview Health - Studio.html"),
          "written": "2026-09-10 14:02"},
-    "_Your Documents Are Here/Sam Rivera - Senior Data Analyst - Harbourview Health - 20260910 - CV.pdf":
+    "4 Finished documents/Sam Rivera - Senior Data Analyst - Harbourview Health - 20260910 - CV.pdf":
         {"role": "Senior Data Analyst", "employer": "Harbourview Health", "kind": "cv",
          "source": "cv-tailored.md", "name": "Sam Rivera - Senior Data Analyst - Harbourview Health - 20260910 - CV.pdf",
          "path": os.path.join(docs, "Sam Rivera - Senior Data Analyst - Harbourview Health - 20260910 - CV.pdf"),
@@ -146,21 +146,21 @@ JOB = "harbourview-health-senior-data-analyst-2026-09"
 after = hashes()
 step("5. After: the job folder, and the originals still in place",
      "Green rows are new. Every file that was there before is still there, byte for byte.",
-     show_tree=True, highlight=("jobs", ".adopted-into-jobs.json"),
+     show_tree=True, highlight=("3 Jobs", ".resu/.adopted-into-jobs.json"),
      checks=[("every original file is unchanged",
-              lambda c, o: all(after.get(k) == v for k, v in original.items() if k != "documents.json")),
+              lambda c, o: all(after.get(k) == v for k, v in original.items() if k != ".resu/documents.json")),
              ("the job copies are identical to the originals",
-              lambda c, o: all(after["jobs/%s/%s" % (JOB, n)] == original[n] for n in
+              lambda c, o: all(after["3 Jobs/%s/%s" % (JOB, n)] == original[n] for n in
                                ("asks.md", "scorecard.md", "scorecard-before.md", "proposals.md",
                                 "cv-decisions.json", "cv-tailored.md", "cv-tailored-archive.md",
                                 "cover-letter-tailored.md"))),
              ("facts.md, answers.md, cv-source and my own notes.md were not copied into the job",
-              lambda c, o: not any(k.startswith("jobs/") and os.path.basename(k) in
+              lambda c, o: not any(k.startswith("3 Jobs/") and os.path.basename(k) in
                                    ("facts.md", "answers.md", "my own notes.md", "Sam Rivera CV.md")
                                    for k in after))])
 
-rec = json.load(open(os.path.join(DATA, "jobs", JOB, "job.json")))
-ledger = json.load(open(os.path.join(DATA, "documents.json")))
+rec = json.load(open(os.path.join(DATA, "3 Jobs", JOB, "job.json")))
+ledger = json.load(open(os.path.join(DATA, ".resu", "documents.json")))
 step("6. The job's record, job.json",
      "Stage, depth and both scores were read from the old files. The Old Mill Foods document was left alone.",
      extra={"json": rec, "ledger": {k.split("/")[-1]: v.get("job", "(no job)") for k, v in ledger.items()}},
@@ -188,19 +188,19 @@ step("8. Somebody keeps working in the old place",
      ["scripts/jobs.py", "list"],
      checks=[("notices exactly 1 file", lambda c, o: "1 working file" in o and "(cv-tailored.md)" in o)])
 
-job_cv_before = hashes()["jobs/%s/cv-tailored.md" % JOB]
+job_cv_before = hashes()["3 Jobs/%s/cv-tailored.md" % JOB]
 step("9. Adopting the changed file keeps both versions",
      "The job already has a cv-tailored.md with different wording, so neither is written over.",
      ["scripts/jobs.py", "adopt"],
      checks=[("exit code 0", lambda c, o: c == 0),
              ("the job's own cv-tailored.md is unchanged",
-              lambda c, o: hashes()["jobs/%s/cv-tailored.md" % JOB] == job_cv_before),
+              lambda c, o: hashes()["3 Jobs/%s/cv-tailored.md" % JOB] == job_cv_before),
              ("the newer one sits beside it with a dated name",
-              lambda c, o: os.path.isfile(os.path.join(DATA, "jobs", JOB,
+              lambda c, o: os.path.isfile(os.path.join(DATA, "3 Jobs", JOB,
                                                        "cv-tailored (brought in %s).md" % time.strftime("%Y-%m-%d"))))])
 
 # ---------------------------------------------------------------- nothing on record
-os.remove(os.path.join(DATA, "documents.json"))
+os.remove(os.path.join(DATA, ".resu", "documents.json"))
 w("asks.md", "# Asks for something else\n")
 step("10. No documents on record: it asks instead of guessing",
      "documents.json removed, and asks.md changed. With nothing saying which job it was for, adopt refuses.",

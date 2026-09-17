@@ -89,5 +89,6 @@ Built as `jobs.py adopt`, run when the assistant asks (not automatically), after
 2. Existing data copy-forward, `jobs.py adopt` (done)
 3. `check.py`, `build_studio.py`, `render_cv.py`, `documents.py` output paths (done)
 4. `build_desk.py` and `assets/desk.html` (done)
+4b. Private data folder chosen on first run, new layout, self-ignoring (done)
 5. `SKILL.md` and references
 6. Test run with a fake person and two fake ads

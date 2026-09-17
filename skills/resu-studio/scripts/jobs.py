@@ -6,7 +6,7 @@ proposals and letter, and the person had to finish one application before starti
 another. So each advertisement now gets its own folder under `jobs/`, and a
 `job.json` inside it saying what it is and how far it has got:
 
-    jobs/
+    3 Jobs/
       acme-data-analyst-2026-09/
         job.json        role, employer, link, closing date, stage, history, scores, notes
         ad/             the advertisement and job pack, verbatim
@@ -14,10 +14,10 @@ another. So each advertisement now gets its own folder under `jobs/`, and a
         cv-<variant>.md, cover-letter-<variant>.md
 
 What belongs to the person and not to one application, `facts.md`, `answers.md` and
-`cv-source/`, stays in their folder and is read by every job.
+`1 About me/` and `2 My record/`, stays in their folder and is read by every job.
 
 Finished documents for a job go in their own folder too, inside
-`_Your Documents Are Here/`, named `<Employer> - <Role>`.
+`4 Finished documents/`, named `<Employer> - <Role>`.
 
     python3 scripts/jobs.py new --role "Data Analyst" --employer "Acme" [--link URL]
                                 [--closes 2026-10-01] [--reference R123] [--location Sydney]
@@ -367,7 +367,7 @@ def _stamp(path):
 
 def _adopted_record():
     try:
-        with io.open(os.path.join(paths.data_dir(), ADOPTED), encoding="utf-8") as fh:
+        with io.open(os.path.join(paths.system_dir(), ADOPTED), encoding="utf-8") as fh:
             data = json.load(fh)
             return data if isinstance(data, dict) else {}
     except (IOError, OSError, ValueError):
@@ -381,16 +381,30 @@ def loose_job_files(include_adopted=False):
     `include_adopted` is set. One that has changed since is included again, because
     somebody kept working the old way and that work is not in the job yet.
     """
-    base = paths.data_dir()
     done = (_adopted_record().get("files") or {}) if not include_adopted else {}
-    out = []
-    for name in sorted(os.listdir(base)):
-        full = os.path.join(base, name)
-        if not os.path.isfile(full) or not LOOSE_RE.match(name):
+    src = loose_sources()
+    return sorted(n for n, full in src.items()
+                  if not (n in done and done[n] == _stamp(full)))
+
+
+def loose_sources():
+    """{name: full path} for every loose working file, wherever it waits.
+
+    Two places. The top of the person's folder, for a folder still in the layout from
+    before jobs had folders, and `.resu/from-before-jobs/`, where `paths.py --bring`
+    puts them when an old folder is copied into the new layout. The top wins a clash,
+    because a file there was worked on in place more recently than a copy was made.
+    """
+    out = {}
+    for base in (os.path.join(paths.system_dir(), paths.FROM_BEFORE_JOBS), paths.data_dir()):
+        try:
+            names = os.listdir(base)
+        except OSError:
             continue
-        if name in done and done[name] == _stamp(full):
-            continue
-        out.append(name)
+        for name in names:
+            full = os.path.join(base, name)
+            if os.path.isfile(full) and LOOSE_RE.match(name):
+                out[name] = full
     return out
 
 
@@ -438,6 +452,7 @@ def adopt(role="", employer="", job=None, dry_run=False):
     import shutil
     import documents
     base = paths.data_dir()
+    sources = loose_sources()
     files = loose_job_files()
     if not files:
         raise ValueError("there are no loose working files in %s to bring into a job."
@@ -480,7 +495,7 @@ def adopt(role="", employer="", job=None, dry_run=False):
 
     import filecmp
     for name in files:
-        src = os.path.join(base, name)
+        src = sources[name]
         target = os.path.join(folder, name)
         if os.path.exists(target):
             if filecmp.cmp(src, target, shallow=False):
@@ -538,9 +553,9 @@ def adopt(role="", employer="", job=None, dry_run=False):
     done = _adopted_record()
     stamps = done.get("files") or {}
     for name in files:
-        stamps[name] = _stamp(os.path.join(base, name))
+        stamps[name] = _stamp(sources[name])
     done.update({"job": rec["id"], "on": today(), "files": stamps})
-    with io.open(os.path.join(base, ADOPTED), "w", encoding="utf-8", newline="\n") as fh:
+    with io.open(os.path.join(paths.system_dir(), ADOPTED), "w", encoding="utf-8", newline="\n") as fh:
         fh.write(json.dumps(done, indent=2, ensure_ascii=False) + "\n")
 
     report["job"] = rec["id"]
@@ -823,10 +838,10 @@ def main(argv=None):
                          "s" if r["tagged"] == 1 else "", "it was" if r["tagged"] == 1
                          else "they were"))
             refresh_desk()
-            print("  the originals are still in %s, untouched." % paths.data_dir())
+            print("  the originals are still where they were, untouched.")
             if r.get("new_job"):
-                print("  the advertisement itself stays in cv-source/. Copy it into %s"
-                      % os.path.join(paths.jobs_root(), r["job"], "ad"))
+                print("  the advertisement itself stays in %s/. Copy it into %s"
+                      % (paths.ABOUT, os.path.join(paths.jobs_root(), r["job"], "ad")))
                 print("  once you know which file it is.")
             return 0
 

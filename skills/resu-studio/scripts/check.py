@@ -426,8 +426,13 @@ def _facts_for(root):
     if os.path.isfile(here):
         return here
     parent = os.path.dirname(root)
-    if os.path.basename(parent) == "jobs":
-        up = os.path.join(os.path.dirname(parent), "facts.md")
+    person = os.path.dirname(parent)
+    tries = []
+    if os.path.basename(parent) in ("3 Jobs", "jobs"):
+        tries += [os.path.join(person, "2 My record", "facts.md"),   # 3 Jobs/<id>
+                  os.path.join(person, "facts.md")]                  # jobs/<id>, older
+    tries.append(os.path.join(root, "2 My record", "facts.md"))     # the person's folder
+    for up in tries:
         if os.path.isfile(up):
             return up
     return here
@@ -466,7 +471,7 @@ def main():
         if root is None:
             sys.stderr.write(
                 "check.py: no folder given and paths.py could not say where this "
-                "person's folder is. Pass the folder holding facts.md.\n")
+                "person's folder is. Pass the folder, or --job <id>.\n")
             return 2
     variant = args[1] if len(args) > 1 else ""
 
@@ -503,7 +508,8 @@ def main():
                 ask_ids.add(b["id"])
     else:
         notes.append("No asks.md. Phase 2 has not run.")
-        if not job and os.path.isdir(os.path.join(root, "jobs")):
+        if not job and (os.path.isdir(os.path.join(root, "3 Jobs"))
+                        or os.path.isdir(os.path.join(root, "jobs"))):
             notes.append("This is the person's folder, and each job's asks.md is in its "
                          "own folder now. Run check.py --job <id>.")
 

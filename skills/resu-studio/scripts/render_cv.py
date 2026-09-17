@@ -73,7 +73,7 @@ def outdir_for(cv_path, asked=None):
         import paths
         out = paths.documents_dir()
     except Exception:
-        out = os.path.join(ROOT, "_Your Documents Are Here")
+        out = os.path.join(ROOT, "4 Finished documents")
     # Asked by permission, not by writing a test file. The first version created a
     # probe and deleted it, which reported "not writable" on any filesystem that
     # allows writing but not deleting — and left a stray file behind each time it

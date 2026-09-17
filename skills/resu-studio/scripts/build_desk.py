@@ -1,6 +1,6 @@
 """Build Resu Desk: every application this person has, in one page.
 
-    python3 scripts/build_desk.py            writes _Your Documents Are Here/Resu Desk.html
+    python3 scripts/build_desk.py            writes 4 Finished documents/Resu Desk.html
     python3 scripts/build_desk.py --out F    somewhere else
 
 The Desk is a picture of the records. It reads each job's `job.json` and the documents

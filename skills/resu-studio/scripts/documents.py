@@ -45,7 +45,7 @@ _MIGRATED = False       # an old ledger is rewritten once per run, never discard
 
 
 def _ledger_path():
-    return os.path.join(paths.data_dir(), LEDGER)
+    return paths.documents_ledger()
 
 
 def key_for(path):

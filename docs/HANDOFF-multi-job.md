@@ -20,6 +20,13 @@ adds **Resu Desk**, an HTML page listing every application with its stage and li
    names its file by role and employer and keys its browser storage (`cvwb:<slug>`) the same way,
    so it is already safe for many jobs.
 
+5. **Where private files live is asked on first run** (step 4b). Nothing is picked up from
+   another location without the person choosing it. The choice is remembered per install.
+6. **Folder names** (step 4b): top folder `Resu - CV Builder`, then `1 About me`, `2 My record`,
+   `3 Jobs`, `4 Finished documents`. System files in a hidden `.resu/`.
+7. **Private by default** (step 4b): the data folder carries its own `.gitignore` of `*` and a
+   `README.txt`; the plugin repo's `.gitignore` also ignores these names.
+
 ## Status
 
 | Step | What | State |
@@ -28,6 +35,7 @@ adds **Resu Desk**, an HTML page listing every application with its stage and li
 | 2 | `jobs.py adopt`: copy loose single-job files into a job folder | Done, with `tools/test_jobs.py` and these notes |
 | 3 | `build_studio.py`, `render_cv.py`, `check.py`, `documents.py` take `--job` | Done, tested by `tools/test_jobs_build.py` |
 | 4 | `build_desk.py`, `assets/desk.html`, `jobs.py apply-desk` | Done, tested by `tools/test_desk.py` |
+| 4b | Private data folder: ask on first run, new layout, self-ignoring folder | Done, tested by `tools/test_data_folder.py` |
 | 5 | `SKILL.md`, `references/where-files-go.md`, `references/studio.md`, `README.md`, `CHANGELOG.md` | **Next** |
 | 6 | Full test run with a fake person and two fake ads, version bump to 0.6.0 via `tools/sync_version.py` | Not started |
 
@@ -111,10 +119,87 @@ Desk), no extra fields beyond what `job.json` already holds.
 - Tests: `tools/test_desk.py`, 13 scenarios, 48 checks. Needs Playwright for Python and Chromium.
   Screenshots land in `<temp>/resu-test-desk/shots`.
 
-## Step 5 in detail (next)
+## Step 4b (done): what was built
+
+**Built as planned, with these details.**
+- `paths.py` was rewritten around the plan below. New public functions: `install()`,
+  `recorded_choice()`, `status()`, `choose()`, `bring()`, `work_in()`, `existing_work()`,
+  `ensure_private()`, `record_dir()`, `system_dir()`. Removed: the automatic copy out of the
+  in-plugin `data/` folder and the old pointer copy-out. `data_dir()` raises `SystemExit(6)`
+  when not chosen, so every script stops cleanly with one sentence.
+- `jobs.py`: `loose_sources()` reads loose files from the folder top and
+  `.resu/from-before-jobs/`; the adopted marker lives in `.resu/`.
+- `documents.py` ledger is `paths.documents_ledger()` (`.resu/documents.json`).
+- `check.py` finds `facts.md` in `2 My record/` for a job folder under `3 Jobs/`, and still reads
+  the older `jobs/<id>` layout.
+- `bring()` leaves anything that is not Resu Studio's behind and names it. The old shared
+  folder's own `locations.json` and `location` are not reported.
+- Plugin repo `.gitignore` adds `Resu - CV Builder/`, `.resu-studio/`, `.resu/`,
+  `skills/resu-studio/data/`, `desk-updates.json`, `*-decisions.json`.
+- Tests: all four scripts pass (34, 23, 48, 47). `tools/test_data_folder.py` needs git and
+  fakes HOME, so it never touches the real home folder.
+- Not yet tried on real Windows: `install()` splits on `os.sep` and handles a project at a
+  drive root. Worth one run from `D:\_skills\Career`.
+
+**Why.** Every install on a computer shared `~/.resu-studio`. An install made with
+`npx skills add` inside `D:\_skills\Career` found a different session's application there and
+nothing asked first. Private files could also end up inside a git repo.
+
+**Resolution order in `paths.py`** (first match wins):
+1. `data-location.txt` inside this skill folder (install-specific, as before).
+2. This install's recorded choice in `<config>/locations.json`. `<config>` is `~/.resu-studio`,
+   or `$RESU_STUDIO_CONFIG` (tests). Key: the project root for a project install, `~` for a
+   computer-wide install.
+3. `CLAUDE_PLUGIN_DATA` / `PLUGIN_DATA` (the host chose; no question).
+4. Nothing: **not chosen**. `data_dir()` prints one sentence saying to ask the person and run
+   `paths.py --status`, and exits 6. Nothing is created and no other folder is used.
+   The old `~/.resu-studio/location` pointer and a plain `~/.resu-studio` are no longer used
+   automatically. They show up as existing work to choose.
+
+**Project install detection.** The skill folder sits under
+`<root>/(.agents|.claude|.codex|.cursor|.gemini|.github)/skills/`. If `<root>` is the home folder,
+it is a computer-wide install.
+
+**New commands.**
+- `paths.py --status [--json]`: chosen or not; the suggested folders (project:
+  `<root>/Resu - CV Builder`; computer-wide: `~/Resu - CV Builder`); and every other folder on
+  this computer that already holds Resu Studio work (`~/.resu-studio`, the old pointer's folder,
+  the in-plugin `data/`, other installs in `locations.json`), each with counts of jobs,
+  documents and whether it has `facts.md`.
+- `paths.py --choose project|home|<absolute folder> [--bring <folder>]`: records the choice,
+  creates the layout, `.gitignore` (`*`) and `README.txt`. `--bring` copies an existing folder in
+  (old or new layout), never overwriting, and repoints `documents.json` paths.
+
+**Layout** inside the chosen folder:
+```
+Resu - CV Builder/
+  README.txt  .gitignore
+  1 About me/            was cv-source/   (CV files as given, CV markdown, links.md)
+  2 My record/           facts.md, answers.md
+  3 Jobs/<id>/           was jobs/<id>/
+  4 Finished documents/  was _Your Documents Are Here/ (Resu Desk.html, a folder per job)
+  .resu/                 documents.json, adopted and brought-in markers, from-before-jobs/
+```
+Old layout mapping for `--bring`: `cv-source` to `1 About me`; `facts.md`, `answers.md` to
+`2 My record`; `jobs` to `3 Jobs`; `_Your Documents Are Here` to `4 Finished documents`;
+`documents.json` to `.resu/`; loose job files to `.resu/from-before-jobs/` (where `jobs.py
+adopt` also looks).
+
+**Also.** The automatic copy out of the in-plugin `data/` folder stops; it is offered through
+`--status` and `--bring` like any other existing work. Plugin repo `.gitignore` adds
+`Resu - CV Builder/`, `.resu-studio/`, `data/`, `desk-updates.json`, `cv-decisions.json`.
+All three test scripts move to the new names and point `RESU_STUDIO_CONFIG` at a temp folder.
+New `tools/test_data_folder.py` covers: not chosen refuses, project and home detection,
+existing work listed, choose creates layout and `.gitignore`, `git status` in a temp repo
+shows nothing from the data folder, bring from old layout, choice remembered.
+
+## Step 5 in detail (after 4b)
+
 
 Teach the skill to use all of this. Read `SKILL.md` and each reference in full first.
 
+- `SKILL.md` first run: run `paths.py --status`. If not chosen, tell the person what was found and ask
+  where to keep their files, then `paths.py --choose`. Never choose for them.
 - `SKILL.md` Phase 1: before copying a new ad, run `jobs.py list`. If loose files are reported,
   offer `jobs.py adopt --dry-run`, confirm the job with the person, then `adopt`. For a new ad,
   `jobs.py new --role --employer [--link --closes]` and copy the ad into
