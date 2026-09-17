@@ -241,6 +241,12 @@ is shared by every job.
 - **Resu Desk** is `4 Finished documents/Resu Desk.html`: every job, its stage, closing
   date, score and documents on one page. It rebuilds itself whenever a job, a studio or a
   PDF changes. Hand it over whenever it changed, in the same reply, the same as the studio.
+- **Open the Desk and the Studio in their web browser, never in an editor or file preview.**
+  A preview shows the page as a file, and its buttons cannot open a new browser tab. When
+  you can run commands, open the file for them with `start "" "<path>"` on Windows,
+  `open "<path>"` on macOS or `xdg-open "<path>"` on Linux. Otherwise tell them to
+  double-click the file in their folder. On the Desk, **Open Studio** and the PDF buttons
+  open in a new tab, so the Desk stays open.
 - **Changes made on the Desk come back as a pasted block or `desk-updates.json`.** Save it
   to a file and run `python3 scripts/jobs.py apply-desk <file>`. Read every `REFUSED` line
   back to them in plain words: it means the job changed after that Desk was built, and

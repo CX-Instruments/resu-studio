@@ -11,7 +11,7 @@ Needs a Chromium-family browser for the PDF (CV_BROWSER) and Playwright for Pyth
 the page checks (pip install playwright). Without either, those checks fail by name.
 Screenshots are written to <temp>/resu-test-desk/shots.
 """
-import datetime, glob, json, os, re, shutil, subprocess, sys, tempfile
+import datetime, glob, json, os, pathlib, re, shutil, subprocess, sys, tempfile
 from urllib.parse import unquote
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -166,11 +166,27 @@ if HAVE_PW:
             "A": rowtext(A), "B": rowtext(B), "E": rowtext(E),
             "chips": pg.locator("#filters").inner_text(),
         })
-        # The Studio link, followed.
-        with pg.expect_navigation():
+        # The Studio link opens in a new tab and leaves the Desk where it was.
+        page_facts["embedded_hidden"] = pg.locator("#embedded").is_hidden()
+        with ctx.expect_page() as newtab:
             pg.locator('[data-job="%s"] .docs a.cta' % A).first.click()
-        page_facts["studio_title"] = pg.title()
-        pg.goto("file://" + DESK)
+        studio = newtab.value
+        studio.wait_for_load_state()
+        page_facts["studio_title"] = studio.title()
+        page_facts["desk_still_open"] = pg.url.endswith("Resu%20Desk.html") or pg.url.endswith("Resu Desk.html")
+        page_facts["doc_links_new_tab"] = pg.locator(".docs a.cta").evaluate_all("as => as.length > 0 && as.every(a => a.target === '_blank' && a.rel === 'noopener')")
+        studio.close()
+        # Shown inside another page, as an editor preview does, the Desk says to open it in the browser.
+        wrapper = os.path.join(SCR, "preview.html")
+        with open(wrapper, "w", encoding="utf-8") as fh:
+            fh.write('<iframe src="%s" style="width:1200px;height:800px"></iframe>' % pathlib.Path(DESK).as_uri())
+        fr = ctx.new_page()
+        fr.goto(pathlib.Path(wrapper).as_uri())
+        fr.wait_for_timeout(800)
+        fr.screenshot(path=os.path.join(SHOTS, "desk-in-preview.png"))
+        inner = fr.frames[1] if len(fr.frames) > 1 else None
+        page_facts["embedded_shown"] = bool(inner) and inner.locator("#embedded").is_visible()
+        fr.close()
 
         dark = b.new_context(viewport={"width": 1280, "height": 900}, color_scheme="dark")
         dp = dark.new_page(); dp.goto("file://" + DESK); dp.wait_for_timeout(300)
@@ -231,7 +247,11 @@ step("5. The Desk in a browser",
          ("Harbour Health says closed 1 day ago", lambda c, o: "closed 1 day ago" in page_facts["E"].lower()),
          ("Riverbend, already applied, has no closing flag", lambda c, o: "closes in" not in page_facts["B"].lower() and "ago" not in page_facts["B"].lower()),
          ("Northside shows the score moving 2 to 3 of 3", lambda c, o: "2 → 3" in page_facts["A"] and "of 3" in page_facts["A"]),
-         ("the Studio link opens the Northside Studio", lambda c, o: page_facts["studio_title"].startswith("Resu Studio - Operations Coordinator"))])
+         ("the Studio link opens the Northside Studio", lambda c, o: page_facts["studio_title"].startswith("Resu Studio - Operations Coordinator")),
+         ("it opens in a new tab and the Desk stays open", lambda c, o: page_facts["desk_still_open"]),
+         ("every document button opens a new tab", lambda c, o: page_facts["doc_links_new_tab"]),
+         ("no preview notice in a real browser tab", lambda c, o: page_facts["embedded_hidden"]),
+         ("inside a preview frame, the Desk says to open it in the browser", lambda c, o: page_facts["embedded_shown"])])
 
 step("6. Dark mode and phone width", "", shot="desk-dark.png",
      checks=[(no_pw, lambda c, o: HAVE_PW)] if not HAVE_PW else [

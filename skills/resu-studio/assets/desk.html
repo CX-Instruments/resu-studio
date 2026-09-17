@@ -128,6 +128,7 @@ a{color:var(--accent)}
           padding:9px 20px;display:flex;align-items:center;gap:12px;font-size:12.5px}
 .stagebar .now{color:var(--muted);flex:1;min-width:0}
 .list{max-width:900px;margin:0 auto;padding:18px 20px 80px}
+.embedded{max-width:900px;margin:14px auto 0;padding:10px 14px;border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--panel2);font-size:13px;line-height:1.45}
 .section{margin:22px 0 8px;font-family:var(--label);font-size:11.5px;font-weight:600;letter-spacing:1.3px;
          text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
 .section:after{content:"";flex:1;border-top:1px solid var(--line)}
@@ -279,7 +280,8 @@ details.update>summary:hover{background:var(--panel2)}
         </div>
         <div class="grp">
           <h2>The buttons on a job</h2>
-          <p class="hint"><b>Open Studio</b> opens that job's Studio: your CV scored against the ad, where you accept or reject suggested changes. <b>CV PDF</b> and <b>Cover letter PDF</b> open the finished documents. The line under them says which folder they are in.</p>
+          <p class="hint"><b>Open Studio</b> opens that job's Studio: your CV scored against the ad, where you accept or reject suggested changes. <b>CV PDF</b> and <b>Cover letter PDF</b> open the finished documents. Each opens in a new browser tab, so this page stays open. The line under them says which folder they are in.</p>
+          <p class="hint">If a button opens a file view instead of a browser tab, this page is being shown inside another program, such as a code editor. Open <b>Resu Desk.html</b> from your folder by double-clicking it, so it opens in Chrome, Edge or your usual browser.</p>
         </div>
         <div class="grp">
           <h2>The stages</h2>
@@ -293,6 +295,7 @@ details.update>summary:hover{background:var(--panel2)}
     <div class="stagebar"><span class="now"><span class="mtitle" hidden>Resu Desk</span><span id="now"></span></span>
       <button type="button" class="cta" id="barHand" hidden>Hand to AI <span class="n" id="barCount"></span></button>
     </div>
+    <p class="embedded" id="embedded" hidden>This page is showing inside another program, so its buttons may open files here instead of in your browser. For the full Resu Desk, double-click <b>Resu Desk.html</b> in your folder to open it in Chrome, Edge or your usual browser.</p>
     <div class="list" id="list"></div>
   </main>
 </div>
@@ -456,7 +459,7 @@ function card(j){
       if(seen[d.kind]) return;                 /* the newest of each kind; older ones are in the folder */
       seen[d.kind] = 1;
       const label = d.kind === "studio" ? "Open Studio" : d.kind === "letter" ? "Cover letter PDF" : "CV PDF";
-      row.appendChild(el("a", {cls: d.kind === "studio" ? "cta" : "cta ghost", href: d.href, title: d.name, text: label}));
+      row.appendChild(el("a", {cls: d.kind === "studio" ? "cta" : "cta ghost", href: d.href, target:"_blank", rel:"noopener", title: d.name + " (opens in a new tab)", text: label}));
     });
     docs.appendChild(row);
     const folder = live[0].where.split("/").slice(0, -1).join("/");
@@ -649,6 +652,9 @@ document.getElementById("tabHow").addEventListener("click", () => tab("how"));
   });
 })();
 
+/* Shown inside an editor or app preview (a frame), links cannot reach the real browser. Say so. */
+try { if(window.self !== window.top) document.getElementById("embedded").hidden = false; }
+catch(e){ document.getElementById("embedded").hidden = false; }
 settle();
 draw();
 </script>

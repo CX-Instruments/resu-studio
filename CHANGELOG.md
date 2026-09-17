@@ -56,6 +56,11 @@ drawer: a card per job with Open Studio and PDF buttons, a Next step line, an Up
 application panel, at-a-glance counts, and a How it works tab explaining every action and
 stage.
 
+**Resu Desk opens documents in a new browser tab.** Open Studio, CV PDF and Cover letter PDF
+open in a new tab so the Desk stays open. Shown inside an editor or app preview, where links
+cannot reach the browser, the Desk says to open it by double-clicking instead, and SKILL.md
+tells assistants to open the Desk and Studio in the person's web browser, never a preview.
+
 **SKILL.md and the references** now ask where files live first, start a job per ad, pass
 `--job` on every command, move stages as the work moves and hand Resu Desk over.
 
