@@ -51,10 +51,30 @@ says which one it found, so read the message rather than guessing at a path.
 there is nothing to upload and nothing to lose when the conversation ends. Tell them the
 folder and the file name in plain words, the same as anywhere else.
 
-**Check the two things the scripts need, once, before Phase 3.** Python 3, and a
-Chromium-family browser for the PDF. Run `python3 --version`; on Windows, where
-`python3` is usually missing, try `python --version` and then `py --version`, and use
-whichever answers in every command from then on. If there is no browser, `--pdf` says
+**Check the two things the scripts need, once, before the first script.** Python 3.8 or
+newer, and a Chromium-family browser for the PDF.
+
+**Find Python with the finder, not by guessing.** `python3 --version` and `python --version`
+are not a test on Windows: `python3` is usually missing, `python` is often the Microsoft
+Store placeholder that prints a message instead of running, and Anaconda or Miniconda
+installs are left off the PATH by their own installer. People have had to tell an assistant
+where their Python was, every conversation. Run the finder instead:
+
+- PowerShell on Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\find_python.ps1`
+- bash, zsh or Git Bash: `sh scripts/find_python.sh`
+
+It tries, in order: `RESU_PYTHON` if set, the path it found last time, an active conda
+environment (`CONDA_PREFIX`, `CONDA_EXE`), the Anaconda, Miniconda, Miniforge and
+Mambaforge folders under the user folder, `AppData\Local`, `ProgramData` and the drive root,
+the `py` launcher, python.org installs, Homebrew and `/usr/bin`, and last whatever the PATH
+calls `python3` or `python`. Each is run and kept only if it really is Python 3.8 or newer.
+The last line it prints is the full path. Use that path, quoted, in place of `python3` in
+every command from then on, and do not ask the person about Python while it is working.
+The path is remembered in `~/.resu-studio/python.txt` and checked again before it is used.
+
+If it exits 1, nothing usable was found anywhere it looked. Say so plainly, say what Python
+is needed for, and ask whether they have one somewhere unusual; if so, set `RESU_PYTHON` to
+its full path and run the finder again. If there is no browser, `--pdf` says
 so in one sentence; say that sentence to them and offer the studio, which prints from
 their own browser with **Save as PDF**. If there is no Python at all, say so plainly and
 say what it is needed for. Do not install anything without asking.
@@ -75,30 +95,65 @@ pretend a file was written.
 
 ## The person's folder
 
-**Their folder is `~/.resu-studio`, unless somebody named another one.** That is
-outside the plugin, so a plugin update cannot delete it, and it is where `facts.md`,
-`answers.md`, `cv-source/` and `_Your Documents Are Here/` all live. Run
-`python3 scripts/paths.py` to see the folder and why it was chosen. Nothing about this
-needs setting up: the default already survives an update.
+**The person chooses their folder, once per install, and it is never guessed.** A skill
+can be installed in more than one place on one computer: inside a project, the way
+`npx skills add` puts it in `<project>/.agents/skills/`, or for the whole computer. Each
+install asks separately, because a person who installed it inside one project does not
+expect it to open an application they started somewhere else.
 
-To choose another folder, write one line, the folder, in either pointer file:
+**First, `python3 scripts/paths.py --status`.** It says whether this install has a folder,
+which folders to offer, and every folder on the computer that already holds Resu Studio
+work, with counts of what is in each. It never prints anybody's CV.
 
-- `~/.resu-studio/location` is the stable one, outside the plugin.
-- `data-location.txt` beside `SKILL.md` still works and is copied out to the stable
-  one the first time it is used, so the next update cannot lose the pointer.
+- **Chosen:** carry on.
+- **NOT CHOSEN YET:** every script that needs the folder stops, with exit code 6 and one
+  sentence, until it is chosen. Nothing is created and no other folder is used meanwhile.
+  Say to the person, in plain words, what `--status` found and offered, and ask:
+  - where their files should live: inside this project (`<project>/Resu - CV Builder`),
+    in their home folder (`~/Resu - CV Builder`), or a folder they name;
+  - for any older work it listed, whether to bring it in. Say where it is and what it holds.
 
-A pointer beats the host's own data folder (`CLAUDE_PLUGIN_DATA` in Claude,
-`PLUGIN_DATA` where the Agent Plugins standard sets one), because a person writing a
-path has said what they want and a host guessing one has not.
+  Then run their answer, and say the folder's name back to them:
 
-**`--pdf-dir` moves rendered output and nothing else.** It does not relocate
-`facts.md`, `answers.md` or the CV as it arrived. Those follow the pointer.
+```bash
+python3 scripts/paths.py --choose project
+python3 scripts/paths.py --choose home --bring "<the older folder they agreed to>"
+python3 scripts/paths.py --choose "<a whole folder path>"
+```
 
-**Anything left in the old in-plugin folder is copied out on the first run.** The old
-folder is left exactly as it was. Nothing already in the new folder is written over,
-and the run says on screen what it did and what it left alone. It happens once. If the
-person sees that message, it is their own history being brought somewhere an update
-cannot reach.
+`--choose` records the choice in `~/.resu-studio/locations.json`, outside every install, so
+an update cannot lose it. `--bring` copies an older folder in, in either layout: nothing
+there is moved or deleted, nothing already in the new folder is written over, the documents
+list is pointed at the copies, and anything that is not Resu Studio's is left behind and
+named. Loose working files from before jobs had folders wait in `.resu/from-before-jobs/`
+for `jobs.py adopt`.
+
+**What is in the folder:**
+
+```
+Resu - CV Builder/
+  README.txt             says the folder is private
+  .gitignore             one line, *, so git ignores everything in the folder
+  1 About me/            the CV as it arrived, the CV as markdown, links.md
+  2 My record/           facts.md, answers.md
+  3 Jobs/<job id>/       job.json, ad/, asks.md, scorecard.md, proposals.md, ...
+  4 Finished documents/  Resu Desk.html, and one folder of documents per job
+  .resu/                 documents.json and the scripts' own notes
+```
+
+**Private by default.** The `.gitignore` inside the folder keeps all of it out of any git
+repository the folder sits in, without anybody's own `.gitignore` being edited. Never
+remove it, never copy anything out of this folder into the project around it, and never
+commit a CV, a ledger or a document anywhere.
+
+**Two things choose without asking, and `--status` says so.** A `data-location.txt` beside
+`SKILL.md`, one line holding a folder, written for this install. And a host's own data
+folder, `CLAUDE_PLUGIN_DATA` in Claude or `PLUGIN_DATA` where the Agent Plugins standard sets
+one. The old `~/.resu-studio/location` pointer and a plain `~/.resu-studio` are no longer used
+on their own: `--status` lists them as older work to bring in.
+
+**`--pdf-dir` moves rendered output and nothing else.** It does not relocate `facts.md`,
+`answers.md` or the CV as it arrived.
 
 ## Commands
 
@@ -108,25 +163,29 @@ on, and that is for you to execute, not for them.
 **Run every command from this skill's own folder**, the one holding `SKILL.md`. Every
 command names `scripts/...` relative to it.
 
-**Every command that names a ledger uses `paths.py` to name it.** A bare relative
+**Every command that names a file uses `paths.py` to name it.** A bare relative
 `facts.md` resolves against the working directory, which in a cloud session is thrown
 away at the end of the session, so the file the next advertisement needs is gone. Write
 it as command substitution, every time:
 
 ```bash
-python3 scripts/paths.py --facts       # one bare path, nothing else
-python3 scripts/paths.py --data        # the folder the ledgers live in
+python3 scripts/paths.py --facts                  # one bare path, nothing else
 python3 scripts/paths.py --answers
-python3 scripts/paths.py --cv-source
-python3 scripts/paths.py --documents
+python3 scripts/paths.py --about                  # 1 About me
+python3 scripts/paths.py --jobs                   # 3 Jobs
+python3 scripts/paths.py --documents              # 4 Finished documents
+python3 scripts/paths.py --job <job id>               # that job's own folder
+python3 scripts/paths.py --job <job id> --job-ad      # where its advertisement goes
+python3 scripts/paths.py --job <job id> --job-documents
 ```
 
 **The commands in this skill are written for bash.** In PowerShell, the same thing is
-written with PowerShell's own variables, and the Python command is whichever one
-answered above:
+written with PowerShell's own variables, and Python is the path the finder printed, called
+with `&`:
 
 ```powershell
-$D = python scripts/paths.py --data
-python scripts/build_studio.py --cv "$(python scripts/paths.py --cv-source)/<their CV>.md" `
-    --scorecard "$D/scorecard.md" --role "<the job title>"
+$PY = powershell -NoProfile -ExecutionPolicy Bypass -File scripts\find_python.ps1
+$J = & $PY scripts/paths.py --job <job id>
+& $PY scripts/build_studio.py --cv "$(& $PY scripts/paths.py --about)/<their CV>.md" `
+    --scorecard "$J/scorecard.md" --job <job id>
 ```

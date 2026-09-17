@@ -75,7 +75,7 @@ The minimum is four builds: end of Phase 3, Phase 4 with the proposals, Phase 6 
 assembled CV, Phase 7 with the letter. **The rule is larger: any time something that
 would appear on the page changes, build the studio again and hand the file back in the
 same reply.** Do not wait to be asked; they do not know it can be rebuilt. Pass the same
-`--role` and `--employer` and the ledgers on every rebuild, and say in one line what
+`--job <job id>` and the ledgers on every rebuild, and say in one line what
 changed.
 
 **One moment holds a rebuild back:** in Phase 5, after they have been through the
@@ -108,16 +108,100 @@ skill runs in different places, and the rules change with each:
 
 Wherever it is:
 
-- **Their folder is `~/.resu-studio`** unless a pointer names another. It is outside
-  the skill, so an update cannot delete it. `python3 scripts/paths.py` says where it is
-  and why.
+- **Their folder is chosen by them, once per install, and never guessed.** See "Before
+  anything else: where their files live" below. It is outside the skill, so an update
+  cannot delete it, and it keeps everything out of git.
 - **Run every command from this skill's own folder**, the one holding this file.
-- **Commands are written for bash with `python3`.** Where `python3` is missing, which is
-  usual on Windows, use `python` or `py`, whichever answers. The reference shows the
-  PowerShell form.
-- **Every command that names a ledger uses `paths.py` to name it**, as
-  `"$(python3 scripts/paths.py --facts)"`, never a bare `facts.md`.
+- **Commands are written for bash with `python3`.** Before the first script, find the
+  Python to use, as below, and put the path it prints in place of `python3` in every
+  command. The reference shows the PowerShell form.
+- **Every command that names a file uses `paths.py` to name it**, as
+  `"$(python3 scripts/paths.py --facts)"` or `"$(python3 scripts/paths.py --job <job id>)"`,
+  never a bare `facts.md`.
 - **Never send them a command to run.** Commands are for you to execute.
+
+## Before anything else: find Python
+
+**On the person's own computer, never assume `python3` or `python` works.** On Windows
+`python3` is usually missing, `python` is often the Microsoft Store placeholder, and
+Anaconda and Miniconda keep a perfectly good Python in `C:\Users\<them>\miniconda3` that
+nothing on the PATH points at. Do not tell them Python is missing, and do not ask them where
+it is, until the finder has looked. Run it once per conversation:
+
+```bash
+sh scripts/find_python.sh                                                  # Mac, Linux, Git Bash
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\find_python.ps1   # Windows PowerShell
+```
+
+It looks in an active conda environment, every usual Anaconda, Miniconda, Miniforge and
+Mambaforge folder, the `py` launcher, python.org installs and the PATH, runs each one, and
+prints the full path of the first real Python 3.8 or newer. Use that path in place of
+`python3` in every command, quoted, for the rest of the conversation: in PowerShell,
+`& "C:\Users\<them>\miniconda3\python.exe" scripts\paths.py --status`. It remembers the
+answer for next time. Exit code 1 means it found none anywhere: say so plainly, say what
+Python is needed for, and ask whether they have one installed somewhere unusual (set
+`RESU_PYTHON` to its path) before suggesting they install it. In a cloud session the
+session's own `python3` is fine and this step can be skipped.
+
+## Before anything else: where their files live
+
+**Their CV, their history, every job ad and every document is private, and where it lives
+is their decision.** The first time a script is about to run in a conversation, run:
+
+```bash
+python3 scripts/paths.py --status
+```
+
+- **Chosen already:** carry on. It names the folder.
+- **NOT CHOSEN YET:** every other script refuses to run (exit 6) until this is settled. Tell
+  them, in plain words, where it suggests (inside this project, or their home folder) and
+  what it found: any older Resu Studio work on the computer is listed with where it is and
+  what it holds. Then ask where their files should live, and whether to bring any older work
+  in. **Never choose for them, and never use older work they have not agreed to.** Then:
+
+```bash
+python3 scripts/paths.py --choose project            # or home, or a whole folder path
+python3 scripts/paths.py --choose project --bring "<the older folder they agreed to>"
+```
+
+The folder it makes, `Resu - CV Builder`, holds `1 About me` (the CV and anything else
+about them), `2 My record` (`facts.md`, `answers.md`), `3 Jobs` (one folder per job ad) and
+`4 Finished documents` (Resu Desk and each job's documents). It carries a `README.txt` and a
+`.gitignore` that keeps all of it out of git. Say the folder's name to them once, and that
+nothing in it is sent anywhere.
+
+A host that sets its own data folder (`CLAUDE_PLUGIN_DATA`) has chosen already, and
+`--status` says so. Full detail: `references/where-files-go.md`.
+
+## Working on more than one job
+
+**Every job ad is its own job, with its own folder under `3 Jobs`.** A new ad never
+replaces an earlier one. What belongs to the person, the CV, `facts.md` and `answers.md`,
+is shared by every job.
+
+- **Name the job in the chat at the start of every phase**, by role and employer, so
+  nobody mixes two applications up. Never read or write one job's files while working on
+  another.
+- **Every job-specific command carries `--job <job id>`**: `build_studio.py`,
+  `render_cv.py`, `check.py`, and `paths.py --job <job id>` for the job's own files. Role
+  and employer come from the job's record. `python3 scripts/jobs.py list` shows the ids;
+  the start of an id is enough when only one job starts that way.
+- **Move the stage as the work moves**, with `python3 scripts/jobs.py stage <job id> <stage>`:
+  `Scoring` when Phase 3 starts, `Tailoring` when Phase 4 starts, `Ready` when the final
+  documents are printed. `Applied`, `Interview`, `Offer`, `Rejected` and `Withdrawn` are
+  the person's to tell you. Record a closing date with `jobs.py set <job id> closes YYYY-MM-DD`
+  and anything they tell you about the application with `jobs.py note`.
+- **Resu Desk** is `4 Finished documents/Resu Desk.html`: every job, its stage, closing
+  date, score and documents on one page. It rebuilds itself whenever a job, a studio or a
+  PDF changes. Hand it over whenever it changed, in the same reply, the same as the studio.
+- **Changes made on the Desk come back as a pasted block or `desk-updates.json`.** Save it
+  to a file and run `python3 scripts/jobs.py apply-desk <file>`. Read every `REFUSED` line
+  back to them in plain words: it means the job changed after that Desk was built, and
+  their Desk change was not written over the newer value. Ask which is right.
+- **Older work from before jobs had folders.** When `jobs.py list` says loose working files
+  are waiting, run `python3 scripts/jobs.py adopt --dry-run`, tell them which application it
+  thinks they belong to, and only after they agree run `jobs.py adopt` (with `--role` and
+  `--employer` when it could not tell).
 
 ## Never ask the same question twice
 
@@ -172,19 +256,26 @@ partial overlap so each half keeps what is unique to it.
 
 Read `references/sources.md` first. It is the whole of this phase.
 
-**Before copying anything in, run `python3 scripts/documents.py`.** If it lists an
-advertisement other than this one, stop and say so before doing any work, naming what is
-kept (their CV, `facts.md`, every PDF already produced) as well as what is replaced (the
-asks ledger, the scorecard, the draft CV and letter for the earlier advertisement). Then
-wait for their answer.
+**Before copying anything in, run `python3 scripts/jobs.py list`.** If a job for this
+advertisement is already there, work in it and say so. If other jobs are there, say so in
+one line: they are kept exactly as they are, and this ad gets a job of its own. Nothing is
+replaced.
 
-**Every render passes `--role "<the job title>"` and `--employer "<the employer>"`**, so
-each application writes its own files. Never pass them for one advertisement while
-working on another.
+**Then start the job**, with the role and employer as the advertisement writes them:
 
-Copy every source into the folder `python3 scripts/paths.py --cv-source` names,
-untouched, with the text of each extracted into a `.txt` beside it. **Then write the CV
-out as markdown in the `templates/cv.md` shape, into the same folder.** Nothing later can
+```bash
+python3 scripts/jobs.py new --role "<the job title>" --employer "<the employer>" \
+    [--link "<the ad's URL>"] [--closes YYYY-MM-DD]
+```
+
+It prints the job id. Use it in every command for this application from here on.
+
+**Copy the advertisement and any job pack into the job**, untouched, into the folder
+`python3 scripts/paths.py --job <job id> --job-ad` names, with the text of each extracted into
+a `.txt` beside it. **Copy the CV into the folder `python3 scripts/paths.py --about` names**,
+the same way, unless it is already there from an earlier job; a LinkedIn URL or any other
+link they share goes in `links.md` in that folder. **Then write the CV out as markdown in the
+`templates/cv.md` shape, into the same folder.** Nothing later can
 read a PDF or a Word file, and `build_studio.py` refuses markdown with no `# Name`
 heading. Convert faithfully: no line reworded, dropped or tidied.
 
@@ -211,19 +302,20 @@ advertisement did not use:
 > Start with the must-haves if you are unsure. Expanding later costs the same as doing
 > it now, so nothing is wasted either way.
 
-Record the answer in `answers.md` the moment it arrives, both as a `depth:` line in its
-frontmatter and as a normal block, as `essentials` or `all`. **Never choose for them, and
+Record the answer the moment it arrives: as a normal block in `answers.md`, and on the
+job, with `python3 scripts/jobs.py set <job id> depth essentials` (or `all`). Depth belongs
+to this ad, so the next ad asks again. **Never choose for them, and
 never quietly do the bigger job.**
 
-**Done when:** every source is on disk in the person's own words, the CV is in
-`cv-source/` as markdown with a `# Name` heading, the application format is known (what
+**Done when:** the job exists, the advertisement is in its `ad` folder, the CV is in
+`1 About me` as markdown with a `# Name` heading, the application format is known (what
 documents, what word limits, what page limit), and the depth is recorded.
 
 ## Phase 2: Atomise
 
 Two ledgers, `facts.md` and `asks.md`, from the templates in `templates/`, written in the
-person's folder and named through `paths.py`: `"$(python3 scripts/paths.py --data)/asks.md"`
-and `"$(python3 scripts/paths.py --facts)"`. A file written to a bare relative name can
+person's folder and named through `paths.py`: `"$(python3 scripts/paths.py --job <job id>)/asks.md"`
+in the job's folder, and `"$(python3 scripts/paths.py --facts)"` in `2 My record`. A file written to a bare relative name can
 be thrown away with the session.
 
 The facts ledger is the reusable asset. **On a second advertisement, read it. Do not
@@ -242,13 +334,16 @@ is recorded as a conflict rather than resolved.
 
 ## Phase 3: Score, before changing anything
 
-Read the Phase 3 section of `references/studio.md`, and `references/scoring.md`.
+Read the Phase 3 section of `references/studio.md`, and `references/scoring.md`. Move the
+job to `Scoring` with `jobs.py stage <job id> Scoring`.
 
 **Score to the depth they chose.** On `essentials`, score every `must` and mark the rest
 `unscored`. Unscored is not missing: missing means you looked and found nothing. Say how
 many are unscored every time you report a score, in the same sentence as the number.
 
-`scorecard.md`, in the person's folder, with the depth in its frontmatter as `depth:`.
+`scorecard.md`, in the job's folder, with the depth in its frontmatter as `depth:`. Once it
+is written, record the score on the job, so Resu Desk shows it:
+`python3 scripts/jobs.py score <job id> --scorecard "$(python3 scripts/paths.py --job <job id>)/scorecard.md" --as before`.
 Necessity on every row is one of `must`, `nice`, `implied`, `condition`,
 `not a cv question`. **`condition` wins over `must`** for a licence, citizenship, right
 to work or clearance. **`implied` covers a stated duty that is not on the criteria list**
@@ -270,15 +365,15 @@ gap between them is the value of the exercise.
 **Then build the studio.** This is where it first exists.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
-    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their CV>.md" \
+    --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
     --facts "$(python3 scripts/paths.py --facts)" \
-    --role "<the job title>" --employer "<the employer>"
+    --job <job id>
 ```
 
-**`--role` is required**; with `--employer` it names the file and keys the studio's
-browser storage. **Never build a separate scorecard page.** The Score tab is the
+**`--job` is required**: the job's role and employer name the file, put it in the job's
+documents folder and key the studio's browser storage, so two jobs never share marks. **Never build a separate scorecard page.** The Score tab is the
 scorecard. Hand the studio over and say what it is: their CV as it stands, scored, before
 anything has changed.
 
@@ -289,7 +384,7 @@ named plainly with no softening.
 ## Phase 4: Propose
 
 Read the Phase 4 section of `references/studio.md`, and `references/proposing-changes.md`
-and `references/rewriting.md` before drafting any line.
+and `references/rewriting.md` before drafting any line. Move the job to `Tailoring`.
 
 `proposals.md`, in the person's folder, one entry per change, in the fields
 `templates/proposals.md` shows: `Kind`, `Line`, `Currently`, `Suggested`, `Why`,
@@ -304,13 +399,13 @@ each reaching across more than one employer, for the person to tick four to six.
 `references/achievements.md`.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
-    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their CV>.md" \
+    --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
     --facts "$(python3 scripts/paths.py --facts)" \
-    --proposals "$D/proposals.md" --achievements "$D/achievements.md" \
-    --role "<the job title>" --employer "<the employer>"
-python3 scripts/check.py
+    --proposals "$J/proposals.md" --achievements "$J/achievements.md" \
+    --job <job id>
+python3 scripts/check.py --job <job id>
 ```
 
 **Read what the build prints, every time.** Content it had nowhere to put is part of their
@@ -362,10 +457,10 @@ and `references/assembling.md`.
 against its proposal before the file changes shape. Then assemble:
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/assemble.py "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
-    --decisions "$D/cv-decisions.json" \
-    --out "$D/cv-<variant>.md"
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/assemble.py "$(python3 scripts/paths.py --about)/<their CV>.md" \
+    --decisions "$J/cv-decisions.json" \
+    --out "$J/cv-<variant>.md"
 ```
 
 It writes `cv-<variant>.md` with everything they decided and copies the rest through byte
@@ -373,18 +468,18 @@ for byte, and appends every removal and rewrite to `cv-<variant>-archive.md`. **
 it prints and tell them what is in it.** Leave the HTML comment on its last line alone; it
 stops the same decisions being applied twice.
 
-**Then rescore**: keep the first scorecard as `scorecard-before.md`, write the new one
-against the assembled CV, and rebuild the studio from the assembled CV with the same
-`--role`, `--employer` and **all the ledgers**, so they watch the score move.
+**Then rescore**: keep the first scorecard as `scorecard-before.md` in the job's folder, write
+the new one against the assembled CV, and rebuild the studio from the assembled CV with the same
+`--job <job id>` and **all the ledgers**, so they watch the score move.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/build_studio.py --cv "$D/cv-<variant>.md" \
-    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/build_studio.py --cv "$J/cv-<variant>.md" \
+    --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
     --facts "$(python3 scripts/paths.py --facts)" \
-    --proposals "$D/proposals.md" --achievements "$D/achievements.md" \
-    --role "<the job title>" --employer "<the employer>"
-python3 scripts/check.py
+    --proposals "$J/proposals.md" --achievements "$J/achievements.md" \
+    --job <job id>
+python3 scripts/check.py --job <job id>
 ```
 
 The rebuilt studio says the CV changed, and that is right after an assembly.
@@ -397,9 +492,11 @@ interleaves, offer the trade rather than switching quietly. The commands, the fi
 the typeface check and the ATS read-back are all in `references/assemble-and-print.md`,
 with `references/rendering.md` and `references/ats.md` behind them.
 
-**Where the documents go:** `_Your Documents Are Here/`, which
-`python3 scripts/paths.py --documents` names, and into the chat as well when the session
-is temporary.
+Record the rescore on the job with `jobs.py score <job id> --scorecard ... --as after`.
+
+**Where the documents go:** the job's own folder inside `4 Finished documents`, which
+`python3 scripts/paths.py --job <job id> --job-documents` names, and into the chat as well when
+the session is temporary. When the final PDFs are printed, move the job to `Ready`.
 
 **Done when:** `assemble.py` exited 0, `cv-<variant>.md` and its archive are in the
 person's folder, what it printed accounts for the whole decisions file, `check.py` has
@@ -420,11 +517,11 @@ pack.
 **Print it on the skin the CV is already on**, in one run, so the two cannot drift:
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/render_cv.py "$D/cv-<variant>.md" --letter "$D/cover-letter-<variant>.md" \
-    --decisions "$D/cv-decisions.json" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/render_cv.py "$J/cv-<variant>.md" --letter "$J/cover-letter-<variant>.md" \
+    --decisions "$J/cv-decisions.json" \
     --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
-    --role "<the job title>" --employer "<the employer>" --pdf
+    --job <job id> --pdf
 ```
 
 The skin flags are whatever they landed on in Phase 6. **Leave the letter prompts in the
@@ -477,11 +574,13 @@ print and how they are worded, and never what is true.
 | `references/rendering.md` | Only if the person wants a designed CV or a report |
 | `references/cover-letter.md` | Phase 7, before writing a line of the letter |
 | `references/arithmetic.md` | Any time a number, date or year count is involved |
-| `templates/` | Shapes for facts, answers, asks, proposals, scorecard, achievements, cv |
-| `scripts/paths.py` | Where this person's files go, in every command that names one |
-| `scripts/documents.py` | Phase 1, before anything else: what they have already produced |
+| `templates/` | Shapes for facts, answers, asks, proposals, scorecard, achievements, cv, job.json |
+| `scripts/paths.py` | `--status` first, `--choose` once; then in every command that names a file |
+| `scripts/jobs.py` | Phase 1 `list` and `new`; `stage`, `score`, `set`, `note` as the work moves; `apply-desk`, `adopt` |
+| `scripts/build_desk.py` | Resu Desk. Rebuilt on its own; run it only to rebuild by hand |
+| `scripts/documents.py` | What they have already produced, and for which job |
 | `scripts/build_studio.py` | Phase 3, then rebuilt in 4, 6 and 7: the studio |
-| `scripts/check.py` | With no arguments, at the end of Phase 4 and the end of Phase 6 |
+| `scripts/check.py` | With `--job <job id>`, at the end of Phase 4 and the end of Phase 6 |
 | `scripts/assemble.py` | Phase 6: bakes the decisions into the markdown and writes the archive |
 | `scripts/render_cv.py` | Markdown CV to printable HTML and PDF, 900 skins |
 | `scripts/render_report.py` | Only if they ask for the score as a page of its own |

@@ -16,10 +16,10 @@ empty decisions file gives back the file it was handed, unchanged. The markdown 
 the deliverable and the master, and this is the command that makes that true.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/assemble.py "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
-    --decisions "$D/cv-decisions.json" \
-    --out "$D/cv-<variant>.md"
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/assemble.py "$(python3 scripts/paths.py --about)/<their CV>.md" \
+    --decisions "$J/cv-decisions.json" \
+    --out "$J/cv-<variant>.md"
 ```
 
 The first argument is the same markdown Phase 3 and Phase 4 passed as `--cv`, because
@@ -50,11 +50,12 @@ proposal for a line they took off names nothing at all. Record every decision ag
 proposal first. Anything they want to change after this belongs in the new studio the
 rebuild below gives them.
 
-Then rescore: keep the first `scorecard.md` as `scorecard-before.md`, write the new
-one against the assembled CV, and rebuild the studio from it with the assembled CV as
-`--cv`. Same `--role` and same `--employer`, for the reason given under *Rebuild the
+Then rescore: keep the first `scorecard.md` as `scorecard-before.md` in the job's folder,
+write the new one against the assembled CV, record it with
+`python3 scripts/jobs.py score <job id> --scorecard "$J/scorecard.md" --as after`, and rebuild
+the studio from it with the assembled CV as `--cv`. Same `--job <job id>`, for the reason given under *Rebuild the
 studio every time the page changes* in SKILL.md and `references/studio.md`, so it is written under the same filename and
-their marks, which are keyed to that role and employer, are all still there. The
+their marks, which are keyed to that job's role and employer, are all still there. The
 Score tab they have been reading all along now shows the new numbers, and they watch
 it move rather than being told it moved.
 
@@ -64,19 +65,19 @@ what carried over, what it put back by matching their wording, and what it dropp
 because the line it was made on has gone. Nothing has gone wrong. Say that plainly if
 they ask about it, and do not go hunting for a fault.
 
-**Pass the ledgers on this rebuild too.** A rebuild given only `--cv`, `--role` and
-`--employer` opens with an empty Score tab, no suggestions and no achievements panel,
+**Pass the ledgers on this rebuild too.** A rebuild given only `--cv` and
+`--job` opens with an empty Score tab, no suggestions and no achievements panel,
 and prints `asks : 0 (not scored yet)` while you are telling them to watch the score
 move.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/build_studio.py --cv "$D/cv-<variant>.md" \
-    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/build_studio.py --cv "$J/cv-<variant>.md" \
+    --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
     --facts "$(python3 scripts/paths.py --facts)" \
-    --proposals "$D/proposals.md" --achievements "$D/achievements.md" \
-    --role "<the job title>" --employer "<the employer>" \
-    --letter "$D/cover-letter-<variant>.md"
+    --proposals "$J/proposals.md" --achievements "$J/achievements.md" \
+    --job <job id> \
+    --letter "$J/cover-letter-<variant>.md"
 ```
 
 Drop `--letter` on the first pass through Phase 6. It goes in when a letter already
@@ -89,7 +90,7 @@ is still in the file, a line the person added that is missing from it, a rewrite
 has not taken, a ticked section that is not there.
 
 ```bash
-python3 scripts/check.py
+python3 scripts/check.py --job <job id>
 ```
 
 Full instructions: `references/assembling.md`.
@@ -102,7 +103,7 @@ Full instructions: `references/assembling.md`.
 - What it printed accounts for the decisions file: every rewrite, every removal, every
   addition, every reorder and every ticked section is on that list, and anything it
   reported as having no line to land on has been read and dealt with.
-- `python3 scripts/check.py` has been run and everything it named has been fixed or
+- `python3 scripts/check.py --job <job id>` has been run and everything it named has been fixed or
   answered.
 - The rescore is shown beside the first score so the movement is visible, and any ask
   that did not move is said out loud rather than left for them to notice.
@@ -117,9 +118,8 @@ live with every layout, palette, typeface, skills treatment, section order and c
 placement as a control, works on a phone, marks where A4 actually cuts, and prints the
 command line for whatever they land on.
 
-It writes into their documents folder, beside their finished PDFs. **Always pass
-`--role` and `--employer`.** `--role` is required and the build refuses without it.
-Together they name the file, key the studio's own browser storage so one application
+It writes into the job's own documents folder, beside its finished PDFs. **Always pass
+`--job <job id>`.** The job's role and employer, read from its record, name the file, key the studio's own browser storage so one application
 cannot show another's marks, and tell two applications apart when a document would
 otherwise be written over.
 
@@ -151,11 +151,11 @@ shuffle a second time. The render says that on stderr, and the answer is to asse
 again from the source rather than to patch either file by hand.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/render_cv.py "$D/cv-<variant>.md" --decisions "$D/cv-decisions.json" --gallery
-python3 scripts/render_cv.py "$D/cv-<variant>.md" --decisions "$D/cv-decisions.json" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/render_cv.py "$J/cv-<variant>.md" --decisions "$J/cv-decisions.json" --gallery
+python3 scripts/render_cv.py "$J/cv-<variant>.md" --decisions "$J/cv-decisions.json" \
     --layout sidebar-dark --palette forest \
-    --role "<the job title>" --employer "<the employer>" \
+    --job <job id> \
     --skills list --skills-by "Technical=bars;Tools=chips" \
     --skills-order "Tools;Technical" --skills-place "Tools=main" \
     --gap normal \
@@ -192,11 +192,11 @@ is the studio's own page: the colours, the layout, the meters and rings, the
 typefaces. The text stays text, which is what an applicant tracking system reads.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/render_cv.py "$D/cv-<variant>.md" --letter "$D/cover-letter-<variant>.md" \
-    --decisions "$D/cv-decisions.json" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/render_cv.py "$J/cv-<variant>.md" --letter "$J/cover-letter-<variant>.md" \
+    --decisions "$J/cv-decisions.json" \
     --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
-    --role "<the job title>" --employer "<the employer>" --pdf
+    --job <job id> --pdf
 ```
 
 **A `--letter` run does not rewrite the CV's own HTML file.** It writes both PDFs and the
@@ -207,13 +207,13 @@ Two ways out, and take one of them: run the CV on its own with `--decisions` fir
 that file is right, or delete the stale HTML and hand over the PDF alone. Never leave
 two files in their folder that disagree with each other.
 
-**The filename is what stops one application writing over another.** With `--role` and
-`--employer` the PDFs are written as
+**The filename is what stops one application writing over another.** With `--job` (or
+`--role` and `--employer` outside the job layout) the PDFs are written as
 `<Name> - <Role> - <Employer> - <YYYYMMDD> - CV.pdf` and
 `<Name> - <Role> - <Employer> - <YYYYMMDD> - Cover Letter.pdf`, in that order, and a
 segment with nothing in it is left out rather than printed as a gap between two
 hyphens. Without `--employer`, two applications for the same job title built on the
-same day produce one filename. `--date` writes the stamp however you pass it and
+same day produce one filename, which is why the job supplies both. `--date` writes the stamp however you pass it and
 defaults to today as YYYYMMDD. `--out` names the HTML file, and `--pdf-dir` names the
 folder the PDFs go to.
 
@@ -223,7 +223,7 @@ Extract the text and check three things: the name is first and whole, every sect
 heading appears as a word rather than spaced-out letters, and nothing is interleaved.
 
 ```bash
-pdftotext "$(python3 scripts/paths.py --documents)/<the finished>.pdf" - | head -40
+pdftotext "$(python3 scripts/paths.py --job <job id> --job-documents)/<the finished>.pdf" - | head -40
 ```
 
 Drop the `head -40` and read the whole extraction the moment anything looks wrong. On a
@@ -279,8 +279,10 @@ that is not valid JSON, or whose order names a line twice or names one that is n
 there, refuses in plain words and writes nothing, rather than printing a document
 nobody can tell is wrong.
 
-**Where they go.** `_Your Documents Are Here/` inside the person's own folder, which
-is `python3 scripts/paths.py --documents`, or wherever `--pdf-dir` says. Put them in
+**Where they go.** The job's own folder inside `4 Finished documents`, which is
+`python3 scripts/paths.py --job <job id> --job-documents`, or wherever `--pdf-dir` says.
+Resu Desk picks them up on its own. When the final documents are printed, move the job to
+`Ready` with `python3 scripts/jobs.py stage <job id> Ready`, and hand Resu Desk over too. Put them in
 the chat as well: a file they cannot find is a file they do not have.
 
 A section that is a flat list of short lines can run in two columns, in the studio or
@@ -345,11 +347,11 @@ in a different palette reads as somebody else's letter. `--palette forest` here 
 Phase 6 example carried over, and it changes to whatever they actually chose.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/render_cv.py "$D/cv-<variant>.md" --letter "$D/cover-letter-<variant>.md" \
-    --decisions "$D/cv-decisions.json" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/render_cv.py "$J/cv-<variant>.md" --letter "$J/cover-letter-<variant>.md" \
+    --decisions "$J/cv-decisions.json" \
     --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
-    --role "<the job title>" --employer "<the employer>" --pdf
+    --job <job id> --pdf
 ```
 
 One run writes both PDFs, so the two files cannot end up on different skins by being
@@ -376,7 +378,7 @@ together, and every line of the letter can be marked up exactly like a line on t
 
 **The rebuild rule holds through this phase as well.** A paragraph of the letter
 rewritten, taken off or added brings a fresh studio back in the same reply, on the same
-`--role` and `--employer`, exactly as a change to the CV does. See *Rebuild the studio
+`--job <job id>`, exactly as a change to the CV does. See *Rebuild the studio
 every time the page changes* in SKILL.md and `references/studio.md`.
 
 **Done when:** it is one page, every claim in it traces to the record, and there is not

@@ -63,19 +63,20 @@ and it is handed over as a file, which is why it carries everything it needs ins
 itself and works with no network. Rebuild it from the current CV when the wording
 changes, and hand over the rebuilt file.
 
-`--role` is required. It names the file and it keys this application's own browser
-storage, so a line marked in one application does not turn up in another.
+`--job` names the application: its role and employer name the file, choose the job's
+documents folder, and key this application's own browser storage, so a line marked in one
+application does not turn up in another. (`--role` and `--employer` still work without a
+job, for a studio built outside the job layout.)
 
 ```bash
-python3 scripts/build_studio.py --cv "cv-<variant>.md" --role "<the job title>" \
-    --employer "<the employer>" \
+python3 scripts/build_studio.py --cv "cv-<variant>.md" --job <job id> \
     --facts "$(python3 scripts/paths.py --facts)"
 ```
 
 **Pass a ledger with command substitution.** A bare relative path resolves against
 whatever directory the session happens to be in, and that directory does not outlive
 the session. `scripts/paths.py` prints the real one:
-`--data`, `--facts`, `--answers`, `--documents` and `--cv-source` each print one bare
+`--facts`, `--answers`, `--about`, `--documents` and `--job <job id>` each print one bare
 path and nothing else.
 
 ## The faces
@@ -623,7 +624,7 @@ that file to a real browser and asks the browser to print it.
 ```bash
 python3 scripts/render_cv.py cv.md --letter cover-letter.md --decisions cv-decisions.json \
     --layout sidebar-dark --palette forest \
-    --role "<the job title>" --employer "<the employer>" --pdf
+    --job <job id> --pdf
 python3 scripts/render_cv.py cv.md --decisions cv-decisions.json \
     --pdf --pdf-dir "<the folder they asked for>"
 ```
@@ -649,7 +650,8 @@ part with nothing in it:
 <Full name> - <role> - <employer> - <date> - Cover Letter.pdf
 ```
 
-The role is `--role`, the employer is `--employer`, and the date is `--date` or today
+The role is `--role`, the employer is `--employer` (both read from the job with `--job`),
+and the date is `--date` or today
 as `YYYYMMDD`. So a run with all of them gives:
 
 ```

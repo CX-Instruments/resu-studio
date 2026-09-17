@@ -43,10 +43,24 @@ over it reads the finished PDF back and checks the typefaces are the ones you ch
 a face was substituted it deletes the file and says which one, rather than giving you a
 document that looks finished and has quietly re-flowed every line.
 
-Your name, the role, the employer and the date go into the filename, so two
-applications for the same job title at different employers cannot overwrite each other.
+Your name, the role, the employer and the date go into the filename, and every job
+keeps its documents in a folder of its own, so two applications cannot overwrite each other.
 
 <br clear="all">
+
+## Every application in one place
+
+![Resu Desk: every job, its stage, closing date, score and documents on one page](docs/images/desk.png)
+
+Apply for as many jobs as you like at once. Each job ad gets its own folder, its own
+Studio and its own documents, and nothing from one ever turns up in another. Your CV and
+your history are shared, so the second ad does not ask for your CV again.
+
+**Resu Desk** is one page listing every application: the stage it is at, when it closes,
+how the score moved, and a link to each Studio and PDF. Closing dates in the next week are
+flagged. Change a stage, a date or add a note right on the page, then hand it back to the
+AI, which writes it into your records. If a job changed in the meantime, it asks you which
+is right instead of writing over it. The Desk rebuilds itself whenever anything changes.
 
 ## The seven phases
 
@@ -81,10 +95,11 @@ never have to ask to see where things stand.
 - It will not quietly hand you a document that differs from what you approved. If a
   typeface cannot be loaded, it deletes the PDF and says which one, rather than
   substituting a face with different metrics and re-flowing every line.
-- It will not write over an earlier application. Re-rendering the same document
-  replaces it, which is what you want when trying skins. A different advertisement
-  keeps the earlier file under a dated name, and the employer is in the filename, so
-  two applications for the same job title at different employers stay apart.
+- It will not write over an earlier application. Every job ad is its own job, with its
+  own folder. Re-rendering the same document replaces it, which is what you want when
+  trying skins.
+- It will not decide where your private files live, or use older work it finds on your
+  computer, without asking you first.
 
 ## Installing it
 
@@ -135,33 +150,25 @@ because that is the longest part of the job and the decision is yours.
 
 ## Where your files go
 
-Your history and your finished documents do **not** live inside the plugin. They live
-in `.resu-studio` in your home folder, so a plugin update cannot delete them. That is
-the default and it needs no setting up.
+Your CV, your history, your job ads and your finished documents are private, and where
+they live is your choice. The first time Resu Studio runs, it asks. It suggests a folder
+called `Resu - CV Builder`, either inside the project you installed it into or in your
+home folder, and you can name any other. If it finds work from an earlier version
+anywhere on your computer, it tells you where and asks whether to bring it in. It never
+uses it without asking.
 
 ```
-python3 scripts/paths.py       where your folder is, and why
-python3 scripts/documents.py   what you have produced, and for which advertisement
+Resu - CV Builder/
+  1 About me/            your CV as you gave it, and any links you shared
+  2 My record/           everything learned about your working life, reused for every job
+  3 Jobs/                one folder for each job ad
+  4 Finished documents/  Resu Desk, and a folder of finished documents for each job
 ```
 
-To choose the folder yourself, put a single line, the path you want, in
-`.resu-studio/location` in your home folder. The older `data-location.txt` beside
-`SKILL.md` still works, and the first time it is used it is copied out to
-`.resu-studio/location`, so the next update cannot take the pointer with it.
-
-Write the path the way the machine doing the work sees it. In an AI tool running on
-your own Windows computer, that is the ordinary path, like `D:\Users\you\CVs`. In a
-cloud session such as Cowork, the machine doing the work is not your computer: the
-path starts with a `/` and has no drive letter and no backslashes, and a Windows path
-there is refused with a message naming the folder on that machine that looks like the
-one you meant.
-
-If you used this before it stopped keeping files inside the plugin, your old folder is
-copied out to the new one the first time it runs. Nothing is moved, nothing already in
-the new folder is written over, and it tells you what it did. It happens once.
-
-Your CV, your facts ledger and every PDF you have already produced survive every new
-advertisement. Only the job-specific work is replaced, and you are told before it is.
+The folder holds its own `.gitignore`, so if it sits inside a git repository, git ignores
+all of it and nothing private can be committed by accident. A `README.txt` in the folder
+says the same in plain words. The folder is outside the plugin, so an update cannot delete
+it, and the choice is remembered for each place the plugin is installed.
 
 ## What you need to install
 
@@ -173,8 +180,10 @@ come back to you as files. You should never have to know what any of it is writt
 Gemini CLI), the work happens on your machine, so it needs two things most computers
 already have:
 
-- **Python 3.** The scripts use only what comes with Python, so there is nothing else
-  to install alongside it.
+- **Python 3.8 or newer.** The scripts use only what comes with Python, so there is
+  nothing else to install alongside it. Anaconda and Miniconda count: the skill carries a
+  small finder that looks in their folders, the `py` launcher and python.org installs, so
+  you should never have to tell the AI where your Python is.
 - **Chrome, Edge or Chromium**, to print the PDF. Without one, everything else still
   works, and the studio prints the PDF from your own browser with **Save as PDF**.
 

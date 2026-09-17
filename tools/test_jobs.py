@@ -15,10 +15,15 @@ ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA, RESU_STUDIO_CONFIG=os.path.join(
 steps = []
 
 
+def _slash(t):
+    """Output with / between folders on every system, so one check reads Windows and Linux alike."""
+    return t.replace("\\", "/") if os.sep == "\\" else t
+
+
 def run(*args):
     p = subprocess.run([sys.executable] + list(args), cwd=SKILL, env=ENV,
                        capture_output=True, text=True)
-    out = (p.stdout + p.stderr).replace(DATA, "~/.resu-studio")
+    out = _slash((p.stdout + p.stderr).replace(DATA, "~/.resu-studio"))
     return p.returncode, out.rstrip()
 
 
@@ -42,7 +47,7 @@ def hashes(root=DATA):
     for d, _, fs in os.walk(root):
         for f in fs:
             p = os.path.join(d, f)
-            out[os.path.relpath(p, root)] = hashlib.sha256(open(p, "rb").read()).hexdigest()
+            out[os.path.relpath(p, root).replace(os.sep, "/")] = hashlib.sha256(open(p, "rb").read()).hexdigest()
     return out
 
 

@@ -153,11 +153,11 @@ promise about their file.
 Re-measure it like this, on their own file:
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/render_cv.py "$D/cv-<variant>.md" --decisions "$D/cv-decisions.json" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/render_cv.py "$J/cv-<variant>.md" --decisions "$J/cv-decisions.json" \
     --layout <the layout> --palette <their palette> \
-    --role "<the job title>" --employer "<the employer>" --pdf
-pdftotext "$(python3 scripts/paths.py --documents)/<the finished>.pdf" -
+    --job <job id> --pdf
+pdftotext "$(python3 scripts/paths.py --job <job id> --job-documents)/<the finished>.pdf" -
 ```
 
 To re-measure the whole table, loop the same two commands over the eighteen names that

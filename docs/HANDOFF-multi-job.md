@@ -36,8 +36,8 @@ adds **Resu Desk**, an HTML page listing every application with its stage and li
 | 3 | `build_studio.py`, `render_cv.py`, `check.py`, `documents.py` take `--job` | Done, tested by `tools/test_jobs_build.py` |
 | 4 | `build_desk.py`, `assets/desk.html`, `jobs.py apply-desk` | Done, tested by `tools/test_desk.py` |
 | 4b | Private data folder: ask on first run, new layout, self-ignoring folder | Done, tested by `tools/test_data_folder.py` |
-| 5 | `SKILL.md`, `references/where-files-go.md`, `references/studio.md`, `README.md`, `CHANGELOG.md` | **Next** |
-| 6 | Full test run with a fake person and two fake ads, version bump to 0.6.0 via `tools/sync_version.py` | Not started |
+| 5 | `SKILL.md`, the references, `README.md`, `CHANGELOG.md`, `docs/TESTING.md` | Done, commands proven by `tools/test_skill_commands.py` |
+| 6 | The owner's own test on Windows (`docs/TESTING.md`), fixes from it, version bump to 0.6.0 via `tools/sync_version.py`, merge | **Next** |
 
 Check `git log --oneline` to confirm what has landed.
 
@@ -193,32 +193,54 @@ New `tools/test_data_folder.py` covers: not chosen refuses, project and home det
 existing work listed, choose creates layout and `.gitignore`, `git status` in a temp repo
 shows nothing from the data folder, bring from old layout, choice remembered.
 
-## Step 5 in detail (after 4b)
+## What step 5 changed
 
+- `SKILL.md`: new sections "Before anything else: where their files live" (`--status`, ask,
+  `--choose`, never choose for them) and "Working on more than one job" (name the job every
+  phase, `--job` on every command, stage moves, Resu Desk hand-over, `apply-desk` and reading
+  REFUSED lines back, `adopt` only after agreement). Phase 1 starts a job with `jobs.py new`
+  instead of warning that a new ad replaces the last. Every command block uses
+  `J="$(python3 scripts/paths.py --job <job id>)"`, `--about` and `--job <job id>`. Depth is
+  recorded on the job. Scores are recorded with `jobs.py score` after Phases 3 and 6. The
+  files table lists `jobs.py` and `build_desk.py`.
+- References updated the same way: `sources.md` (Phase 1 rewritten), `where-files-go.md`
+  ("The person's folder" rewritten for choosing, the layout and privacy), `studio.md`,
+  `assemble-and-print.md`, `assembling.md`, `atomising-sources.md`, `rendering.md`,
+  `marking.md`. Templates: `answers.md` (depth per job), `cv.md`.
+- `README.md`: "Every application in one place" with `docs/images/desk.png` (fictional data),
+  "Where your files go" rewritten, "What it will not do" updated.
+- `CHANGELOG.md`: an Unreleased section for the whole branch.
+- `docs/TESTING.md`: step-by-step for the owner on Windows: run all tests, then try the
+  plugin by hand in `D:\resu-test` with a checklist.
+- Tests: `tools/test_skill_commands.py` pulls every bash block out of SKILL.md, fills the
+  placeholders and runs them in order from a project install (17 checks).
+  `tools/run_all_tests.py` runs all six suites (198 checks) and prints ALL PASSED.
+  All tests now normalise path separators so they can pass on Windows (untested there).
 
-Teach the skill to use all of this. Read `SKILL.md` and each reference in full first.
+## After step 5: finding Python
 
-- `SKILL.md` first run: run `paths.py --status`. If not chosen, tell the person what was found and ask
-  where to keep their files, then `paths.py --choose`. Never choose for them.
-- `SKILL.md` Phase 1: before copying a new ad, run `jobs.py list`. If loose files are reported,
-  offer `jobs.py adopt --dry-run`, confirm the job with the person, then `adopt`. For a new ad,
-  `jobs.py new --role --employer [--link --closes]` and copy the ad into
-  `paths.py --job <id> --job-ad`. Replace the "a new advertisement replaces the last one"
-  warning: nothing is replaced now.
-- Every later command in SKILL.md passes `--job <id>` and names job files through
-  `paths.py --job <id>` (asks.md, scorecard.md, proposals.md, achievements.md,
-  cv-decisions.json, cv-<variant>.md, cover-letter-<variant>.md). `facts.md`, `answers.md`,
-  `cv-source/` stay where they are. Depth goes into `job.json` with `jobs.py set <id> depth`.
-- Stage moves: Phase 3 start `Scoring`, Phase 4 `Tailoring`, after the final PDF `Ready`. Record
-  scores with `jobs.py score --as before` after Phase 3 and `--as after` after Phase 6.
-- A short "Working on more than one job" section: name the job in chat at the start of every
-  phase; never mix two jobs' files; hand over Resu Desk after it changes; when the person pastes a
-  Desk block, save it and run `apply-desk`, and read every REFUSED line back to them in plain words.
-- `references/where-files-go.md`: the new layout tree, `--job` paths, where the Desk lives.
-- `references/studio.md`: `--job` on every build command. The store key rule did not change.
-- `README.md`: a short Resu Desk section with a screenshot made from fictional data, and the
-  folder layout. `CHANGELOG.md`: an Unreleased section listing steps 1 to 5.
-- Check every edited doc for em dashes and en dashes (`check.py` already refuses them in CVs).
+- `scripts/find_python.ps1` and `scripts/find_python.sh` print the full path of the first
+  working Python 3.8+ from: `RESU_PYTHON`, `<config>/python.txt` (last answer, re-checked),
+  `CONDA_PREFIX`/`CONDA_EXE`, conda folders (miniconda3, anaconda3, miniforge3, mambaforge and
+  capitalised forms) under USERPROFILE, HOME, LOCALAPPDATA, ProgramData, C:\, C:\tools, D:\,
+  the `py` launcher, python.org installs, Homebrew and /usr/bin, then the PATH. Each candidate is
+  run; the Store placeholder fails that run. `.sh` must stay LF (`.gitattributes`).
+- SKILL.md "Before anything else: find Python" runs it before the first script; commands use its
+  path in place of `python3`. `references/where-files-go.md` has the detail and the PowerShell form.
+- `tools/test_find_python.py`: 8 checks with fake conda, old, broken and active-env Pythons. The
+  PowerShell checks only run on Windows, so the `.ps1` has not been executed yet; the owner's
+  `docs/TESTING.md` Part 1 step 3 is its first real run.
+
+## Step 6 in detail (next)
+
+- The owner runs `docs/TESTING.md` Part 1 and Part 2 on Windows. Fix anything found, with a
+  test that fails first.
+- Things only Windows can show: `paths.install()` on `D:\...` paths; `locations.json` keys
+  (`os.path.normcase`); `test_skill_commands.py` under Git Bash with Windows paths; Edge or
+  Chrome found by `to_pdf.py`; Playwright's browser.
+- Then `tools/sync_version.py` to 0.6.0, move the CHANGELOG Unreleased section under
+  `## 0.6.0, <date>`, build the `.plugin` file the way earlier releases were, and open a pull
+  request into `main`.
 
 ## Rules for working in this repo
 
@@ -230,7 +252,8 @@ Teach the skill to use all of this. Read `SKILL.md` and each reference in full f
 - **Every refusal is a full sentence** saying what was wrong and what to do instead.
 - **Never delete or overwrite a person's file.** Copy, keep beside, or refuse.
 - **Test data is always fictional.** Never use the owner's real name, email, phone or LinkedIn in
-  fixtures, samples or screenshots. Use an invented person (the tests use Sam Rivera).
+  fixtures, samples or screenshots. Use an invented person (the tests use Sam Rivera and Alex Morgan).
+- **Run `python tools/run_all_tests.py` before handing anything back.** It must say ALL PASSED.
 - **Writing for the owner**: no em dashes or en dashes, plain language, beginner-friendly
   explanations of tooling. Show evidence of testing, screenshots preferred.
 - **Do not bump the version** until step 6.

@@ -28,7 +28,8 @@ ENV.update(HOME=HOME, USERPROFILE=HOME)
 
 
 def short(text):
-    return text.replace(PROJECT, "D:/Career").replace(HOME, "~")
+    text = text.replace(PROJECT, "D:/Career").replace(HOME, "~")
+    return text.replace("\\", "/") if os.sep == "\\" and "D:\\CVs" not in text else text
 
 
 def run(skill, *args, cwd=None):
@@ -64,7 +65,7 @@ def hashes(root):
             p = os.path.join(d, f)
             if os.path.relpath(p, root) == "locations.json":
                 continue
-            out[os.path.relpath(p, root)] = hashlib.sha256(open(p, "rb").read()).hexdigest()
+            out[os.path.relpath(p, root).replace(os.sep, "/")] = hashlib.sha256(open(p, "rb").read()).hexdigest()
     return out
 
 

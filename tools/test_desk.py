@@ -29,10 +29,15 @@ def day(n):
     return (datetime.date.today() + datetime.timedelta(days=n)).isoformat()
 
 
+def _slash(t):
+    """Output with / between folders on every system, so one check reads Windows and Linux alike."""
+    return t.replace("\\", "/") if os.sep == "\\" else t
+
+
 def run(*args, env=None):
     p = subprocess.run([sys.executable] + list(args), cwd=SKILL, env=env or ENV,
                        capture_output=True, text=True, encoding="utf-8")
-    return p.returncode, (p.stdout + p.stderr).replace(DATA, "~/.resu-studio").rstrip()
+    return p.returncode, _slash((p.stdout + p.stderr).replace(DATA, "~/.resu-studio").rstrip())
 
 
 def step(title, why, cmd=None, checks=(), shot=None, env=None):
