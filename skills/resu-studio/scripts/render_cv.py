@@ -2776,6 +2776,14 @@ def main():
         rc = write_pdfs(a, doc, letter, skins, out)
         if rc:
             return rc
+        # A new PDF is a new link on Resu Desk. See build_desk.refresh: a Desk that
+        # cannot be written is one line on screen and never a failed print.
+        try:
+            sys.path.insert(0, HERE)
+            import build_desk
+            build_desk.refresh(quiet=True)
+        except Exception as e:                                 # noqa: BLE001
+            sys.stderr.write("resu-studio: Resu Desk was not updated (%s).\n" % e)
     roles = sum(1 for s in doc["sections"] for b in s["blocks"] if b["kind"] == "role")
     bullets = sum(len(b["bullets"]) for s in doc["sections"] for b in s["blocks"]
                   if b["kind"] == "role")

@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resu Desk</title>
+<!-- Resu Desk. Every application this person has open, in one page.
+
+     This file is a template. scripts/build_desk.py fills the DESK block below from each
+     job's job.json and from documents.json, and writes the result to
+     _Your Documents Are Here/Resu Desk.html. It is rebuilt whenever a job changes, so
+     the page is a picture of the records as they stood at that moment.
+
+     The page never writes a record itself. It cannot: it is a file. A stage, a closing
+     date or a note changed here is kept in this browser and comes back to the assistant
+     through "hand to AI" or "Save the desk file", and scripts/jobs.py apply-desk writes
+     it. That is the same road the Studio's decisions travel, for the same reason.
+
+     The colours are the Studio's own tokens, copied from assets/studio.html, so the two
+     pages read as one tool. The label face is Archivo Narrow, embedded by the build.
+     Nothing on this page asks the network for anything. -->
+<style id="deskfaces"></style>
+<style>
+:root{
+  color-scheme:light;
+  --table:#dee2e8; --panel:#ffffff; --panel2:#f4f6f9;
+  --ink:#12161c; --muted:#5c6674; --line:#c9cfd9; --line2:#e2e6ec;
+  --accent:#14607f; --accent-soft:#e2eef3; --on-accent:#ffffff;
+  --ok:#2e7d52; --warn:#a8681a; --gap:#a63b36; --near:#7a6a3c;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --label:"Archivo Narrow","Arial Narrow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --shadow:0 1px 2px rgba(16,22,32,.06),0 8px 26px rgba(16,22,32,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --table:#14171c; --panel:#1c2027; --panel2:#232830;
+    --ink:#e8ebf0; --muted:#949dab; --line:#2a303a; --line2:#242932;
+    --accent:#4fa3c7; --accent-soft:#1b2c36; --on-accent:#0d1418;
+    --ok:#5cb98a; --warn:#d09a4e; --gap:#e0776f; --near:#c2ad74;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --table:#14171c; --panel:#1c2027; --panel2:#232830;
+  --ink:#e8ebf0; --muted:#949dab; --line:#2a303a; --line2:#242932;
+  --accent:#4fa3c7; --accent-soft:#1b2c36; --on-accent:#0d1418;
+  --ok:#5cb98a; --warn:#d09a4e; --gap:#e0776f; --near:#c2ad74;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--table);color:var(--ink);font-family:var(--ui);font-size:15px;
+     line-height:1.5;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+[hidden]{display:none!important}
+
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 120px}
+.lab{font-family:var(--label);font-size:12px;font-weight:700;letter-spacing:.9px;
+     text-transform:uppercase;color:var(--muted)}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 20px;
+           margin-bottom:16px}
+header.top h1{margin:0;font-size:24px;letter-spacing:-.3px}
+header.top p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+
+.strip{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
+      border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13.5px;color:var(--ink)}
+.chip b{font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--sc,var(--muted))}
+
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 12px;font-size:13.5px;color:var(--muted)}
+.tools select{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+
+.list{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.head,.row{display:grid;grid-template-columns:minmax(0,2.1fr) 150px 150px 120px minmax(0,1.6fr);gap:14px;
+           padding:12px 16px;align-items:start}
+.head{background:var(--panel2);border-bottom:1px solid var(--line)}
+.row{border-top:1px solid var(--line2)}
+.head + .row{border-top:0}
+.row.changed{box-shadow:inset 3px 0 0 var(--warn)}
+.who b{display:block;font-size:15.5px}
+.who span{color:var(--muted);font-size:14px}
+.who .next{display:block;margin-top:4px;font-size:12.5px;color:var(--muted)}
+.who a.ad{font-size:12.5px;color:var(--accent)}
+.cell .lab{display:none}
+select.stage,input.date{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:14px}
+.pill{display:inline-block;margin-top:5px;font-size:12px;font-weight:600;border-radius:4px;padding:1px 6px}
+.pill.soon{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.pill.past{background:color-mix(in srgb,var(--gap) 16%,transparent);color:var(--gap)}
+.score{font-variant-numeric:tabular-nums;font-size:14px}
+.score .big{font-weight:700;font-size:16px}
+.score small{display:block;color:var(--muted);font-size:12px}
+.docs{display:flex;flex-direction:column;gap:6px;min-width:0}
+.doc a{color:var(--accent);font-weight:600;text-decoration:none}
+.doc a:hover{text-decoration:underline}
+.doc .gone{color:var(--muted);text-decoration:line-through}
+.doc code{display:block;font-size:11.5px;color:var(--muted);overflow-wrap:anywhere;font-family:ui-monospace,Menlo,Consolas,monospace}
+.notes{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:flex-start;font-size:13.5px;color:var(--muted)}
+.notes .last{flex:1 1 320px;min-width:0}
+.notes button,.btn{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.notes textarea{width:100%;min-height:58px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:14px}
+.badge{font-size:11.5px;font-weight:700;color:var(--warn);font-family:var(--label);letter-spacing:.6px;text-transform:uppercase}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+details.closed{margin-top:16px}
+details.closed summary{cursor:pointer;padding:6px 2px;font-size:14px;color:var(--muted)}
+details.closed .list{margin-top:8px}
+
+.tray{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+      box-shadow:0 -8px 26px rgba(16,22,32,.12);padding:10px 16px;z-index:5}
+.tray .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.tray .msg{flex:1 1 260px;font-size:14px}
+.tray textarea{width:100%;min-height:180px;margin-top:8px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace;
+               background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px}
+.foot{margin-top:18px;font-size:12.5px;color:var(--muted)}
+
+@media (max-width:860px){
+  .head{display:none}
+  .row{grid-template-columns:1fr 1fr;gap:10px 12px}
+  .who,.docs,.notes{grid-column:1 / -1}
+  .cell .lab{display:block;margin-bottom:2px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Resu Desk</h1>
+      <p id="sub"></p>
+    </div>
+    <p id="built" class="lab"></p>
+  </header>
+  <div class="strip" id="strip" role="group" aria-label="Filter by stage"></div>
+  <div class="tools">
+    <label>Sort by
+      <select id="sort">
+        <option value="closes">closing date</option>
+        <option value="updated">last change</option>
+        <option value="employer">employer</option>
+      </select>
+    </label>
+    <span id="showing"></span>
+  </div>
+  <div class="list" id="open"></div>
+  <details class="closed" id="closedBox" hidden>
+    <summary id="closedSum"></summary>
+    <div class="list" id="closed"></div>
+  </details>
+  <p class="foot">Links open the files in your own folder. They work when this page is opened from
+    that folder. If a link does not open, the grey line under it says where the file is.</p>
+</div>
+
+<div class="tray" id="tray" hidden>
+  <div class="in">
+    <div class="msg" id="trayMsg"></div>
+    <button class="btn primary" id="handBtn" type="button">hand to AI</button>
+    <button class="btn" id="saveBtn" type="button">Save the desk file</button>
+    <button class="btn" id="clearBtn" type="button">Undo all</button>
+    <div id="handBox" hidden style="flex-basis:100%">
+      <textarea id="handText" readonly aria-label="Text to paste into the chat"></textarea>
+      <button class="btn" id="copyBtn" type="button" style="margin-top:6px">Copy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* The records, written in by scripts/build_desk.py. Empty in the template. */
+const DESK = {"schema":1,"built":"","key":"template","stages":[],"closed":[],"jobs":[]};
+
+const NEXT = {
+  "Saved":"Next: score it against your CV",
+  "Scoring":"Next: look at where you stand, then the suggested changes",
+  "Tailoring":"Next: decide on the changes in the Studio",
+  "Ready":"Next: send it, then mark it Applied",
+  "Applied":"Waiting to hear back",
+  "Interview":"Next: get ready for the interview",
+  "Offer":"Next: decide on the offer",
+  "Rejected":"", "Withdrawn":""
+};
+const STAGE_COLOUR = {
+  "Saved":"var(--muted)","Scoring":"var(--near)","Tailoring":"var(--warn)","Ready":"var(--accent)",
+  "Applied":"var(--accent)","Interview":"var(--ok)","Offer":"var(--ok)","Rejected":"var(--gap)","Withdrawn":"var(--muted)"
+};
+
+/* One store per person's folder. Pages opened from disk share one storage area in most
+   browsers, so a bare name would let two people's Desks on one machine, or a test
+   folder and a real one, see each other's unsent changes. */
+const STORE = "resu-desk:" + DESK.key;
+let EDITS = {};
+try{ EDITS = JSON.parse(localStorage.getItem(STORE) || "{}") || {}; }catch(e){ EDITS = {}; }
+let FILTER = "";
+
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(EDITS)); }catch(e){} }
+function byId(id){ return DESK.jobs.find(j => j.id === id); }
+
+/* A change that the records already hold was carried out by apply-desk and the page
+   was rebuilt since. It is dropped here, so a rebuilt Desk opens clean instead of
+   offering to send the same change twice. A change the records do not hold is kept. */
+function settle(){
+  Object.keys(EDITS).forEach(id => {
+    const j = byId(id), e = EDITS[id];
+    if(!j){ delete EDITS[id]; return; }
+    if(e.stage && j.stage === e.stage.to) delete e.stage;
+    if(e.closes && (j.closes || "") === (e.closes.to || "")) delete e.closes;
+    if(e.note && (j.notes || []).some(n => n.text === e.note)) delete e.note;
+    if(!e.stage && !e.closes && !e.note) delete EDITS[id];
+  });
+  save();
+}
+
+function today(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function daysUntil(iso){
+  if(!iso) return null;
+  const p = iso.split("-").map(Number); const d = new Date(p[0], p[1]-1, p[2]);
+  return Math.round((d - today()) / 86400000);
+}
+function stageOf(j){ const e = EDITS[j.id]; return e && e.stage ? e.stage.to : j.stage; }
+function closesOf(j){ const e = EDITS[j.id]; return e && e.closes ? e.closes.to : (j.closes || ""); }
+function isClosed(j){ return DESK.closed.indexOf(stageOf(j)) >= 0; }
+
+function el(tag, attrs, kids){
+  const n = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(k => {
+    if(k === "text") n.textContent = attrs[k];
+    else if(k === "cls") n.className = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  });
+  (kids || []).forEach(c => { if(c) n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return n;
+}
+
+function change(id, field, value){
+  const j = byId(id); if(!j) return;
+  const e = EDITS[id] || (EDITS[id] = {base: j.updated || ""});
+  const was = field === "stage" ? j.stage : (j.closes || "");
+  if(field === "note"){
+    if(value.trim()) e.note = value.trim(); else delete e.note;
+  } else if(value === was){
+    delete e[field];
+  } else {
+    e[field] = {from: was, to: value};
+  }
+  if(!e.stage && !e.closes && !e.note) delete EDITS[id];
+  save(); draw();
+}
+
+function scoreCell(j){
+  const b = j.before, a = j.after;
+  const box = el("div", {cls:"cell score"}, [el("div", {cls:"lab", text:"Found on your CV"})]);
+  const s = a || b;
+  if(!s || !s.asks_total){ box.appendChild(el("span", {text:"Not scored yet"})); return box; }
+  const main = el("div");
+  if(a && b){
+    main.appendChild(el("span", {cls:"big", text: b.a_reader_would_find + " → " + a.a_reader_would_find}));
+  } else {
+    main.appendChild(el("span", {cls:"big", text: String(s.a_reader_would_find)}));
+  }
+  main.appendChild(document.createTextNode(" of " + s.asks_total));
+  box.appendChild(main);
+  box.appendChild(el("small", {text: a && b ? "before and after tailoring" : "before tailoring"}));
+  return box;
+}
+
+function docsCell(j){
+  const box = el("div", {cls:"cell docs"}, [el("div", {cls:"lab", text:"Documents"})]);
+  if(!j.docs.length){ box.appendChild(el("span", {cls:"doc", text:"Nothing made yet"})); return box; }
+  j.docs.forEach(d => {
+    const label = d.kind === "studio" ? "Studio" : d.kind === "letter" ? "Cover letter PDF" : "CV PDF";
+    const line = el("div", {cls:"doc"});
+    if(d.exists) line.appendChild(el("a", {href:d.href, text:label, title:d.name}));
+    else line.appendChild(el("span", {cls:"gone", text:label, title:"This file has been moved or deleted"}));
+    line.appendChild(el("code", {text: d.where}));
+    box.appendChild(line);
+  });
+  return box;
+}
+
+function row(j){
+  const e = EDITS[j.id] || {};
+  const st = stageOf(j), cl = closesOf(j);
+  const r = el("div", {cls:"row" + (EDITS[j.id] ? " changed" : ""), "data-job": j.id});
+
+  const who = el("div", {cls:"who"}, [
+    el("b", {text: j.employer || "(employer not recorded)"}),
+    el("span", {text: j.role}),
+  ]);
+  if(j.link) who.appendChild(el("div", {}, [el("a", {cls:"ad", href:j.link, text:"the advertisement", rel:"noopener", target:"_blank"})]));
+  if(NEXT[st]) who.appendChild(el("span", {cls:"next", text: NEXT[st]}));
+  if(EDITS[j.id]) who.appendChild(el("span", {cls:"badge", text:"changed here, not sent yet"}));
+  /* The record moved on after this change was made here, usually because the assistant
+     changed it in the chat. apply-desk will refuse this change, so say so now, on the row. */
+  const stale = [];
+  if(e.stage && e.stage.from !== j.stage) stale.push("stage is " + j.stage);
+  if(e.closes && (e.closes.from || "") !== (j.closes || "")) stale.push("closing date is " + (j.closes || "not set"));
+  if(stale.length) who.appendChild(el("span", {cls:"pill past", text:"Your records now say the " + stale.join(" and the ") + ". Undo to use that."}));
+  r.appendChild(who);
+
+  const sel = el("select", {cls:"stage", "aria-label":"Stage for " + j.role + " at " + j.employer});
+  DESK.stages.forEach(s => { const o = el("option", {value:s, text:s}); if(s === st) o.selected = true; sel.appendChild(o); });
+  sel.addEventListener("change", () => change(j.id, "stage", sel.value));
+  r.appendChild(el("div", {cls:"cell"}, [el("div", {cls:"lab", text:"Stage"}), sel]));
+
+  const date = el("input", {type:"date", cls:"date", value: cl, "aria-label":"Closing date"});
+  date.addEventListener("change", () => change(j.id, "closes", date.value));
+  const dc = el("div", {cls:"cell"}, [el("div", {cls:"lab", text:"Closes"}), date]);
+  const n = daysUntil(cl);
+  if(n !== null && !isClosed(j) && ["Saved","Scoring","Tailoring","Ready"].indexOf(st) >= 0){
+    if(n < 0) dc.appendChild(el("span", {cls:"pill past", text:"closed " + (-n) + (n === -1 ? " day" : " days") + " ago"}));
+    else if(n <= 7) dc.appendChild(el("span", {cls:"pill soon", text: n === 0 ? "closes today" : "closes in " + n + (n === 1 ? " day" : " days")}));
+  }
+  r.appendChild(dc);
+
+  r.appendChild(scoreCell(j));
+  r.appendChild(docsCell(j));
+
+  const notes = el("div", {cls:"notes"});
+  const last = (j.notes || []).slice(-1)[0];
+  notes.appendChild(el("div", {cls:"last", text: last ? "Last note, " + last.on + ": " + last.text : "No notes yet."}));
+  const area = el("textarea", {"aria-label":"A new note", placeholder:"A new note, in your own words"});
+  area.value = e.note || "";
+  const openBtn = el("button", {type:"button", text: e.note ? "Edit the note" : "Add a note"});
+  const noteBox = el("div", {style:"flex-basis:100%"}, [area]);
+  noteBox.hidden = !e.note;
+  openBtn.addEventListener("click", () => { noteBox.hidden = false; area.focus(); });
+  area.addEventListener("change", () => change(j.id, "note", area.value));
+  notes.appendChild(openBtn);
+  if(EDITS[j.id]){
+    const undo = el("button", {type:"button", text:"Undo"});
+    undo.addEventListener("click", () => { delete EDITS[j.id]; save(); draw(); });
+    notes.appendChild(undo);
+  }
+  notes.appendChild(noteBox);
+  r.appendChild(notes);
+  return r;
+}
+
+function sorted(list){
+  const how = document.getElementById("sort").value;
+  return list.slice().sort((a, b) => {
+    if(how === "employer") return (a.employer || "").localeCompare(b.employer || "") || a.role.localeCompare(b.role);
+    if(how === "updated") return (b.updated || "").localeCompare(a.updated || "");
+    return (closesOf(a) || "9999").localeCompare(closesOf(b) || "9999") || a.id.localeCompare(b.id);
+  });
+}
+
+function head(){
+  return el("div", {cls:"head"}, ["Application","Stage","Closes","Found on your CV","Documents"]
+    .map(t => el("div", {cls:"lab", text:t})));
+}
+
+function draw(){
+  const jobs = DESK.jobs;
+  const open = jobs.filter(j => !isClosed(j)), closed = jobs.filter(isClosed);
+  document.getElementById("sub").textContent = jobs.length
+    ? open.length + " open application" + (open.length === 1 ? "" : "s") + (closed.length ? ", " + closed.length + " closed" : "")
+    : "No applications yet";
+  document.getElementById("built").textContent = DESK.built ? "Built " + DESK.built : "";
+
+  const strip = document.getElementById("strip"); strip.textContent = "";
+  const all = el("button", {cls:"chip", type:"button", "aria-pressed": String(!FILTER)}, [el("span", {text:"All open"}), el("b", {text:String(open.length)})]);
+  all.addEventListener("click", () => { FILTER = ""; draw(); });
+  strip.appendChild(all);
+  DESK.stages.forEach(s => {
+    const c = jobs.filter(j => stageOf(j) === s).length;
+    if(!c) return;
+    const b = el("button", {cls:"chip", type:"button", "aria-pressed": String(FILTER === s), style:"--sc:" + STAGE_COLOUR[s]},
+                 [el("span", {cls:"dot"}), el("span", {text:s}), el("b", {text:String(c)})]);
+    b.addEventListener("click", () => { FILTER = FILTER === s ? "" : s; draw(); });
+    strip.appendChild(b);
+  });
+
+  const shown = FILTER ? jobs.filter(j => stageOf(j) === FILTER) : open;
+  const box = document.getElementById("open"); box.textContent = "";
+  if(!jobs.length){
+    box.appendChild(el("div", {cls:"empty", text:"No jobs yet. Give the assistant a job ad and it will start one here."}));
+  } else if(!shown.length){
+    box.appendChild(el("div", {cls:"empty", text:"Nothing at this stage."}));
+  } else {
+    box.appendChild(head());
+    sorted(shown).forEach(j => box.appendChild(row(j)));
+  }
+  document.getElementById("showing").textContent = FILTER ? "Showing " + FILTER + " only" : "";
+
+  const cb = document.getElementById("closedBox"), cl = document.getElementById("closed");
+  cb.hidden = !!FILTER || !closed.length; cl.textContent = "";
+  document.getElementById("closedSum").textContent = "Closed (" + closed.length + ")";
+  if(closed.length){ cl.appendChild(head()); sorted(closed).forEach(j => cl.appendChild(row(j))); }
+
+  const n = Object.keys(EDITS).length;
+  document.getElementById("tray").hidden = !n;
+  document.getElementById("trayMsg").textContent = n
+    ? "You changed " + n + " application" + (n === 1 ? "" : "s") + " here. Nothing reaches your records until you send it."
+    : "";
+  if(!n) document.getElementById("handBox").hidden = true;
+  else if(!document.getElementById("handBox").hidden) document.getElementById("handText").value = handText();
+}
+
+/* What goes back to the assistant. Each change carries the value it replaced, so
+   apply-desk can tell when the record moved on after this page was built and ask
+   instead of writing over it. */
+function updatesFile(){
+  return JSON.stringify({
+    desk: 1, built: DESK.built, key: DESK.key,
+    changes: Object.keys(EDITS).map(id => Object.assign({job: id}, EDITS[id]))
+  }, null, 1);
+}
+function handText(){
+  const L = ["Changes from Resu Desk. Please save the JSON below as desk-updates.json and run",
+             "scripts/jobs.py apply-desk on it.", ""];
+  Object.keys(EDITS).forEach(id => {
+    const j = byId(id), e = EDITS[id];
+    L.push("- " + j.role + " at " + (j.employer || "(no employer)"));
+    if(e.stage) L.push("    stage: " + e.stage.from + " to " + e.stage.to);
+    if(e.closes) L.push("    closes: " + (e.closes.from || "not set") + " to " + (e.closes.to || "not set"));
+    if(e.note) L.push("    new note: " + e.note);
+  });
+  L.push("", "```json", updatesFile(), "```");
+  return L.join("\n");
+}
+
+async function copyText(text){
+  try{
+    if(!navigator.clipboard || !navigator.clipboard.writeText) return false;
+    return await Promise.race([
+      navigator.clipboard.writeText(text).then(() => true, () => false),
+      new Promise(r => setTimeout(() => r(false), 1200))
+    ]);
+  }catch(e){ return false; }
+}
+
+document.getElementById("sort").addEventListener("change", draw);
+document.getElementById("handBtn").addEventListener("click", () => {
+  const box = document.getElementById("handBox");
+  box.hidden = !box.hidden;
+  document.getElementById("handText").value = handText();
+});
+document.getElementById("copyBtn").addEventListener("click", async (ev) => {
+  const ok = await copyText(document.getElementById("handText").value);
+  ev.target.textContent = ok ? "Copied" : "Select the text and copy it";
+  setTimeout(() => ev.target.textContent = "Copy", 1800);
+});
+document.getElementById("saveBtn").addEventListener("click", async (ev) => {
+  const data = updatesFile(), btn = ev.target;
+  try{
+    if(typeof claude !== "undefined" && claude.use){
+      const dl = await claude.use("downloads");
+      if(dl){ await dl.save({filename:"desk-updates.json", data:data}); btn.textContent = "Saved"; setTimeout(() => btn.textContent = "Save the desk file", 1600); return; }
+    }
+  }catch(e){}
+  try{
+    const url = URL.createObjectURL(new Blob([data], {type:"application/json"}));
+    const a = document.createElement("a"); a.href = url; a.download = "desk-updates.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    btn.textContent = "Saved"; setTimeout(() => btn.textContent = "Save the desk file", 1600);
+  }catch(e){
+    btn.textContent = (await copyText(data)) ? "Copied instead" : "Use hand to AI instead";
+  }
+});
+document.getElementById("clearBtn").addEventListener("click", () => { EDITS = {}; save(); draw(); });
+
+settle();
+draw();
+</script>
+</body>
+</html>

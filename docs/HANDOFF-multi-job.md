@@ -27,8 +27,8 @@ adds **Resu Desk**, an HTML page listing every application with its stage and li
 | 1 | `scripts/jobs.py` (new, list, show, stage, note, set, score), `templates/job.json`, `paths.py --job` | Done, committed as `feat(jobs): one folder per job ad, with job.json and paths --job` |
 | 2 | `jobs.py adopt`: copy loose single-job files into a job folder | Done, with `tools/test_jobs.py` and these notes |
 | 3 | `build_studio.py`, `render_cv.py`, `check.py`, `documents.py` take `--job` | Done, tested by `tools/test_jobs_build.py` |
-| 4 | `build_desk.py` and `assets/desk.html` | **Next** |
-| 5 | `SKILL.md`, `references/where-files-go.md`, `references/studio.md`, `README.md`, `CHANGELOG.md` | Not started |
+| 4 | `build_desk.py`, `assets/desk.html`, `jobs.py apply-desk` | Done, tested by `tools/test_desk.py` |
+| 5 | `SKILL.md`, `references/where-files-go.md`, `references/studio.md`, `README.md`, `CHANGELOG.md` | **Next** |
 | 6 | Full test run with a fake person and two fake ads, version bump to 0.6.0 via `tools/sync_version.py` | Not started |
 
 Check `git log --oneline` to confirm what has landed.
@@ -79,21 +79,61 @@ Check `git log --oneline` to confirm what has landed.
 - Tests: `tools/test_jobs_build.py`, 10 scenarios, 23 checks, uses the fictional CV in
   `docs/review/sample-cv.md`. It prints a PDF, so it needs Chromium, Chrome or Edge (`CV_BROWSER`).
 
-## Step 4 in detail (next)
+## What step 4 changed
 
-- `scripts/build_desk.py`: read `jobs.all_jobs()` and `documents.load_ledger(paths.documents_ledger())`.
-  Group documents by their `job` field. Write `_Your Documents Are Here/Resu Desk.html` from
-  `assets/desk.html`, swapping `const` blocks the way `build_studio.swap_const` does.
-- One row per job: employer, role, stage, closing date (flag ones closing within 7 days), before
-  and after score (`a_reader_would_find` of `asks_total`), last updated, relative links to its
-  Studio and PDFs. Open jobs first, closed below.
-- Filter by stage, sort by closing date. Stage, closing date and notes editable in the page,
-  saved in localStorage under `resu-desk` (wrapped in try/catch), returned through a
-  **hand to AI** block and a **Save the desk file** button (`desk-updates.json`), matching the
-  Studio's pattern. Then add `jobs.py apply-desk <desk-updates.json>` to write those changes.
-- Match the Studio's look: read the `:root` tokens and fonts in `assets/studio.html`. Do not edit it.
-- Call `build_desk.py` at the end of `build_studio.py`, `render_cv.py --pdf` and every `jobs.py`
-  command that changes a record, so the Desk is never stale. Never let a Desk failure fail those.
+Defaults the owner accepted: a table (not stage columns), new jobs start in chat (not on the
+Desk), no extra fields beyond what `job.json` already holds.
+
+- `assets/desk.html` (new): full HTML document, Studio's `:root` colour tokens (light and dark),
+  Archivo Narrow embedded by the build, no network. Stage count strip (click to filter), sort by
+  closing date, last change or employer, one row per job, closed jobs folded under
+  "Closed (n)", a "Next:" hint per stage, closing flags ("closes in 3 days", "closed 1 day ago")
+  only for Saved to Ready. Works at 390px wide.
+- Editing on the page: stage, closing date, new note. Kept in localStorage under
+  `resu-desk:<sha1 of data folder>[:10]` (every call in try/catch). A bottom tray offers
+  **hand to AI** (plain summary plus a ```json block), **Save the desk file**
+  (`desk-updates.json`, via `claude.use("downloads")` when present, else a Blob download, else
+  clipboard) and **Undo all**. On load, `settle()` drops changes the records already hold, so a
+  rebuilt Desk opens clean. A row whose record moved on since the change says so on the row.
+- `scripts/build_desk.py` (new): `build(out)`, `refresh(quiet)` (never raises, prints one line on
+  failure), `desk_data()`. Documents for a job: ledger records with that `job` id, plus older
+  records with no job whose role and employer match. Links are relative and URL-quoted; each also
+  carries a plain `where` path. Data is embedded with `</` escaped. Atomic write, temp file removed
+  on failure. Exit 5 when it cannot write.
+- `scripts/jobs.py apply-desk <file> [--dry-run]`: accepts the JSON file or the whole pasted
+  hand-to-AI text. Each stage or closing date change carries `from`; if the record no longer
+  holds `from`, that change is REFUSED with a sentence naming both values, and the rest still
+  apply. Notes are only added, duplicates skipped. Exit 4 when anything was refused. This
+  per-field check replaced the plan's "compare the updated date", because `updated` is only a
+  date and would refuse unrelated same-day changes.
+- Desk rebuild hooks: `jobs.py` after new, stage, note, set, score, adopt and apply-desk (silent);
+  `build_studio.py` after writing (prints `desk   : <path>`); `render_cv.py` after `--pdf`.
+- Tests: `tools/test_desk.py`, 13 scenarios, 48 checks. Needs Playwright for Python and Chromium.
+  Screenshots land in `<temp>/resu-test-desk/shots`.
+
+## Step 5 in detail (next)
+
+Teach the skill to use all of this. Read `SKILL.md` and each reference in full first.
+
+- `SKILL.md` Phase 1: before copying a new ad, run `jobs.py list`. If loose files are reported,
+  offer `jobs.py adopt --dry-run`, confirm the job with the person, then `adopt`. For a new ad,
+  `jobs.py new --role --employer [--link --closes]` and copy the ad into
+  `paths.py --job <id> --job-ad`. Replace the "a new advertisement replaces the last one"
+  warning: nothing is replaced now.
+- Every later command in SKILL.md passes `--job <id>` and names job files through
+  `paths.py --job <id>` (asks.md, scorecard.md, proposals.md, achievements.md,
+  cv-decisions.json, cv-<variant>.md, cover-letter-<variant>.md). `facts.md`, `answers.md`,
+  `cv-source/` stay where they are. Depth goes into `job.json` with `jobs.py set <id> depth`.
+- Stage moves: Phase 3 start `Scoring`, Phase 4 `Tailoring`, after the final PDF `Ready`. Record
+  scores with `jobs.py score --as before` after Phase 3 and `--as after` after Phase 6.
+- A short "Working on more than one job" section: name the job in chat at the start of every
+  phase; never mix two jobs' files; hand over Resu Desk after it changes; when the person pastes a
+  Desk block, save it and run `apply-desk`, and read every REFUSED line back to them in plain words.
+- `references/where-files-go.md`: the new layout tree, `--job` paths, where the Desk lives.
+- `references/studio.md`: `--job` on every build command. The store key rule did not change.
+- `README.md`: a short Resu Desk section with a screenshot made from fictional data, and the
+  folder layout. `CHANGELOG.md`: an Unreleased section listing steps 1 to 5.
+- Check every edited doc for em dashes and en dashes (`check.py` already refuses them in CVs).
 
 ## Rules for working in this repo
 

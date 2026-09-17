@@ -1007,6 +1007,11 @@ def main():
     print("  content: %s. Marks saved against a different one are checked against "
           "their own\n           wording before any of them is put back on a line."
           % fp)
+    try:
+        import build_desk
+        build_desk.refresh(quiet=False)
+    except Exception as e:                                     # noqa: BLE001
+        sys.stderr.write("resu-studio: Resu Desk was not updated (%s).\n" % e)
     print()
     print("Hand the file over so they can open it themselves. It draws their own CV live")
     print("with every layout, palette and typeface as a control, and prints the command for")

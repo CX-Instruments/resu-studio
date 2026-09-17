@@ -28,6 +28,11 @@ Finished documents for a job go in their own folder too, inside
     python3 scripts/jobs.py set <job> closes 2026-10-01
     python3 scripts/jobs.py score <job> --scorecard <scorecard.md> --as before|after
     python3 scripts/jobs.py adopt [--dry-run] [--role R --employer E | --job <job>]
+    python3 scripts/jobs.py apply-desk <desk-updates.json> [--dry-run]
+
+`apply-desk` writes the changes a person made on Resu Desk: a stage, a closing date, a
+new note. Each change says what it replaced, and one whose record has moved on since
+the Desk was built is refused, by name, rather than written over the newer value.
 
 `adopt` is for somebody who used this before jobs had folders. Their last
 application's working files are still loose in their folder; it copies them into a job,
@@ -558,6 +563,116 @@ def loose_notice():
                                      ", ".join(files), paths.PY))
 
 
+# ------------------------------------------------------------------ changes from the Desk
+
+def read_desk_updates(path):
+    """The changes out of a desk-updates.json, or out of the pasted hand-to-AI text.
+
+    The hand-to-AI block is prose with the JSON in a fenced block at the end, and an
+    assistant may save the whole paste rather than just the JSON. Either is accepted.
+    """
+    with io.open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    try:
+        data = json.loads(text)
+    except ValueError:
+        m = re.search(r"```json\s*(\{.*\})\s*```", text, re.S)
+        if not m:
+            raise ValueError("%s is neither desk-updates.json nor a pasted hand-to-AI block "
+                             "with a ```json section, so there are no changes to read." % path)
+        data = json.loads(m.group(1))
+    if not isinstance(data, dict) or not isinstance(data.get("changes"), list):
+        raise ValueError("%s has no list of changes in it. It should be the file Resu Desk "
+                         "saves, desk-updates.json." % path)
+    return data
+
+
+def apply_desk(path, dry_run=False):
+    """Write the Desk's changes into the job records. Returns a report.
+
+    A stage or a closing date is written only when the record still holds the value the
+    Desk showed. When it does not, something else changed that job after the Desk was
+    built, most often the assistant moving it on in the chat, and writing the Desk's
+    older idea over it would lose that. Those are refused, named, and left for the
+    person. A note is only ever added, never replaces anything, so it is never refused
+    for being stale; the same note already on the job is skipped.
+    """
+    data = read_desk_updates(path)
+    report = {"applied": [], "refused": [], "skipped": [], "dry_run": dry_run}
+    for ch in data["changes"]:
+        jid = (ch or {}).get("job", "")
+        try:
+            rec = load(jid)
+        except paths.NoSuchJob as e:
+            report["refused"].append("%s: %s" % (jid or "(no job named)", e))
+            continue
+        name = "%s at %s" % (rec.get("role"), rec.get("employer") or "(no employer)")
+        touched = False
+
+        st = ch.get("stage")
+        if isinstance(st, dict):
+            to = stage_named(st.get("to"))
+            if not to:
+                report["refused"].append("%s: %r is not a stage, so the stage was left at %s."
+                                         % (name, st.get("to"), rec.get("stage")))
+            elif rec.get("stage") == to:
+                report["skipped"].append("%s: already at %s." % (name, to))
+            elif rec.get("stage") != st.get("from"):
+                report["refused"].append(
+                    "%s: the Desk moved it from %s to %s, but it has been at %s since the "
+                    "Desk was built. Left at %s. Ask the person whether %s is still right."
+                    % (name, st.get("from"), to, rec.get("stage"), rec.get("stage"), to))
+            else:
+                rec["stage"] = to
+                rec.setdefault("history", []).append({"stage": to, "on": today()})
+                report["applied"].append("%s: stage %s to %s." % (name, st.get("from"), to))
+                touched = True
+
+        cl = ch.get("closes")
+        if isinstance(cl, dict):
+            to = (cl.get("to") or "").strip()
+            was = rec.get("closes") or ""
+            if not valid_date(to):
+                report["refused"].append("%s: %r is not a date written YYYY-MM-DD, so the "
+                                         "closing date was left as it was." % (name, to))
+            elif was == to:
+                report["skipped"].append("%s: closing date already %s." % (name, to or "empty"))
+            elif was != (cl.get("from") or ""):
+                report["refused"].append(
+                    "%s: the Desk changed the closing date from %s to %s, but it has been %s "
+                    "since the Desk was built. Left as %s. Ask the person which is right."
+                    % (name, cl.get("from") or "not set", to or "not set", was or "not set",
+                       was or "not set"))
+            else:
+                rec["closes"] = to
+                report["applied"].append("%s: closing date %s to %s."
+                                         % (name, was or "not set", to or "not set"))
+                touched = True
+
+        note = (ch.get("note") or "").strip()
+        if note:
+            if any(n.get("text") == note for n in rec.get("notes") or []):
+                report["skipped"].append("%s: that note is already there." % name)
+            else:
+                rec.setdefault("notes", []).append({"on": today(), "text": note})
+                report["applied"].append("%s: note added." % name)
+                touched = True
+
+        if touched and not dry_run:
+            save(rec)
+    return report
+
+
+def refresh_desk():
+    """Rebuild Resu Desk after a record changed. A Desk problem never fails the command."""
+    try:
+        import build_desk
+    except Exception as e:                                     # noqa: BLE001
+        sys.stderr.write("jobs.py: Resu Desk was not updated (%s).\n" % e)
+        return
+    build_desk.refresh(quiet=True)
+
+
 # ------------------------------------------------------------------ printing
 
 def _score_text(s):
@@ -637,6 +752,10 @@ def main(argv=None):
     p.add_argument("--job", default=None, help="an existing job to bring them into")
     p.add_argument("--dry-run", action="store_true", help="say what would happen, change nothing")
 
+    p = sub.add_parser("apply-desk", help="write the changes saved from Resu Desk")
+    p.add_argument("file", help="desk-updates.json, or the pasted hand-to-AI text")
+    p.add_argument("--dry-run", action="store_true", help="say what would happen, change nothing")
+
     try:
         a = ap.parse_args(argv)
     except SystemExit as e:
@@ -649,9 +768,31 @@ def main(argv=None):
         if a.cmd == "new":
             rec = create(a.role, a.employer, a.link, a.reference, a.location,
                          a.closes, a.depth, a.again)
+            refresh_desk()
             print("started %s" % rec["id"])
             print(describe(rec))
             return 0
+
+        if a.cmd == "apply-desk":
+            try:
+                r = apply_desk(a.file, a.dry_run)
+            except (IOError, OSError) as e:
+                sys.stderr.write("jobs.py: could not read %s (%s).\n" % (a.file, e))
+                return 2
+            head = "would write" if r["dry_run"] else "wrote"
+            print("%s %d change%s from Resu Desk" % (head, len(r["applied"]),
+                                                    "" if len(r["applied"]) == 1 else "s"))
+            for line in r["applied"]:
+                print("  done     : %s" % line)
+            for line in r["skipped"]:
+                print("  no change: %s" % line)
+            for line in r["refused"]:
+                print("  REFUSED  : %s" % line)
+            if r["dry_run"]:
+                print("  nothing was changed.")
+            elif r["applied"]:
+                refresh_desk()
+            return 4 if r["refused"] else 0
 
         if a.cmd == "adopt":
             r = adopt(a.role, a.employer, a.job, a.dry_run)
@@ -681,6 +822,7 @@ def main(argv=None):
                       % (r["tagged"], "" if r["tagged"] == 1 else "s",
                          "s" if r["tagged"] == 1 else "", "it was" if r["tagged"] == 1
                          else "they were"))
+            refresh_desk()
             print("  the originals are still in %s, untouched." % paths.data_dir())
             if r.get("new_job"):
                 print("  the advertisement itself stays in cv-source/. Copy it into %s"
@@ -714,21 +856,25 @@ def main(argv=None):
 
         if a.cmd == "stage":
             rec = set_stage(a.job, a.stage, a.on)
+            refresh_desk()
             print("%s is now at %s" % (rec["id"], rec["stage"]))
             return 0
 
         if a.cmd == "note":
             rec = add_note(a.job, a.text)
+            refresh_desk()
             print("noted on %s" % rec["id"])
             return 0
 
         if a.cmd == "set":
             rec = set_field(a.job, a.field, a.value)
+            refresh_desk()
             print("%s: %s is now %s" % (rec["id"], a.field, rec[a.field] or "(empty)"))
             return 0
 
         if a.cmd == "score":
             rec = record_score(a.job, a.scorecard, a.which)
+            refresh_desk()
             print("%s: %s score recorded, %s"
                   % (rec["id"], a.which, _score_text(rec["scores"][a.which])))
             return 0

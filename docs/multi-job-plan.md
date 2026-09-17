@@ -88,6 +88,6 @@ Built as `jobs.py adopt`, run when the assistant asks (not automatically), after
 1. `jobs.py`, `templates/job.json`, `paths.py --job` (done)
 2. Existing data copy-forward, `jobs.py adopt` (done)
 3. `check.py`, `build_studio.py`, `render_cv.py`, `documents.py` output paths (done)
-4. `build_desk.py` and `assets/desk.html`
+4. `build_desk.py` and `assets/desk.html` (done)
 5. `SKILL.md` and references
 6. Test run with a fake person and two fake ads
