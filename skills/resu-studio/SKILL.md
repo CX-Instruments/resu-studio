@@ -4,7 +4,7 @@ description: This skill should be used whenever the user is applying for a job, 
 license: AGPL-3.0-or-later
 compatibility: Runs its scripts with Python 3 (standard library only) and prints PDFs through a Chromium-family browser such as Chrome, Edge or Chromium. Works in any agent that can run commands; in a chat that cannot, the scoring, proposals and letter still work and the studio and PDF do not.
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
   author: CX Instruments
   homepage: https://github.com/CX-Instruments/resu-studio/blob/main/README.md
 ---

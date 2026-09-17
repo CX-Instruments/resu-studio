@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (branch feature/multi-job-desk)
+## 0.6.0, 17 September 2026
 
 Resu Studio now works on more than one job at a time, shows every application on one page,
 and asks where a person's private files should live before it keeps any.
@@ -68,6 +68,9 @@ tells assistants to open the Desk and Studio in the person's web browser, never 
 `test_data_folder.py`, `test_end_to_end.py`, and `test_skill_commands.py`, which runs every
 command SKILL.md documents, as written. `docs/TESTING.md` says how to run them and how to
 try the branch by hand.
+
+**Releases** are packed by `tools/build_plugin.py`, which checks every manifest carries the
+same version and writes `dist/resu-studio-<version>.plugin`.
 
 ## 0.5.0, 16 September 2026
 
