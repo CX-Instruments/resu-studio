@@ -231,6 +231,19 @@ shows nothing from the data folder, bring from old layout, choice remembered.
   PowerShell checks only run on Windows, so the `.ps1` has not been executed yet; the owner's
   `docs/TESTING.md` Part 1 step 3 is its first real run.
 
+## After the owner's first Part 2 test
+
+- Owner found jargon in chat ("requirements ledger") and no sign the Studio was coming.
+  SKILL.md now has "Say it in their words, never the skill's" (a word table), a per-stop
+  script, the Studio named in the opening, and Phase 2 running straight into Phase 3 unless
+  the person is needed. `references/working-with-the-person.md` and README phases updated.
+- Owner found Resu Desk looked unlike the Studio and unclear to use. `assets/desk.html` was
+  rebuilt from `studio.html`'s components (rail, brand, tabs, `.grp`, `.opt`, `.seg`, `.cta`,
+  drawer): cards per job, Open Studio / CV PDF / Cover letter PDF buttons, Next step, Update
+  this application (stage, closing date, note), at-a-glance tiles, How it works tab.
+  `build_desk.py` stamps the skill version like the Studio. `tools/test_desk.py` updated to
+  the new page (48 checks). `docs/images/desk.png` refreshed.
+
 ## Step 6 in detail (next)
 
 - The owner runs `docs/TESTING.md` Part 1 and Part 2 on Windows. Fix anything found, with a

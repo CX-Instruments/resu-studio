@@ -42,6 +42,20 @@ usual Anaconda, Miniconda, Miniforge and Mambaforge folder, the `py` launcher, p
 installs and the PATH, run each one, keep the first real Python 3.8 or newer, and remember
 it. SKILL.md runs the finder before the first script and uses the path it prints.
 
+**Plain words in the chat, and the Studio named up front.** A test run asked "Shall I
+continue by turning Alex's CV into a facts ledger and the advertisement into a requirements
+ledger?", which tells a person nothing about what they will get. SKILL.md now forbids the
+skill's internal words in the chat (ledger, asks, scorecard, proposals, phases, job id,
+depth), gives the plain words for each, says what to tell the person at every stop, and
+promises the Studio from the first message. Reading the CV and the ad now runs straight on
+into scoring, so the first thing back after the depth question is the Studio.
+
+**Resu Desk rebuilt from the Studio's own parts.** The first Desk used its own look. It now
+has the Studio's rail, brand block, tabs, labels, chips, segmented control, buttons and
+drawer: a card per job with Open Studio and PDF buttons, a Next step line, an Update this
+application panel, at-a-glance counts, and a How it works tab explaining every action and
+stage.
+
 **SKILL.md and the references** now ask where files live first, start a job per ad, pass
 `--job` on every command, move stages as the work moves and hand Resu Desk over.
 

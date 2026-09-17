@@ -40,13 +40,44 @@ not know it runs in steps, that it stops for them at every one, or that it will 
 before it changes a word. If you go straight to asking for files, they cannot tell you
 apart from any other answer, and they will not know what they are being offered.
 
-So open with two or three plain sentences: that you work through the advertisement and
-their CV in order, that you score where they stand before changing anything, and that
-they accept or reject every change themselves. Then ask for what you need.
+So open with two or three plain sentences: that you read the advertisement and their CV,
+that you then show them **the Studio**, a page that opens in their browser with their CV
+drawn on it and scored against the ad, before anything is changed, and that they accept or
+reject every suggested change themselves, on that page. Then ask for what you need.
+
+Something like:
+
+> I'll read the ad and your CV, then give you a page called the Studio: your CV drawn as it
+> will print, scored against what this employer asks for. I suggest changes there, and you
+> accept or reject each one yourself. Nothing on your CV changes until you say so.
 
 **Once per conversation, and never as a menu.** Do not list the seven phases at them
 unless they ask what it does. Do not make them read a tool log to find out what they
 are talking to.
+
+## Say it in their words, never the skill's
+
+**The words in this file are for you, not for them.** A person who reads "facts ledger",
+"asks ledger", "requirements ledger", "atomise", "scorecard", "proposals", "Phase 3",
+"job id" or "depth" in the chat does not know what is being made, or whether the thing they
+were promised is still coming. Never put those words in front of them. Say what the thing
+is, and where they will see it:
+
+| In this file | Say to them |
+|---|---|
+| facts ledger, `facts.md` | "your working history, pulled out of your CV line by line so every job can use it" |
+| asks ledger, `asks.md` | "everything this ad asks for, as a checklist" |
+| scoring, the scorecard | "checking your CV against that checklist" |
+| the studio, `-Studio.html` | "the Studio, a page that opens in your browser" |
+| proposals | "the changes I suggest, which you accept or reject in the Studio" |
+| depth, `essentials` / `all` | "the must-haves only, or everything the ad asks for" |
+| job id | the role and the employer, "the Operations Coordinator job at Northside" |
+| Resu Desk | "Resu Desk, one page listing every job you're applying for" |
+| phases | never; say what comes next instead |
+
+**Every time you stop, say when they will see the Studio.** Until it exists, the Studio is
+the thing they are waiting for. "Next I'll check your CV against the ad and give you the
+Studio" tells them. "Shall I continue by building a requirements ledger?" does not.
 
 ## End every phase by saying what happens next
 
@@ -64,6 +95,22 @@ So close every phase with three things, in two or three plain sentences:
 Then stop. **Their answer starts the next phase. Finishing one is not permission to
 begin the next**, and this matters most after scoring: somebody who has just been handed
 a hard number deserves to be asked before anything of theirs gets rewritten.
+
+**One exception: reading the CV and the ad (Phase 2) runs straight on into checking one
+against the other (Phase 3).** Their answer to the depth question is their go-ahead for
+both, and neither changes a word of theirs. Stop between them only when Phase 2 needs
+something from them, such as two CV versions that disagree. The first stop after the depth
+question is the Studio, handed over with their score.
+
+What to say at each stop, in plain words:
+
+| After | Say, in your own words |
+|---|---|
+| Phase 1 (the depth question) | what you have (their CV, the ad, the job started), then the must-haves-or-everything question, and "once you answer I'll check your CV against the ad and give you the Studio" |
+| Phase 3 | the Studio, handed over: "this is your CV as it stands, scored against the ad"; the two numbers in one sentence; the biggest gaps plainly; "next I'll suggest changes, shown in the Studio beside each line, if you'd like" |
+| Phase 4 | the rebuilt Studio with the suggestions on the page; "accept or reject each one in the Studio, then press hand to AI and paste what it gives you here" |
+| Phase 6 | the rebuilt Studio from the finished CV, the score before and after; "want me to print the PDF, and write a cover letter?" |
+| Phase 7 | the letter in the Studio and the PDFs; Resu Desk; "the job is marked Ready" |
 
 ## Rebuild the studio every time the page changes
 

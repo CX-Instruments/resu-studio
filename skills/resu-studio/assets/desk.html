@@ -4,21 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Resu Desk</title>
-<!-- Resu Desk. Every application this person has open, in one page.
+<!-- Resu Desk. Every application this person has, in one page.
 
-     This file is a template. scripts/build_desk.py fills the DESK block below from each
-     job's job.json and from documents.json, and writes the result to
-     _Your Documents Are Here/Resu Desk.html. It is rebuilt whenever a job changes, so
-     the page is a picture of the records as they stood at that moment.
+     A template. scripts/build_desk.py fills the DESK block below from each job's job.json
+     and the documents list, and writes the page to 4 Finished documents/Resu Desk.html. It
+     is rebuilt whenever a job, a studio or a PDF changes.
 
-     The page never writes a record itself. It cannot: it is a file. A stage, a closing
-     date or a note changed here is kept in this browser and comes back to the assistant
-     through "hand to AI" or "Save the desk file", and scripts/jobs.py apply-desk writes
-     it. That is the same road the Studio's decisions travel, for the same reason.
+     It is built from the Studio's own parts: the same colour tokens, the same rail with a
+     brand block and tabs, the same Archivo Narrow labels, option chips, segmented controls,
+     call-to-action buttons and drawer, copied from assets/studio.html. Somebody who has
+     used the Studio should recognise every control here without being told.
 
-     The colours are the Studio's own tokens, copied from assets/studio.html, so the two
-     pages read as one tool. The label face is Archivo Narrow, embedded by the build.
-     Nothing on this page asks the network for anything. -->
+     The page never writes a record. A stage, a closing date or a note changed here is kept
+     in this browser and goes back to the AI through "Hand to AI" or "Save the desk file";
+     scripts/jobs.py apply-desk writes it. Nothing here asks the network for anything. -->
 <style id="deskfaces"></style>
 <style>
 :root{
@@ -51,157 +50,304 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--table);color:var(--ink);font-family:var(--ui);font-size:15px;
-     line-height:1.5;-webkit-text-size-adjust:100%}
+body{background:var(--table);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.5;
+     -webkit-text-size-adjust:100%}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 [hidden]{display:none!important}
+a{color:var(--accent)}
 
-.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 120px}
-.lab{font-family:var(--label);font-size:12px;font-weight:700;letter-spacing:.9px;
-     text-transform:uppercase;color:var(--muted)}
+/* ---------------------------------------------------------------- frame, as the Studio */
+.app{display:grid;grid-template-columns:352px 1fr;height:100dvh}
+.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;
+      min-height:0;min-width:0}
+.stage{position:relative;overflow:auto;min-width:0}
+.brand{padding:16px 18px 12px;border-bottom:1px solid var(--line2);flex:none}
+.brand h1{margin:0;font-size:16px;font-weight:700;letter-spacing:-.15px}
+.brand p{margin:3px 0 0;font-size:12.5px;color:var(--muted);line-height:1.4}
+.tabs{display:flex;gap:2px;padding:9px 12px 0;border-bottom:1px solid var(--line2);flex:none}
+.tabs button{flex:1;background:none;border:0;padding:8px 4px 9px;cursor:pointer;
+             font-family:var(--label);font-size:12px;font-weight:600;letter-spacing:.9px;
+             text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.panes{flex:1;overflow-y:auto;padding:4px 18px 30px;min-height:0}
+.pane{display:none}
+.pane.on{display:block}
+.grp{margin:18px 0 0}
+.grp:first-child{margin-top:14px}
+.grp>h2{margin:0 0 8px;font-family:var(--label);font-size:11.5px;font-weight:600;letter-spacing:1.3px;
+        text-transform:uppercase;color:var(--muted)}
+.hint{margin:7px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
 
-header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 20px;
-           margin-bottom:16px}
-header.top h1{margin:0;font-size:24px;letter-spacing:-.3px}
-header.top p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{background:var(--panel2);border:1px solid var(--line2);border-radius:2px;padding:7px 10px;font-size:13px;
+     cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;line-height:1.25}
+.opt:hover{border-color:var(--line)}
+.opt[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
+.opt b{font-variant-numeric:tabular-nums;font-weight:600;color:var(--muted)}
+.opt[aria-pressed="true"] b{color:var(--accent)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--sc,var(--muted))}
+.seg{display:flex;border:1px solid var(--line2);border-radius:2px;overflow:hidden}
+.seg button{flex:1;background:var(--panel2);border:0;border-right:1px solid var(--line2);padding:7px 2px;
+            font-family:var(--label);font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+            color:var(--muted);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 
-.strip{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
-.chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
-      border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13.5px;color:var(--ink)}
-.chip b{font-variant-numeric:tabular-nums}
-.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--sc,var(--muted))}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tile{background:var(--panel2);border:1px solid var(--line2);border-radius:2px;padding:9px 11px}
+.tile b{display:block;font-size:22px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{display:block;margin-top:3px;font-family:var(--label);font-size:10.5px;font-weight:600;
+           letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.tile.warn b{color:var(--warn)}
 
-.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 12px;font-size:13.5px;color:var(--muted)}
-.tools select{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.cta{background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:2px;
+     padding:8px 13px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;
+     align-items:center;gap:7px;line-height:1.2}
+.cta.ghost{background:transparent;color:var(--accent);border-color:var(--line)}
+.cta.ghost:hover{background:var(--panel2);border-color:var(--accent)}
+.cta:disabled{opacity:.45;cursor:default}
+.cta .n{background:var(--on-accent);color:var(--accent);border-radius:2px;padding:0 5px;font-size:11.5px}
+.small{border:1px solid var(--line2);background:var(--panel);border-radius:2px;padding:4px 9px;font-size:12.5px;
+       cursor:pointer;color:var(--muted)}
+.small:hover{color:var(--accent);border-color:var(--accent)}
+.small:disabled{opacity:.45;cursor:default;color:var(--muted);border-color:var(--line2)}
+.actions{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
 
-.list{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
-.head,.row{display:grid;grid-template-columns:minmax(0,2.1fr) 150px 150px 120px minmax(0,1.6fr);gap:14px;
-           padding:12px 16px;align-items:start}
-.head{background:var(--panel2);border-bottom:1px solid var(--line)}
-.row{border-top:1px solid var(--line2)}
-.head + .row{border-top:0}
-.row.changed{box-shadow:inset 3px 0 0 var(--warn)}
-.who b{display:block;font-size:15.5px}
-.who span{color:var(--muted);font-size:14px}
-.who .next{display:block;margin-top:4px;font-size:12.5px;color:var(--muted)}
-.who a.ad{font-size:12.5px;color:var(--accent)}
-.cell .lab{display:none}
-select.stage,input.date{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:14px}
-.pill{display:inline-block;margin-top:5px;font-size:12px;font-weight:600;border-radius:4px;padding:1px 6px}
-.pill.soon{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
-.pill.past{background:color-mix(in srgb,var(--gap) 16%,transparent);color:var(--gap)}
-.score{font-variant-numeric:tabular-nums;font-size:14px}
-.score .big{font-weight:700;font-size:16px}
-.score small{display:block;color:var(--muted);font-size:12px}
-.docs{display:flex;flex-direction:column;gap:6px;min-width:0}
-.doc a{color:var(--accent);font-weight:600;text-decoration:none}
-.doc a:hover{text-decoration:underline}
-.doc .gone{color:var(--muted);text-decoration:line-through}
-.doc code{display:block;font-size:11.5px;color:var(--muted);overflow-wrap:anywhere;font-family:ui-monospace,Menlo,Consolas,monospace}
-.notes{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:flex-start;font-size:13.5px;color:var(--muted)}
-.notes .last{flex:1 1 320px;min-width:0}
-.notes button,.btn{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
-.notes textarea{width:100%;min-height:58px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:14px}
-.badge{font-size:11.5px;font-weight:700;color:var(--warn);font-family:var(--label);letter-spacing:.6px;text-transform:uppercase}
-.empty{padding:28px 16px;color:var(--muted);text-align:center}
-details.closed{margin-top:16px}
-details.closed summary{cursor:pointer;padding:6px 2px;font-size:14px;color:var(--muted)}
-details.closed .list{margin-top:8px}
+.steps{margin:6px 0 0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding:0 0 12px 32px;font-size:13.5px;line-height:1.5}
+.steps li:before{content:counter(s);position:absolute;left:0;top:0;width:22px;height:22px;border-radius:2px;
+                 background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:12px;
+                 display:flex;align-items:center;justify-content:center}
+.stagedef{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:13px;margin:6px 0 0}
+.stagedef dt{margin:0}
+.stagedef dd{margin:0;color:var(--muted)}
 
-.tray{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
-      box-shadow:0 -8px 26px rgba(16,22,32,.12);padding:10px 16px;z-index:5}
-.tray .in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
-.tray .msg{flex:1 1 260px;font-size:14px}
-.tray textarea{width:100%;min-height:180px;margin-top:8px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace;
-               background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px}
-.foot{margin-top:18px;font-size:12.5px;color:var(--muted)}
+/* ---------------------------------------------------------------- the list */
+.stagebar{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);
+          padding:9px 20px;display:flex;align-items:center;gap:12px;font-size:12.5px}
+.stagebar .now{color:var(--muted);flex:1;min-width:0}
+.list{max-width:900px;margin:0 auto;padding:18px 20px 80px}
+.section{margin:22px 0 8px;font-family:var(--label);font-size:11.5px;font-weight:600;letter-spacing:1.3px;
+         text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
+.section:after{content:"";flex:1;border-top:1px solid var(--line)}
+.section:first-child{margin-top:4px}
 
-@media (max-width:860px){
-  .head{display:none}
-  .row{grid-template-columns:1fr 1fr;gap:10px 12px}
-  .who,.docs,.notes{grid-column:1 / -1}
-  .cell .lab{display:block;margin-bottom:2px}
+.job{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--sc,var(--line));border-radius:3px;
+     box-shadow:var(--shadow);margin:0 0 14px}
+.job.changed{border-left-color:var(--warn)}
+.jhead{display:grid;grid-template-columns:1fr auto;gap:4px 14px;padding:14px 16px 10px}
+.jhead h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
+.jhead .role{margin:1px 0 0;font-size:14px;color:var(--muted)}
+.tag{font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
+     padding:3px 8px;border-radius:2px;white-space:nowrap;border:1px solid var(--sc,var(--line));color:var(--sc,var(--muted));
+     align-self:start}
+.flag{display:inline-block;font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.7px;
+      text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-left:6px;vertical-align:1px}
+.flag.soon{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.flag.past{background:color-mix(in srgb,var(--gap) 14%,transparent);color:var(--gap)}
+.banner{margin:0 16px 10px;padding:8px 11px;border-left:3px solid var(--warn);background:var(--panel2);
+        font-size:13px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.banner.stale{border-left-color:var(--gap)}
+.banner b{font-family:var(--label);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--warn)}
+.banner.stale b{color:var(--gap)}
+.banner span{flex:1;min-width:200px}
+
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line2)}
+.fact{padding:10px 16px;border-right:1px solid var(--line2);min-width:0}
+.fact:last-child{border-right:0}
+.lab{display:block;font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.8px;
+     text-transform:uppercase;color:var(--muted);margin:0 0 3px}
+.fact .v{font-size:14px}
+.meter{height:6px;background:var(--line2);border-radius:1px;margin:6px 0 0;position:relative;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+.meter i.before{background:var(--line)}
+
+.next{margin:0;padding:10px 16px;border-top:1px solid var(--line2);background:var(--panel2);font-size:13.5px}
+.next .lab{display:inline;margin-right:8px;color:var(--accent)}
+
+.docs{padding:12px 16px;border-top:1px solid var(--line2)}
+.docs .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.docs .none{font-size:13.5px;color:var(--muted);margin:0}
+.where{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.where code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;overflow-wrap:anywhere}
+.gone{font-size:12.5px;color:var(--muted);text-decoration:line-through}
+
+details.update{border-top:1px solid var(--line2)}
+details.update>summary{list-style:none;cursor:pointer;padding:10px 16px;font-family:var(--label);font-size:11.5px;
+     font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--accent);display:flex;gap:8px;align-items:center}
+details.update>summary::-webkit-details-marker{display:none}
+details.update>summary:before{content:"+";font-family:var(--ui);font-size:15px;width:12px}
+details.update[open]>summary:before{content:"\2212"}
+details.update>summary:hover{background:var(--panel2)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;padding:4px 16px 14px}
+.form .full{grid-column:1 / -1}
+.form select,.form input,.form textarea{width:100%;background:var(--panel);border:1px solid var(--line2);border-radius:2px;
+     padding:7px 9px;font-size:14px}
+.form textarea{min-height:70px;resize:vertical;font:14px/1.45 var(--ui)}
+.notes{padding:0 16px 12px}
+.notes ul{margin:0;padding:0;list-style:none}
+.notes li{font-size:13px;padding:6px 0;border-top:1px solid var(--line2);color:var(--ink)}
+.notes li time{font-family:var(--label);font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-right:8px}
+
+.empty{background:var(--panel);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:26px 22px}
+.empty h2{margin:0 0 6px;font-size:18px}
+.empty p{margin:0 0 6px;color:var(--muted);font-size:14px}
+.closedjob .facts,.closedjob .next,.closedjob .docs{display:none}
+
+/* ---------------------------------------------------------------- hand to AI drawer, as the Studio */
+.veil{position:fixed;inset:0;background:rgba(16,22,32,.35);z-index:20}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:min(460px,100%);z-index:21;background:var(--panel);
+        border-left:1px solid var(--line);box-shadow:-6px 0 30px rgba(16,22,32,.18);overflow-y:auto;padding:18px 18px 40px}
+.drawer h3{margin:0 0 4px;font-size:16px;font-weight:700;letter-spacing:-.15px}
+.drawer>p{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.45}
+.dclose{position:absolute;right:10px;top:10px;width:30px;height:30px;border:0;background:none;color:var(--muted);
+        font-size:20px;cursor:pointer;line-height:1}
+.copybox{width:100%;min-height:220px;font:11.5px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:8px;
+         border:1px solid var(--line2);border-radius:2px;background:var(--panel2);color:var(--ink);margin:8px 0 0;resize:vertical}
+
+@media (max-width:900px){
+  /* On a phone the applications come first; the filters and the how-to follow them. */
+  .app{display:flex;flex-direction:column;height:auto}
+  .stage{order:1}
+  .rail{order:2;border-right:0;border-top:1px solid var(--line)}
+  .mtitle{display:inline!important;font-weight:700;color:var(--ink);margin-right:6px}
+  .panes{overflow:visible;padding-bottom:16px}
+  .stage{overflow:visible}
+  .stagebar{padding:8px 12px}
+  .list{padding:14px 12px 60px}
+  .facts{grid-template-columns:1fr 1fr}
+  .fact:nth-child(2){border-right:0}
+  .fact:nth-child(3){grid-column:1 / -1;border-top:1px solid var(--line2)}
+  .form{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
       <h1>Resu Desk</h1>
-      <p id="sub"></p>
+      <p>Every job you are applying for, in one place. Nothing here changes your records until you hand it to the AI.</p>
+      <p class="buildstamp">BUILD_STAMP</p>
     </div>
-    <p id="built" class="lab"></p>
-  </header>
-  <div class="strip" id="strip" role="group" aria-label="Filter by stage"></div>
-  <div class="tools">
-    <label>Sort by
-      <select id="sort">
-        <option value="closes">closing date</option>
-        <option value="updated">last change</option>
-        <option value="employer">employer</option>
-      </select>
-    </label>
-    <span id="showing"></span>
-  </div>
-  <div class="list" id="open"></div>
-  <details class="closed" id="closedBox" hidden>
-    <summary id="closedSum"></summary>
-    <div class="list" id="closed"></div>
-  </details>
-  <p class="foot">Links open the files in your own folder. They work when this page is opened from
-    that folder. If a link does not open, the grey line under it says where the file is.</p>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabApps" aria-selected="true">Applications</button>
+      <button type="button" role="tab" id="tabHow" aria-selected="false">How it works</button>
+    </div>
+    <div class="panes">
+      <div class="pane on" id="paneApps">
+        <div class="grp">
+          <h2>At a glance</h2>
+          <div class="tiles" id="tiles"></div>
+        </div>
+        <div class="grp">
+          <h2>Show</h2>
+          <div class="opts" id="filters" role="group" aria-label="Show applications at a stage"></div>
+        </div>
+        <div class="grp">
+          <h2>Sort by</h2>
+          <div class="seg" id="sort" role="group" aria-label="Sort applications">
+            <button type="button" data-sort="closes" aria-pressed="true">Closing date</button>
+            <button type="button" data-sort="updated" aria-pressed="false">Last change</button>
+            <button type="button" data-sort="employer" aria-pressed="false">Employer</button>
+          </div>
+        </div>
+        <div class="grp">
+          <h2>Your changes</h2>
+          <p class="hint" id="changesMsg"></p>
+          <div class="actions">
+            <button type="button" class="cta" id="handBtn">Hand to AI</button>
+            <button type="button" class="cta ghost" id="saveBtn">Save the desk file</button>
+          </div>
+          <div class="actions"><button type="button" class="small" id="clearBtn">Undo all my changes</button></div>
+        </div>
+      </div>
+      <div class="pane" id="paneHow">
+        <div class="grp">
+          <h2>What this page is</h2>
+          <p class="hint">A list of every job you are applying for, with where each one is up to, when it closes, how well your CV answers the ad, and the documents made for it. It is rebuilt every time the AI works on one of your jobs.</p>
+        </div>
+        <div class="grp">
+          <h2>To update a job</h2>
+          <ol class="steps">
+            <li>On the job, open <b>Update this application</b> and change the stage, the closing date, or add a note.</li>
+            <li>Press <b>Hand to AI</b>, then <b>Copy</b>.</li>
+            <li>Paste it into your chat with the AI. It updates your records and gives you a fresh Resu Desk.</li>
+          </ol>
+          <p class="hint">If a job changed after this page was built, the AI tells you and asks which is right. Nothing is written over.</p>
+        </div>
+        <div class="grp">
+          <h2>The buttons on a job</h2>
+          <p class="hint"><b>Open Studio</b> opens that job's Studio: your CV scored against the ad, where you accept or reject suggested changes. <b>CV PDF</b> and <b>Cover letter PDF</b> open the finished documents. The line under them says which folder they are in.</p>
+        </div>
+        <div class="grp">
+          <h2>The stages</h2>
+          <dl class="stagedef" id="stagedef"></dl>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <div class="stagebar"><span class="now"><span class="mtitle" hidden>Resu Desk</span><span id="now"></span></span>
+      <button type="button" class="cta" id="barHand" hidden>Hand to AI <span class="n" id="barCount"></span></button>
+    </div>
+    <div class="list" id="list"></div>
+  </main>
 </div>
 
-<div class="tray" id="tray" hidden>
-  <div class="in">
-    <div class="msg" id="trayMsg"></div>
-    <button class="btn primary" id="handBtn" type="button">hand to AI</button>
-    <button class="btn" id="saveBtn" type="button">Save the desk file</button>
-    <button class="btn" id="clearBtn" type="button">Undo all</button>
-    <div id="handBox" hidden style="flex-basis:100%">
-      <textarea id="handText" readonly aria-label="Text to paste into the chat"></textarea>
-      <button class="btn" id="copyBtn" type="button" style="margin-top:6px">Copy</button>
-    </div>
-  </div>
-</div>
+<div class="veil" id="veil" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Hand to AI">
+  <button type="button" class="dclose" id="dclose" aria-label="Close">&times;</button>
+  <h3>Hand your changes to the AI</h3>
+  <p>Copy this and paste it into your chat with the AI. It will update your records and give you a new Resu Desk.</p>
+  <div class="actions"><button type="button" class="cta" id="copyBtn">Copy</button>
+    <button type="button" class="cta ghost" id="saveBtn2">Save as a file instead</button></div>
+  <textarea class="copybox" id="handText" readonly aria-label="Text to paste into the chat"></textarea>
+</aside>
 
 <script>
 /* The records, written in by scripts/build_desk.py. Empty in the template. */
 const DESK = {"schema":1,"built":"","key":"template","stages":[],"closed":[],"jobs":[]};
 
+const MEANS = {
+  "Saved":"You have the ad. Nothing has been done with it yet.",
+  "Scoring":"Your CV is being checked against the ad.",
+  "Tailoring":"You are deciding on suggested changes in the Studio.",
+  "Ready":"Your CV and letter are finished and ready to send.",
+  "Applied":"Sent. Waiting to hear back.",
+  "Interview":"They want to talk to you.",
+  "Offer":"They have made you an offer.",
+  "Rejected":"Not this time. Kept for your records.",
+  "Withdrawn":"You decided not to go ahead."
+};
 const NEXT = {
-  "Saved":"Next: score it against your CV",
-  "Scoring":"Next: look at where you stand, then the suggested changes",
-  "Tailoring":"Next: decide on the changes in the Studio",
-  "Ready":"Next: send it, then mark it Applied",
-  "Applied":"Waiting to hear back",
-  "Interview":"Next: get ready for the interview",
-  "Offer":"Next: decide on the offer",
+  "Saved":"Ask the AI to check your CV against this ad. The Studio appears here when it is done.",
+  "Scoring":"The AI is checking your CV against the ad. Open the Studio when it appears to see where you stand.",
+  "Tailoring":"Open the Studio, accept or reject each suggested change, then press hand to AI in the Studio.",
+  "Ready":"Your documents are ready. Send them, then set this job to Applied.",
+  "Applied":"Waiting to hear back. Set this job to Interview when they get in touch.",
+  "Interview":"Ask the AI to help you prepare, using this job's Studio and the ad.",
+  "Offer":"Decide on the offer. Add a note with the details so they are all in one place.",
   "Rejected":"", "Withdrawn":""
 };
-const STAGE_COLOUR = {
+const COLOUR = {
   "Saved":"var(--muted)","Scoring":"var(--near)","Tailoring":"var(--warn)","Ready":"var(--accent)",
   "Applied":"var(--accent)","Interview":"var(--ok)","Offer":"var(--ok)","Rejected":"var(--gap)","Withdrawn":"var(--muted)"
 };
 
-/* One store per person's folder. Pages opened from disk share one storage area in most
-   browsers, so a bare name would let two people's Desks on one machine, or a test
-   folder and a real one, see each other's unsent changes. */
+/* One store per person's folder: pages opened from disk share one storage area. */
 const STORE = "resu-desk:" + DESK.key;
 let EDITS = {};
 try{ EDITS = JSON.parse(localStorage.getItem(STORE) || "{}") || {}; }catch(e){ EDITS = {}; }
-let FILTER = "";
+let FILTER = "open", SORT = "closes";
 
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(EDITS)); }catch(e){} }
 function byId(id){ return DESK.jobs.find(j => j.id === id); }
 
-/* A change that the records already hold was carried out by apply-desk and the page
-   was rebuilt since. It is dropped here, so a rebuilt Desk opens clean instead of
-   offering to send the same change twice. A change the records do not hold is kept. */
+/* A change the records already hold was applied by apply-desk and this page was rebuilt
+   since: drop it, so a rebuilt Desk opens clean. A change the records do not hold stays. */
 function settle(){
   Object.keys(EDITS).forEach(id => {
     const j = byId(id), e = EDITS[id];
@@ -214,16 +360,6 @@ function settle(){
   save();
 }
 
-function today(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
-function daysUntil(iso){
-  if(!iso) return null;
-  const p = iso.split("-").map(Number); const d = new Date(p[0], p[1]-1, p[2]);
-  return Math.round((d - today()) / 86400000);
-}
-function stageOf(j){ const e = EDITS[j.id]; return e && e.stage ? e.stage.to : j.stage; }
-function closesOf(j){ const e = EDITS[j.id]; return e && e.closes ? e.closes.to : (j.closes || ""); }
-function isClosed(j){ return DESK.closed.indexOf(stageOf(j)) >= 0; }
-
 function el(tag, attrs, kids){
   const n = document.createElement(tag);
   Object.keys(attrs || {}).forEach(k => {
@@ -234,181 +370,204 @@ function el(tag, attrs, kids){
   (kids || []).forEach(c => { if(c) n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
   return n;
 }
+function today(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function asDate(iso){ const p = iso.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function daysUntil(iso){ return iso ? Math.round((asDate(iso) - today()) / 86400000) : null; }
+function niceDate(iso){
+  if(!iso) return "";
+  try{ return asDate(iso).toLocaleDateString(undefined, {weekday:"short", day:"numeric", month:"short", year:"numeric"}); }
+  catch(e){ return iso; }
+}
+function stageOf(j){ const e = EDITS[j.id]; return e && e.stage ? e.stage.to : j.stage; }
+function closesOf(j){ const e = EDITS[j.id]; return e && e.closes ? e.closes.to : (j.closes || ""); }
+function isClosed(j){ return DESK.closed.indexOf(stageOf(j)) >= 0; }
+function beforeApplying(s){ return ["Saved","Scoring","Tailoring","Ready"].indexOf(s) >= 0; }
 
 function change(id, field, value){
   const j = byId(id); if(!j) return;
   const e = EDITS[id] || (EDITS[id] = {base: j.updated || ""});
   const was = field === "stage" ? j.stage : (j.closes || "");
-  if(field === "note"){
-    if(value.trim()) e.note = value.trim(); else delete e.note;
-  } else if(value === was){
-    delete e[field];
-  } else {
-    e[field] = {from: was, to: value};
-  }
+  if(field === "note"){ if(value.trim()) e.note = value.trim(); else delete e.note; }
+  else if(value === was){ delete e[field]; }
+  else { e[field] = {from: was, to: value}; }
   if(!e.stage && !e.closes && !e.note) delete EDITS[id];
-  save(); draw();
+  save(); draw(id);
 }
 
-function scoreCell(j){
-  const b = j.before, a = j.after;
-  const box = el("div", {cls:"cell score"}, [el("div", {cls:"lab", text:"Found on your CV"})]);
-  const s = a || b;
-  if(!s || !s.asks_total){ box.appendChild(el("span", {text:"Not scored yet"})); return box; }
-  const main = el("div");
-  if(a && b){
-    main.appendChild(el("span", {cls:"big", text: b.a_reader_would_find + " → " + a.a_reader_would_find}));
-  } else {
-    main.appendChild(el("span", {cls:"big", text: String(s.a_reader_would_find)}));
-  }
-  main.appendChild(document.createTextNode(" of " + s.asks_total));
-  box.appendChild(main);
-  box.appendChild(el("small", {text: a && b ? "before and after tailoring" : "before tailoring"}));
-  return box;
+function closingFlag(j){
+  const n = daysUntil(closesOf(j));
+  if(n === null || isClosed(j) || !beforeApplying(stageOf(j))) return null;
+  if(n < 0) return el("span", {cls:"flag past", text:"closed " + (-n) + (n === -1 ? " day" : " days") + " ago"});
+  if(n <= 7) return el("span", {cls:"flag soon", text: n === 0 ? "closes today" : "closes in " + n + (n === 1 ? " day" : " days")});
+  return null;
 }
 
-function docsCell(j){
-  const box = el("div", {cls:"cell docs"}, [el("div", {cls:"lab", text:"Documents"})]);
-  if(!j.docs.length){ box.appendChild(el("span", {cls:"doc", text:"Nothing made yet"})); return box; }
-  j.docs.forEach(d => {
-    const label = d.kind === "studio" ? "Studio" : d.kind === "letter" ? "Cover letter PDF" : "CV PDF";
-    const line = el("div", {cls:"doc"});
-    if(d.exists) line.appendChild(el("a", {href:d.href, text:label, title:d.name}));
-    else line.appendChild(el("span", {cls:"gone", text:label, title:"This file has been moved or deleted"}));
-    line.appendChild(el("code", {text: d.where}));
-    box.appendChild(line);
-  });
-  return box;
+function scoreFact(j){
+  const f = el("div", {cls:"fact"}, [el("span", {cls:"lab", text:"Found on your CV"})]);
+  const b = j.before, a = j.after, s = a || b;
+  if(!s || !s.asks_total){ f.appendChild(el("div", {cls:"v", text:"Not checked yet"})); return f; }
+  f.appendChild(el("div", {cls:"v", text: a && b
+    ? b.a_reader_would_find + " \u2192 " + a.a_reader_would_find + " of " + a.asks_total + " asks"
+    : s.a_reader_would_find + " of " + s.asks_total + " asks"}));
+  const m = el("div", {cls:"meter", title: a && b ? "after tailoring" : "before tailoring"});
+  m.appendChild(el("i", {style:"width:" + Math.round(100 * s.a_reader_would_find / s.asks_total) + "%"}));
+  f.appendChild(m);
+  return f;
 }
 
-function row(j){
+function card(j){
   const e = EDITS[j.id] || {};
-  const st = stageOf(j), cl = closesOf(j);
-  const r = el("div", {cls:"row" + (EDITS[j.id] ? " changed" : ""), "data-job": j.id});
+  const st = stageOf(j), closed = isClosed(j);
+  const c = el("article", {cls:"job" + (EDITS[j.id] ? " changed" : "") + (closed ? " closedjob" : ""),
+                           "data-job": j.id, style:"--sc:" + COLOUR[st]});
 
-  const who = el("div", {cls:"who"}, [
-    el("b", {text: j.employer || "(employer not recorded)"}),
-    el("span", {text: j.role}),
-  ]);
-  if(j.link) who.appendChild(el("div", {}, [el("a", {cls:"ad", href:j.link, text:"the advertisement", rel:"noopener", target:"_blank"})]));
-  if(NEXT[st]) who.appendChild(el("span", {cls:"next", text: NEXT[st]}));
-  if(EDITS[j.id]) who.appendChild(el("span", {cls:"badge", text:"changed here, not sent yet"}));
-  /* The record moved on after this change was made here, usually because the assistant
-     changed it in the chat. apply-desk will refuse this change, so say so now, on the row. */
+  const titles = el("div", {}, [el("h3", {text: j.employer || "Employer not recorded"}), el("p", {cls:"role", text: j.role})]);
+  c.appendChild(el("div", {cls:"jhead"}, [titles, el("span", {cls:"tag", text: st})]));
+
+  if(EDITS[j.id]){
+    const undo = el("button", {type:"button", cls:"small", text:"Undo"});
+    undo.addEventListener("click", () => { delete EDITS[j.id]; save(); draw(); });
+    c.appendChild(el("div", {cls:"banner"}, [el("b", {text:"Changed here"}),
+      el("span", {text:"Not in your records yet. Press Hand to AI to send it."}), undo]));
+  }
   const stale = [];
   if(e.stage && e.stage.from !== j.stage) stale.push("stage is " + j.stage);
-  if(e.closes && (e.closes.from || "") !== (j.closes || "")) stale.push("closing date is " + (j.closes || "not set"));
-  if(stale.length) who.appendChild(el("span", {cls:"pill past", text:"Your records now say the " + stale.join(" and the ") + ". Undo to use that."}));
-  r.appendChild(who);
+  if(e.closes && (e.closes.from || "") !== (j.closes || "")) stale.push("closing date is " + (niceDate(j.closes) || "not set"));
+  if(stale.length) c.appendChild(el("div", {cls:"banner stale"}, [el("b", {text:"Out of date"}),
+      el("span", {text:"Your records now say the " + stale.join(" and the ") + ". Undo to use that."})]));
 
-  const sel = el("select", {cls:"stage", "aria-label":"Stage for " + j.role + " at " + j.employer});
+  const cl = closesOf(j);
+  const closes = el("div", {cls:"fact"}, [el("span", {cls:"lab", text:"Closes"}),
+    el("div", {cls:"v"}, [cl ? niceDate(cl) : "No closing date", closingFlag(j)])]);
+  const updated = el("div", {cls:"fact"}, [el("span", {cls:"lab", text:"Last change"}),
+    el("div", {cls:"v", text: j.updated ? niceDate(j.updated) : "Not recorded"})]);
+  c.appendChild(el("div", {cls:"facts"}, [closes, scoreFact(j), updated]));
+
+  if(NEXT[st]) c.appendChild(el("p", {cls:"next"}, [el("span", {cls:"lab", text:"Next step"}), NEXT[st]]));
+
+  const docs = el("div", {cls:"docs"});
+  const live = j.docs.filter(d => d.exists), gone = j.docs.filter(d => !d.exists);
+  if(!live.length){
+    docs.appendChild(el("p", {cls:"none", text:"No documents yet. The Studio appears here once your CV has been checked against this ad."}));
+  } else {
+    const row = el("div", {cls:"row"});
+    const seen = {};
+    live.forEach(d => {
+      if(seen[d.kind]) return;                 /* the newest of each kind; older ones are in the folder */
+      seen[d.kind] = 1;
+      const label = d.kind === "studio" ? "Open Studio" : d.kind === "letter" ? "Cover letter PDF" : "CV PDF";
+      row.appendChild(el("a", {cls: d.kind === "studio" ? "cta" : "cta ghost", href: d.href, title: d.name, text: label}));
+    });
+    docs.appendChild(row);
+    const folder = live[0].where.split("/").slice(0, -1).join("/");
+    docs.appendChild(el("p", {cls:"where"}, ["In your folder: ", el("code", {text: folder + "/"})]));
+  }
+  gone.forEach(d => docs.appendChild(el("p", {cls:"gone", text: d.name + " (moved or deleted)"})));
+  c.appendChild(docs);
+
+  const upd = el("details", {cls:"update"});
+  if(EDITS[j.id]) upd.open = true;
+  upd.appendChild(el("summary", {text:"Update this application"}));
+  const form = el("div", {cls:"form"});
+  const sel = el("select", {cls:"stage", id:"st-" + j.id});
   DESK.stages.forEach(s => { const o = el("option", {value:s, text:s}); if(s === st) o.selected = true; sel.appendChild(o); });
   sel.addEventListener("change", () => change(j.id, "stage", sel.value));
-  r.appendChild(el("div", {cls:"cell"}, [el("div", {cls:"lab", text:"Stage"}), sel]));
-
-  const date = el("input", {type:"date", cls:"date", value: cl, "aria-label":"Closing date"});
+  const date = el("input", {type:"date", cls:"date", id:"cl-" + j.id, value: cl});
   date.addEventListener("change", () => change(j.id, "closes", date.value));
-  const dc = el("div", {cls:"cell"}, [el("div", {cls:"lab", text:"Closes"}), date]);
-  const n = daysUntil(cl);
-  if(n !== null && !isClosed(j) && ["Saved","Scoring","Tailoring","Ready"].indexOf(st) >= 0){
-    if(n < 0) dc.appendChild(el("span", {cls:"pill past", text:"closed " + (-n) + (n === -1 ? " day" : " days") + " ago"}));
-    else if(n <= 7) dc.appendChild(el("span", {cls:"pill soon", text: n === 0 ? "closes today" : "closes in " + n + (n === 1 ? " day" : " days")}));
-  }
-  r.appendChild(dc);
+  const note = el("textarea", {cls:"note", id:"nt-" + j.id, placeholder:"Anything worth remembering: who called, what they said, what happens next"});
+  note.value = e.note || "";
+  note.addEventListener("change", () => change(j.id, "note", note.value));
+  form.appendChild(el("label", {for:"st-" + j.id}, [el("span", {cls:"lab", text:"Stage"}), sel]));
+  form.appendChild(el("label", {for:"cl-" + j.id}, [el("span", {cls:"lab", text:"Closing date"}), date]));
+  form.appendChild(el("label", {cls:"full", for:"nt-" + j.id}, [el("span", {cls:"lab", text:"Add a note"}), note]));
+  upd.appendChild(form);
+  if(j.link) upd.appendChild(el("p", {cls:"hint", style:"margin:0 16px 12px"}, [el("a", {href:j.link, target:"_blank", rel:"noopener", text:"Open the job ad"})]));
+  c.appendChild(upd);
 
-  r.appendChild(scoreCell(j));
-  r.appendChild(docsCell(j));
-
-  const notes = el("div", {cls:"notes"});
-  const last = (j.notes || []).slice(-1)[0];
-  notes.appendChild(el("div", {cls:"last", text: last ? "Last note, " + last.on + ": " + last.text : "No notes yet."}));
-  const area = el("textarea", {"aria-label":"A new note", placeholder:"A new note, in your own words"});
-  area.value = e.note || "";
-  const openBtn = el("button", {type:"button", text: e.note ? "Edit the note" : "Add a note"});
-  const noteBox = el("div", {style:"flex-basis:100%"}, [area]);
-  noteBox.hidden = !e.note;
-  openBtn.addEventListener("click", () => { noteBox.hidden = false; area.focus(); });
-  area.addEventListener("change", () => change(j.id, "note", area.value));
-  notes.appendChild(openBtn);
-  if(EDITS[j.id]){
-    const undo = el("button", {type:"button", text:"Undo"});
-    undo.addEventListener("click", () => { delete EDITS[j.id]; save(); draw(); });
-    notes.appendChild(undo);
+  const notes = (j.notes || []).slice(-3).reverse();
+  if(notes.length){
+    const ul = el("ul");
+    notes.forEach(n => ul.appendChild(el("li", {}, [el("time", {text: niceDate(n.on) || n.on}), n.text])));
+    c.appendChild(el("div", {cls:"notes"}, [el("span", {cls:"lab", text:"Notes"}), ul]));
   }
-  notes.appendChild(noteBox);
-  r.appendChild(notes);
-  return r;
+  return c;
 }
 
 function sorted(list){
-  const how = document.getElementById("sort").value;
   return list.slice().sort((a, b) => {
-    if(how === "employer") return (a.employer || "").localeCompare(b.employer || "") || a.role.localeCompare(b.role);
-    if(how === "updated") return (b.updated || "").localeCompare(a.updated || "");
-    return (closesOf(a) || "9999").localeCompare(closesOf(b) || "9999") || a.id.localeCompare(b.id);
+    if(SORT === "employer") return (a.employer || "").localeCompare(b.employer || "") || a.role.localeCompare(b.role);
+    if(SORT === "updated") return (b.updated || "").localeCompare(a.updated || "");
+    /* Closing date puts the jobs still waiting to be sent first, soonest first: a date
+       that has passed on a job already applied for is history, not a deadline. */
+    return (beforeApplying(stageOf(b)) - beforeApplying(stageOf(a)))
+        || (closesOf(a) || "9999").localeCompare(closesOf(b) || "9999") || a.id.localeCompare(b.id);
   });
 }
 
-function head(){
-  return el("div", {cls:"head"}, ["Application","Stage","Closes","Found on your CV","Documents"]
-    .map(t => el("div", {cls:"lab", text:t})));
-}
+function tile(n, label, warn){ return el("div", {cls:"tile" + (warn && n ? " warn" : "")}, [el("b", {text:String(n)}), el("span", {text:label})]); }
 
-function draw(){
-  const jobs = DESK.jobs;
-  const open = jobs.filter(j => !isClosed(j)), closed = jobs.filter(isClosed);
-  document.getElementById("sub").textContent = jobs.length
-    ? open.length + " open application" + (open.length === 1 ? "" : "s") + (closed.length ? ", " + closed.length + " closed" : "")
-    : "No applications yet";
-  document.getElementById("built").textContent = DESK.built ? "Built " + DESK.built : "";
+function draw(keepOpen){
+  const jobs = DESK.jobs, open = jobs.filter(j => !isClosed(j)), closed = jobs.filter(isClosed);
+  const soon = open.filter(j => { const n = daysUntil(closesOf(j)); return n !== null && n >= 0 && n <= 7 && beforeApplying(stageOf(j)); }).length;
 
-  const strip = document.getElementById("strip"); strip.textContent = "";
-  const all = el("button", {cls:"chip", type:"button", "aria-pressed": String(!FILTER)}, [el("span", {text:"All open"}), el("b", {text:String(open.length)})]);
-  all.addEventListener("click", () => { FILTER = ""; draw(); });
-  strip.appendChild(all);
-  DESK.stages.forEach(s => {
-    const c = jobs.filter(j => stageOf(j) === s).length;
-    if(!c) return;
-    const b = el("button", {cls:"chip", type:"button", "aria-pressed": String(FILTER === s), style:"--sc:" + STAGE_COLOUR[s]},
-                 [el("span", {cls:"dot"}), el("span", {text:s}), el("b", {text:String(c)})]);
-    b.addEventListener("click", () => { FILTER = FILTER === s ? "" : s; draw(); });
-    strip.appendChild(b);
-  });
+  const tiles = document.getElementById("tiles"); tiles.textContent = "";
+  tiles.append(tile(open.length, "Open"), tile(soon, "Closing this week", true),
+               tile(jobs.filter(j => stageOf(j) === "Applied").length, "Waiting to hear"),
+               tile(jobs.filter(j => ["Interview","Offer"].indexOf(stageOf(j)) >= 0).length, "Interviews and offers"));
 
-  const shown = FILTER ? jobs.filter(j => stageOf(j) === FILTER) : open;
-  const box = document.getElementById("open"); box.textContent = "";
-  if(!jobs.length){
-    box.appendChild(el("div", {cls:"empty", text:"No jobs yet. Give the assistant a job ad and it will start one here."}));
-  } else if(!shown.length){
-    box.appendChild(el("div", {cls:"empty", text:"Nothing at this stage."}));
-  } else {
-    box.appendChild(head());
-    sorted(shown).forEach(j => box.appendChild(row(j)));
-  }
-  document.getElementById("showing").textContent = FILTER ? "Showing " + FILTER + " only" : "";
-
-  const cb = document.getElementById("closedBox"), cl = document.getElementById("closed");
-  cb.hidden = !!FILTER || !closed.length; cl.textContent = "";
-  document.getElementById("closedSum").textContent = "Closed (" + closed.length + ")";
-  if(closed.length){ cl.appendChild(head()); sorted(closed).forEach(j => cl.appendChild(row(j))); }
+  const f = document.getElementById("filters"); f.textContent = "";
+  const addFilter = (key, label, count, colour) => {
+    const b = el("button", {type:"button", cls:"opt", "aria-pressed": String(FILTER === key)},
+                 [colour ? el("span", {cls:"dot", style:"--sc:" + colour}) : null, label + " ", el("b", {text:String(count)})]);
+    b.addEventListener("click", () => { FILTER = key; draw(); });
+    f.appendChild(b);
+  };
+  addFilter("open", "All open", open.length);
+  DESK.stages.forEach(s => { const n = jobs.filter(j => stageOf(j) === s).length; if(n && DESK.closed.indexOf(s) < 0) addFilter(s, s, n, COLOUR[s]); });
+  if(closed.length) addFilter("closed", "Closed", closed.length, "var(--gap)");
 
   const n = Object.keys(EDITS).length;
-  document.getElementById("tray").hidden = !n;
-  document.getElementById("trayMsg").textContent = n
-    ? "You changed " + n + " application" + (n === 1 ? "" : "s") + " here. Nothing reaches your records until you send it."
-    : "";
-  if(!n) document.getElementById("handBox").hidden = true;
-  else if(!document.getElementById("handBox").hidden) document.getElementById("handText").value = handText();
+  document.getElementById("changesMsg").textContent = n
+    ? "You changed " + n + " application" + (n === 1 ? "" : "s") + " on this page. Nothing reaches your records until you hand it to the AI."
+    : "No changes yet. Change a job under Update this application, then hand it to the AI here.";
+  ["handBtn","saveBtn","clearBtn"].forEach(id => document.getElementById(id).disabled = !n);
+  document.getElementById("barHand").hidden = !n;
+  document.getElementById("barCount").textContent = n;
+  document.getElementById("now").textContent = jobs.length
+    ? open.length + " open application" + (open.length === 1 ? "" : "s") + (closed.length ? ", " + closed.length + " closed" : "")
+      + (soon ? ". " + soon + " closing this week." : ".")
+    : "No applications yet.";
+
+  const openIds = keepOpen ? [keepOpen] : [];
+  document.querySelectorAll("details.update[open]").forEach(d => { const a = d.closest(".job"); if(a) openIds.push(a.dataset.job); });
+  const list = document.getElementById("list"); list.textContent = "";
+  if(!jobs.length){
+    list.appendChild(el("div", {cls:"empty"}, [el("h2", {text:"No applications yet"}),
+      el("p", {text:"Give the AI a job ad and your CV. It starts the job, and it appears here with its Studio."})]));
+    return;
+  }
+  let shown, heading;
+  if(FILTER === "open"){ shown = open; heading = "Open applications"; }
+  else if(FILTER === "closed"){ shown = closed; heading = "Closed"; }
+  else { shown = jobs.filter(j => stageOf(j) === FILTER); heading = FILTER; }
+  const openList = el("div", {id:"open"});
+  list.appendChild(el("div", {cls:"section", text: heading + " (" + shown.length + ")"}));
+  if(!shown.length) list.appendChild(el("p", {cls:"hint", text:"Nothing here right now."}));
+  sorted(shown).forEach(j => openList.appendChild(card(j)));
+  list.appendChild(openList);
+  if(FILTER === "open" && closed.length){
+    list.appendChild(el("div", {cls:"section", id:"closedSum", text:"Closed (" + closed.length + ")"}));
+    const cl = el("div", {id:"closed"});
+    sorted(closed).forEach(j => cl.appendChild(card(j)));
+    list.appendChild(cl);
+  }
+  openIds.forEach(id => { const d = document.querySelector('[data-job="' + id + '"] details.update'); if(d) d.open = true; });
+  if(!document.getElementById("drawer").hidden) document.getElementById("handText").value = handText();
 }
 
-/* What goes back to the assistant. Each change carries the value it replaced, so
-   apply-desk can tell when the record moved on after this page was built and ask
-   instead of writing over it. */
 function updatesFile(){
-  return JSON.stringify({
-    desk: 1, built: DESK.built, key: DESK.key,
-    changes: Object.keys(EDITS).map(id => Object.assign({job: id}, EDITS[id]))
-  }, null, 1);
+  return JSON.stringify({desk: 1, built: DESK.built, key: DESK.key,
+    changes: Object.keys(EDITS).map(id => Object.assign({job: id}, EDITS[id]))}, null, 1);
 }
 function handText(){
   const L = ["Changes from Resu Desk. Please save the JSON below as desk-updates.json and run",
@@ -423,34 +582,38 @@ function handText(){
   L.push("", "```json", updatesFile(), "```");
   return L.join("\n");
 }
-
 async function copyText(text){
   try{
     if(!navigator.clipboard || !navigator.clipboard.writeText) return false;
-    return await Promise.race([
-      navigator.clipboard.writeText(text).then(() => true, () => false),
-      new Promise(r => setTimeout(() => r(false), 1200))
-    ]);
+    return await Promise.race([navigator.clipboard.writeText(text).then(() => true, () => false),
+                               new Promise(r => setTimeout(() => r(false), 1200))]);
   }catch(e){ return false; }
 }
-
-document.getElementById("sort").addEventListener("change", draw);
-document.getElementById("handBtn").addEventListener("click", () => {
-  const box = document.getElementById("handBox");
-  box.hidden = !box.hidden;
+function openDrawer(){
   document.getElementById("handText").value = handText();
-});
-document.getElementById("copyBtn").addEventListener("click", async (ev) => {
+  document.getElementById("veil").hidden = false;
+  document.getElementById("drawer").hidden = false;
+}
+function closeDrawer(){ document.getElementById("veil").hidden = true; document.getElementById("drawer").hidden = true; }
+
+document.getElementById("handBtn").addEventListener("click", openDrawer);
+document.getElementById("barHand").addEventListener("click", openDrawer);
+document.getElementById("dclose").addEventListener("click", closeDrawer);
+document.getElementById("veil").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", ev => { if(ev.key === "Escape") closeDrawer(); });
+document.getElementById("copyBtn").addEventListener("click", async ev => {
   const ok = await copyText(document.getElementById("handText").value);
-  ev.target.textContent = ok ? "Copied" : "Select the text and copy it";
-  setTimeout(() => ev.target.textContent = "Copy", 1800);
+  if(!ok){ const t = document.getElementById("handText"); t.focus(); t.select(); }
+  ev.target.textContent = ok ? "Copied" : "Selected, press Ctrl+C";
+  setTimeout(() => ev.target.textContent = "Copy", 2000);
 });
-document.getElementById("saveBtn").addEventListener("click", async (ev) => {
-  const data = updatesFile(), btn = ev.target;
+async function saveFile(ev){
+  const data = updatesFile(), btn = ev.target, label = btn.textContent;
+  const done = t => { btn.textContent = t; setTimeout(() => btn.textContent = label, 1800); };
   try{
     if(typeof claude !== "undefined" && claude.use){
       const dl = await claude.use("downloads");
-      if(dl){ await dl.save({filename:"desk-updates.json", data:data}); btn.textContent = "Saved"; setTimeout(() => btn.textContent = "Save the desk file", 1600); return; }
+      if(dl){ await dl.save({filename:"desk-updates.json", data:data}); done("Saved"); return; }
     }
   }catch(e){}
   try{
@@ -458,12 +621,33 @@ document.getElementById("saveBtn").addEventListener("click", async (ev) => {
     const a = document.createElement("a"); a.href = url; a.download = "desk-updates.json";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
-    btn.textContent = "Saved"; setTimeout(() => btn.textContent = "Save the desk file", 1600);
-  }catch(e){
-    btn.textContent = (await copyText(data)) ? "Copied instead" : "Use hand to AI instead";
-  }
-});
+    done("Saved");
+  }catch(e){ done((await copyText(data)) ? "Copied instead" : "Use Hand to AI instead"); }
+}
+document.getElementById("saveBtn").addEventListener("click", saveFile);
+document.getElementById("saveBtn2").addEventListener("click", saveFile);
 document.getElementById("clearBtn").addEventListener("click", () => { EDITS = {}; save(); draw(); });
+document.querySelectorAll("#sort button").forEach(b => b.addEventListener("click", () => {
+  SORT = b.dataset.sort;
+  document.querySelectorAll("#sort button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  draw();
+}));
+function tab(which){
+  const apps = which === "apps";
+  document.getElementById("tabApps").setAttribute("aria-selected", String(apps));
+  document.getElementById("tabHow").setAttribute("aria-selected", String(!apps));
+  document.getElementById("paneApps").classList.toggle("on", apps);
+  document.getElementById("paneHow").classList.toggle("on", !apps);
+}
+document.getElementById("tabApps").addEventListener("click", () => tab("apps"));
+document.getElementById("tabHow").addEventListener("click", () => tab("how"));
+(function(){
+  const dl = document.getElementById("stagedef");
+  (DESK.stages.length ? DESK.stages : Object.keys(MEANS)).forEach(s => {
+    dl.appendChild(el("dt", {}, [el("span", {cls:"tag", style:"--sc:" + COLOUR[s], text:s})]));
+    dl.appendChild(el("dd", {text: MEANS[s] || ""}));
+  });
+})();
 
 settle();
 draw();

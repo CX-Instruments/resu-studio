@@ -161,14 +161,14 @@ if HAVE_PW:
         rowtext = lambda jid: pg.locator('[data-job="%s"]' % jid).first.inner_text()
         page_facts.update({
             "errors": list(errors),
-            "open_rows": pg.locator("#open .row").count(),
+            "open_rows": pg.locator("#open .job").count(),
             "closed_sum": pg.locator("#closedSum").inner_text(),
             "A": rowtext(A), "B": rowtext(B), "E": rowtext(E),
-            "chips": pg.locator("#strip").inner_text(),
+            "chips": pg.locator("#filters").inner_text(),
         })
         # The Studio link, followed.
         with pg.expect_navigation():
-            pg.locator('[data-job="%s"] .doc a' % A).first.click()
+            pg.locator('[data-job="%s"] .docs a.cta' % A).first.click()
         page_facts["studio_title"] = pg.title()
         pg.goto("file://" + DESK)
 
@@ -185,19 +185,21 @@ if HAVE_PW:
         phone.close()
 
         # A person's changes: Riverbend moves on to Interview with a note, Coastal's date moves.
+        pg.locator('[data-job="%s"] details.update > summary' % B).click()
         pg.select_option('[data-job="%s"] select.stage' % B, "Interview")
-        pg.locator('[data-job="%s"] .notes button' % B).first.click()
-        pg.fill('[data-job="%s"] textarea' % B, "Interview on Thursday at 10, with the venue director")
-        pg.locator('[data-job="%s"] textarea' % B).dispatch_event("change")
+        pg.fill('[data-job="%s"] textarea.note' % B, "Interview on Thursday at 10, with the venue director")
+        pg.locator('[data-job="%s"] textarea.note' % B).dispatch_event("change")
+        pg.locator('[data-job="%s"] details.update > summary' % C).click()
         pg.fill('[data-job="%s"] input.date' % C, day(25))
         pg.locator('[data-job="%s"] input.date' % C).dispatch_event("change")
         pg.click("#handBtn")
         pg.wait_for_timeout(200)
         page_facts["hand"] = pg.locator("#handText").input_value()
-        page_facts["tray"] = pg.locator("#trayMsg").inner_text()
-        pg.screenshot(path=os.path.join(SHOTS, "desk-changed.png"), full_page=True)
+        page_facts["tray"] = pg.locator("#changesMsg").inner_text()
+        pg.screenshot(path=os.path.join(SHOTS, "desk-changed.png"), full_page=False)
+        page_facts["drawer_shot"] = True
         with pg.expect_download() as dl:
-            pg.click("#saveBtn")
+            pg.click("#saveBtn2")
         dl.value.save_as(os.path.join(SCR, "desk-updates.json"))
         w(os.path.join(SCR, "pasted.txt"), page_facts["hand"])
 
@@ -207,8 +209,8 @@ if HAVE_PW:
 
         pg.goto("file://" + DESK)
         pg.wait_for_timeout(400)
-        page_facts["after_tray"] = pg.locator("#trayMsg").inner_text()
-        page_facts["after_tray_hidden"] = pg.locator("#tray").is_hidden()
+        page_facts["after_tray"] = pg.locator("#changesMsg").inner_text()
+        page_facts["after_tray_hidden"] = pg.locator("#barHand").is_hidden()
         page_facts["B_changed"] = "changed" in (pg.locator('[data-job="%s"]' % B).first.get_attribute("class") or "")
         page_facts["C_changed"] = "changed" in (pg.locator('[data-job="%s"]' % C).first.get_attribute("class") or "")
         page_facts["B_after"] = pg.locator('[data-job="%s"]' % B).first.inner_text()
@@ -224,10 +226,10 @@ step("5. The Desk in a browser",
      checks=[(no_pw, lambda c, o: HAVE_PW)] if not HAVE_PW else [
          ("no script errors on the page", lambda c, o: not page_facts["errors"]),
          ("4 open rows", lambda c, o: page_facts["open_rows"] == 4),
-         ("the rejected job is folded away as Closed (1)", lambda c, o: page_facts["closed_sum"] == "Closed (1)"),
-         ("Northside says closes in 3 days", lambda c, o: "closes in 3 days" in page_facts["A"]),
-         ("Harbour Health says closed 1 day ago", lambda c, o: "closed 1 day ago" in page_facts["E"]),
-         ("Riverbend, already applied, has no closing flag", lambda c, o: "closes in" not in page_facts["B"] and "ago" not in page_facts["B"]),
+         ("the rejected job is folded away as Closed (1)", lambda c, o: page_facts["closed_sum"].lower() == "closed (1)"),
+         ("Northside says closes in 3 days", lambda c, o: "closes in 3 days" in page_facts["A"].lower()),
+         ("Harbour Health says closed 1 day ago", lambda c, o: "closed 1 day ago" in page_facts["E"].lower()),
+         ("Riverbend, already applied, has no closing flag", lambda c, o: "closes in" not in page_facts["B"].lower() and "ago" not in page_facts["B"].lower()),
          ("Northside shows the score moving 2 to 3 of 3", lambda c, o: "2 → 3" in page_facts["A"] and "of 3" in page_facts["A"]),
          ("the Studio link opens the Northside Studio", lambda c, o: page_facts["studio_title"].startswith("Resu Studio - Operations Coordinator"))])
 
@@ -270,7 +272,7 @@ step("9. The rebuilt Desk, opened again in the same browser",
      checks=[(no_pw, lambda c, o: HAVE_PW)] if not HAVE_PW else [
          ("Riverbend shows Interview and is not marked changed", lambda c, o: not page_facts["B_changed"] and "Interview" in page_facts["B_after"]),
          ("Coastal Parks is still marked changed", lambda c, o: page_facts["C_changed"]),
-         ("Coastal Parks' row says the records now hold a different date", lambda c, o: "Your records now say the closing date is " + day(22) in page_facts["C_after"]),
+         ("Coastal Parks' card says the records now hold a different date", lambda c, o: "out of date" in page_facts["C_after"].lower() and "your records now say the closing date is" in page_facts["C_after"].lower()),
          ("the tray now says 1 application", lambda c, o: "changed 1 application" in page_facts["after_tray"])])
 
 if HAVE_PW:

@@ -96,7 +96,8 @@ and use the newer one. What they said and when is part of the record.
 
 ## The three rules that matter most
 
-**1. A fact is not a printed line.** The facts ledger holds everything the person has
+**1. A fact is not a printed line.** The facts ledger (never called that in the chat: say
+"your working history") holds everything the person has
 ever written about their working life. The page holds a small selection of it. These
 are different things and conflating them is what produces a six page CV. Every
 printed line traces to a fact; most facts do not print.

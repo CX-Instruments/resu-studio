@@ -166,6 +166,16 @@ def _script_json(value):
             .replace("\u2029", "\\u2029"))
 
 
+def _skill_version():
+    """The version in SKILL.md's frontmatter, as the Studio's own stamp reads it."""
+    try:
+        with io.open(os.path.join(ROOT, "SKILL.md"), encoding="utf-8") as fh:
+            m = re.search(r'^\s*version:\s*"?([^"\n]+)"?', fh.read(), re.M)
+            return m.group(1).strip() if m else "?"
+    except (IOError, OSError):
+        return "?"
+
+
 def build(out=None):
     """Write the Desk. Returns the path. Raises OSError or ValueError when it cannot."""
     out = out or desk_path()
@@ -187,6 +197,8 @@ def build(out=None):
     # Written beside and swapped in, so a Desk someone has open is never half a page.
     # A failed swap takes its temporary file with it rather than leaving litter in the
     # folder a person opens to find their documents.
+    page = page.replace("BUILD_STAMP", "Resu Studio %s &middot; this page built %s"
+                        % (_skill_version(), data["built"]), 1)
     tmp = out + ".tmp"
     try:
         with io.open(tmp, "w", encoding="utf-8", newline="") as fh:

@@ -64,7 +64,9 @@ is right instead of writing over it. The Desk rebuilds itself whenever anything 
 
 ## The seven phases
 
-Each one stops and waits for you. Finishing one is not permission to begin the next.
+Each one stops and waits for you, so nothing of yours is rewritten without your say. The
+one exception is reading your CV and the ad, which runs straight on into scoring, so the
+first thing you get back after saying how deep to go is the Studio with your score.
 
 ```mermaid
 flowchart TD
