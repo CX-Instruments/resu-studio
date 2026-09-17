@@ -31,6 +31,15 @@ import sys
 import tempfile
 from pathlib import Path
 
+if os.name == "nt":
+    # An agent reads this through a pipe, and a pipe on Windows uses the old code
+    # page, so one accented letter would stop the script. See paths.utf8_output.
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+
 
 # Where a browser hides, in the order worth trying. Anything on PATH wins, because a
 # person who installed one meant it. Then the usual install locations for each OS,

@@ -750,6 +750,31 @@ def achievements_block(path):
     return {"achievements": out} if out else {}
 
 
+def skill_version():
+    """The version this skill says it is, or "?".
+
+    Read from SKILL.md's own frontmatter, because that file travels with the skill
+    wherever it is installed. The Skills CLI, Gemini CLI and Copilot copy only the
+    skill folder, so a manifest two folders up is not there to read. The Claude
+    manifest is still tried after it, for a checkout older than that line.
+    """
+    import re as _re
+    try:
+        head = io.open(os.path.join(paths.SKILL, "SKILL.md"), encoding="utf-8").read(4000)
+        m = _re.match(r"^---\s*\n(.*?)\n---", head, _re.S)
+        if m:
+            v = _re.search(r"^\s+version:\s*[\"']?([0-9][^\"'\s]*)", m.group(1), _re.M)
+            if v:
+                return v.group(1)
+    except (IOError, OSError, UnicodeDecodeError):
+        pass
+    try:
+        _m = os.path.join(paths.SKILL, "..", "..", ".claude-plugin", "plugin.json")
+        return json.load(io.open(os.path.normpath(_m), encoding="utf-8")).get("version", "?")
+    except Exception:                                         # noqa: BLE001
+        return "?"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cv", required=True, help="the CV markdown for this application")
@@ -905,13 +930,7 @@ def main():
     # Which build made this page. A studio is a file on disk: updating the plugin
     # does not change one that already exists, so without a stamp there is no way to
     # tell a page built before a fix from one built after it.
-    ver = "?"
-    try:
-        import json as _j
-        _m = os.path.join(paths.SKILL, "..", "..", ".claude-plugin", "plugin.json")
-        ver = _j.load(io.open(os.path.normpath(_m), encoding="utf-8")).get("version", "?")
-    except Exception:
-        pass
+    ver = skill_version()
     s = s.replace("BUILD_STAMP", "Resu Studio %s &middot; this page built %s"
                   % (ver, datetime.date.today().isoformat()), 1)
 

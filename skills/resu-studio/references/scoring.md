@@ -192,7 +192,7 @@ which one.
 | `unscored` | Check this one | queues the ask to be worked against their record |
 | `none` | nothing | there is nothing a CV can do about it |
 
-Anything they choose lands in Hand to Claude with the ask, their wording and
+Anything they choose lands in Hand to AI with the ask, their wording and
 whatever they typed, so the request arrives with its evidence attached.
 
 ## Correcting the reading is never the prominent control

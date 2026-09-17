@@ -451,8 +451,8 @@ button,input,select{font:inherit;color:inherit}
           <p class="hint" id="dochint"></p>
           <p class="hint">Save as PDF at the top does both documents, one file each,
             in the skin you have chosen. If this page cannot open a print dialog, the
-            button copies the command for this exact skin instead: hand it to Claude
-            and both PDFs land in your folder. It never gives you HTML to print
+            button copies the command for this exact skin instead: paste it into your chat
+            with the AI and both PDFs land in your folder. It never gives you HTML to print
             yourself.</p></div>
         <div class="grp"><h2>Layout</h2><div id="c-layout"></div></div>
         <div class="grp"><h2>Palette</h2><div class="opts" id="c-palette"></div></div>
@@ -800,7 +800,7 @@ const EXTRA = {
          +"Each one reaches across more than one job, so it says something none of your "
          +"role bullets say and nothing has to come off the page for it. Tick the ones "
          +"you want.",
-    empty:"Claude has not drafted any for this application yet. Ask for key "
+    empty:"Nothing has been drafted for this application yet. Ask for key "
          +"achievements and they will appear here to pick from. You can also type your "
          +"own below."},
   memberships:{
@@ -825,7 +825,7 @@ const EXTRA = {
    to. */
 const DRAFTS = {};
 
-/* What Claude has suggested, keyed by the line it lands on. Nothing here is applied:
+/* What the AI has suggested, keyed by the line it lands on. Nothing here is applied:
    the page shows the person's own wording until they press Use this. A suggestion is
    a card in the review queue, not a change to the document, because the whole promise
    of this studio is that they see a change before it happens. */
@@ -1142,7 +1142,7 @@ if(S.v !== STATE_V){
 function save(){ try{ S.v=STATE_V; remember();
                       localStorage.setItem(STORE,JSON.stringify(S)); }catch(e){} }
 
-/* If Claude drafted key achievements for this advertisement, the section has to be on
+/* If the AI drafted key achievements for this advertisement, the section has to be on
    the page for them to be seen at all. It used to sit behind an "add a section"
    button, so six drafted lines were invisible unless the person happened to press it —
    which is indistinguishable from the lines never having been written. Adding the
@@ -3171,7 +3171,7 @@ function tryPrint(){
    1. This page can print. That is the real thing, and it is what happens when the
       studio is open as its own page rather than inside a frame.
    2. It cannot. Then the print engine has to be the one on the machine where the
-      files live, and the command that drives it goes to Claude, who prints both
+      files live, and the command that drives it goes to the AI, which prints both
       documents on this exact skin.
 
    What it will not do is save the pages as HTML and call that saving a PDF. That was
@@ -3181,7 +3181,7 @@ async function savePdfs(btn){
   const was=btn.textContent, wantDoc=S.doc, wantView=S.view;
   try{
     /* Final is what prints, so that is what you are shown before anything leaves.
-       On the hand-to-Claude route especially: sending a command for a page you were
+       On the hand-to-AI route especially: sending a command for a page you were
        not looking at is how a surprise arrives in the PDF. */
     if(S.view!=="final"){ S.view="final"; draw(); await rendered(); }
     if(canPrintHere()){
@@ -3497,7 +3497,7 @@ function paintRails(){
   };
   r.appendChild(mk("turn","your turn",
     propsWaiting()+Object.keys(S.flags||{}).length));
-  r.appendChild(mk("claude","hand to Claude", handoffCount(), "claude"));
+  r.appendChild(mk("claude","hand to AI", handoffCount(), "claude"));
 }
 
 function openDrawer(key){
@@ -3562,7 +3562,7 @@ function editorInto(box){
   box.appendChild(ta);
   const row=document.createElement("div"); row.className="row";
   const ok=document.createElement("button"); ok.type="button";
-  ok.textContent = act==="rewrite" ? "Hand it to Claude" : act==="edit" ? "Use my wording" : "Add it";
+  ok.textContent = act==="rewrite" ? "Ask for a rewrite" : act==="edit" ? "Use my wording" : "Add it";
   ok.addEventListener("click",()=>{
     const v=ta.value.trim();
     const prop = editing.prop;
@@ -3600,7 +3600,7 @@ function paintDrawer(){
   const sub=document.createElement("p");
 
   if(S.drawer==="claude"){
-    h.textContent="Hand to Claude";
+    h.textContent="Hand to AI";
     sub.textContent="Everything you have decided in this studio: the suggestions you "
       +"used, the ones you kept your own wording on, what you rewrote yourself, what "
       +"you took off, what you added, and every line you have asked me to rewrite. "
@@ -3700,16 +3700,16 @@ function paintDrawer(){
       const lead=document.createElement("p"); lead.className="note";
       lead.style.marginTop="14px";
       lead.textContent="This is everything you have decided. Copy it into the chat, or "
-        +"save the file and hand Claude that. Until you do, it lives only in this "
+        +"save the file and hand that over. Until you do, it lives only in this "
         +"browser.";
       d.appendChild(lead);
       const ta=document.createElement("textarea"); ta.className="copybox";
       ta.readOnly=true; ta.value=handoffText();
       const row=document.createElement("div"); row.className="row";
-      const cp=document.createElement("button"); cp.type="button"; cp.textContent="Copy for Claude";
+      const cp=document.createElement("button"); cp.type="button"; cp.textContent="Copy for the chat";
       cp.addEventListener("click",async()=>{
         try{ await navigator.clipboard.writeText(ta.value); cp.textContent="Copied";
-             setTimeout(()=>cp.textContent="Copy for Claude",1400);
+             setTimeout(()=>cp.textContent="Copy for the chat",1400);
         }catch(e){ ta.select(); }
       });
       const dl=document.createElement("button"); dl.type="button";
@@ -3787,18 +3787,18 @@ function paintDrawer(){
   }
 
   /* The studio keeps their decisions in this browser and nowhere else. Nothing tells
-     Claude about them until they hand them over, and somebody who does not know that
+     the AI about them until they hand them over, and somebody who does not know that
      can work for an hour and believe it was all saved. */
   if(handoffCount()){
     const nag=document.createElement("div"); nag.className="item";
     nag.style.borderLeft="3px solid var(--warn)"; nag.style.paddingLeft="10px";
     const t=document.createElement("p"); t.className="t";
     t.textContent=handoffCount()+" decision"+(handoffCount()===1?"":"s")
-      +" are saved here, in this browser, and Claude cannot see them yet.";
+      +" are saved here, in this browser, and the AI cannot see them yet.";
     const n=document.createElement("p"); n.className="note";
     n.textContent="They stay if you close the page. To put them into the CV, open "
-      +"hand to Claude and paste the block into the chat, or save the decisions file "
-      +"and give Claude that.";
+      +"hand to AI and paste the block into the chat, or save the decisions file "
+      +"and give the AI that.";
     const row=document.createElement("div"); row.className="row";
     const go=document.createElement("button"); go.type="button";
     go.textContent="Hand them over";
@@ -3844,7 +3844,7 @@ function paintDrawer(){
         ok.textContent="Happy with it after all";
         ok.addEventListener("click",()=>{ clearFlag(a.id); setChecked(a.id,true); });
         const ask=document.createElement("button"); ask.type="button";
-        ask.textContent="Ask Claude to rewrite it";
+        ask.textContent="Ask for a rewrite";
         ask.addEventListener("click",()=>{ editing={act:"rewrite", id:a.id, shown:a.text};
           openDrawer("claude"); });
         row.append(ok,ask); box.appendChild(row); d.appendChild(box);
@@ -4332,7 +4332,7 @@ function handoffText(){
     L.push("");
   }
   L.push("---");
-  L.push("Claude: apply these to the markdown CV, then rescore and rebuild the studio "
+  L.push("AI: apply these to the markdown CV, then rescore and rebuild the studio "
          + "with the same --role so this page carries the result.");
   return L.join("\n");
 }
@@ -4417,6 +4417,18 @@ async function saveDecisions(btn){
             btn.textContent="Saved"; setTimeout(()=>btn.textContent="Save the decisions file",1600);
             return; }
   }catch(e){}
+  /* Outside Claude there is no downloads capability, but a page opened from disk in
+     an ordinary browser can still hand over a real file. Only as its own page: inside
+     a sandboxed frame the click can be swallowed without an error, and "Saved" would
+     then be untrue, so a frame goes on to the clipboard below. */
+  if(canPrintHere()) try{
+    const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));
+    const a=document.createElement("a"); a.href=url; a.download="cv-decisions.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    btn.textContent="Saved"; setTimeout(()=>btn.textContent="Save the decisions file",1600);
+    return;
+  }catch(e){}
   try{ await navigator.clipboard.writeText(data); btn.textContent="Copied instead";
        setTimeout(()=>btn.textContent="Save the decisions file",1800);
   }catch(e){ btn.textContent="Could not save"; }
@@ -4457,7 +4469,7 @@ $("#pdf").addEventListener("click",function(){ savePdfs(this); });
 /* The command line for whatever is on screen.
 
    One place builds it, because Copy settings and the Save as PDF fallback have to
-   agree. A person told to hand a line to Claude, who is then given a command for a
+   agree. A person told to hand a line to the AI, which is then given a command for a
    different skin than the one they are looking at, has been told something untrue by
    a tool whose whole promise is that the preview equals the print. */
 function settingsCommand(withPdf){
@@ -4532,7 +4544,7 @@ function settingsCommand(withPdf){
        somebody has to remember to save. Copied in the same breath as the command,
        so they cannot be out of date with it. */
     cmd += "\n\n# Your page has "+bits.join(", and ")+"."
-        +  "\n# Claude: save the JSON below as cv-decisions.json beside the CV"
+        +  "\n# AI: save the JSON below as cv-decisions.json beside the CV"
         +  " markdown, then run the command above. Without it the renderer prints"
         +  " from the markdown alone and none of that appears."
         +  "\n\n" + decisionsFile();
@@ -4542,7 +4554,7 @@ function settingsCommand(withPdf){
      studio knows about the letter is in here: the wording, the paragraphs added to it,
      and nothing that is still a prompt. */
   if(letterWritten() && (withPdf || S.doc==="letter")){
-    cmd += "\n\n# Claude: save the markdown below as "+LTMD+" beside the CV markdown,"
+    cmd += "\n\n# AI: save the markdown below as "+LTMD+" beside the CV markdown,"
         +  "\n# then run the command above. It is the letter exactly as this studio"
         +  "\n# shows it, and nothing that is still a prompt is in it."
         +  "\n\n" + letterMarkdown();
@@ -4822,8 +4834,8 @@ function showCommand(text, copied){
     +"font:13px/1.5 system-ui,'Segoe UI',Arial,sans-serif;color:#1d232c";
   const h=document.createElement("div");
   h.style.cssText="font-weight:700;margin:0 0 4px";
-  h.textContent = copied ? "Copied. Hand this to Claude."
-                         : "Select and copy the line below, then hand it to Claude.";
+  h.textContent = copied ? "Copied. Paste it into your chat."
+                         : "Select and copy the line below, then paste it into your chat.";
   const sub=document.createElement("div");
   sub.style.cssText="color:#4a5361;margin:0 0 9px";
   sub.textContent="A PDF has to come out of a print engine, and this page is not "

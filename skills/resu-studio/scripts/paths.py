@@ -16,25 +16,29 @@ them inside itself. In order:
                                      out to the stable place the first time it is
                                      used, so the next update cannot lose it.
        A human wrote this, so it wins over anything the host guessed.
-    2. CLAUDE_PLUGIN_DATA   the host's own folder for data that outlives an update.
-                            Set when this is installed as a plugin. Used when no
-                            pointer was written.
+    2. CLAUDE_PLUGIN_DATA or PLUGIN_DATA
+                            the host's own folder for data that outlives an update.
+                            Claude sets the first when this is installed as a
+                            plugin; PLUGIN_DATA is the name the Agent Plugins
+                            standard uses. Used when no pointer was written.
     3. ~/.resu-studio       last resort, and still outside the plugin, so a bare
                             checkout keeps this person's work through an update.
     4. <skill>/data         only when a home folder cannot be made at all. Says so
                             loudly, because it is the one answer an update deletes.
 
-A pointer is checked before it is believed. A Windows path such as `D:\\CVs`, or
-anything holding a backslash, is not a path this session can see: it would be
-created as one directory with backslashes in its name, in some working directory,
-and every finished document would go there and never be found. It is refused, by
-name, with what to write instead.
+A pointer is checked before it is believed. When the scripts run on Linux or a Mac,
+a Windows path such as `D:\\CVs`, or anything holding a backslash, is not a path
+they can see: it would be created as one directory with backslashes in its name, in
+some working directory, and every finished document would go there and never be
+found. It is refused, by name, with what to write instead. When the scripts run on
+Windows itself, which is where Codex, Copilot, Cursor and Gemini CLI run for a
+Windows user, a drive letter is exactly the right way to write it and is accepted.
 
 Anybody who used this skill before it stopped keeping files inside itself has their
 whole history sitting in `<skill>/data`: their facts ledger, their answers, their
 documents list and every PDF they printed. Resolving to a new folder on its own
 would show them an empty history and quietly rebuild a ledger they already have,
-and a fact they told Claude rather than wrote on a CV has nothing to be rebuilt
+and a fact they told the assistant rather than wrote on a CV has nothing to be rebuilt
 from. So the first time the new folder is used, the old one is copied into it. See
 `_bring_forward`.
 
@@ -51,6 +55,46 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
+
+#: True when Python itself is running on Windows. Then `D:\\CVs` is a real folder
+#: this process can open, and refusing it would lock a Windows user out of choosing
+#: where their own files go.
+ON_WINDOWS = os.name == "nt"
+
+#: How to name Python in a message a person or an agent will copy. Windows installs
+#: it as `python` or `py`; `python3` is usually missing there.
+PY = "python" if ON_WINDOWS else "python3"
+
+#: The host's own data folder, in the order they are trusted. CLAUDE_PLUGIN_DATA is
+#: what Claude sets for an installed plugin; PLUGIN_DATA is the Agent Plugins name.
+DATA_ENV = ("CLAUDE_PLUGIN_DATA", "PLUGIN_DATA")
+
+
+def utf8_output():
+    """Make printing a name like Zoë safe on Windows. Harmless everywhere else.
+
+    An agent reads a script's output through a pipe, and on Windows a pipe uses the
+    old code page, so the first accented letter or typographic dash in somebody's CV
+    stops the script with UnicodeEncodeError halfway through a render.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+
+
+if ON_WINDOWS:
+    utf8_output()
+
+
+def _host_data():
+    """(variable name, value) for the first host data folder that is set, or (None, None)."""
+    for name in DATA_ENV:
+        value = os.environ.get(name)
+        if value:
+            return name, value
+    return None, None
 
 #: The folder finished documents land in. Named for what is in it rather than for
 #: what the code calls it, and prefixed so it sorts above everything else: somebody
@@ -160,7 +204,7 @@ def check_pointer_text(raw, where="", require_parent=True):
     if not raw:
         return None, "the pointer%s is empty." % label
 
-    if re.match(r"^[A-Za-z]:[\\/]", raw) or "\\" in raw:
+    if not ON_WINDOWS and (re.match(r"^[A-Za-z]:[\\/]", raw) or "\\" in raw):
         hint = _mounted_equivalent(raw)
         msg = ("the pointer%s names %s, which is a Windows path. This session "
                "cannot see drive letters or backslashes, and using it as written "
@@ -176,8 +220,9 @@ def check_pointer_text(raw, where="", require_parent=True):
     if not os.path.isabs(path):
         return None, ("the pointer%s names %s, which is a relative path. It would "
                       "mean a different folder for every directory a script is run "
-                      "from, so it is refused. Write the whole path, starting at /."
-                      % (label, raw))
+                      "from, so it is refused. Write the whole path, %s."
+                      % (label, raw, "starting with the drive letter, like D:\\CVs"
+                         if ON_WINDOWS else "starting at /"))
 
     path = os.path.normpath(path)
     parent = os.path.dirname(path)
@@ -245,7 +290,7 @@ def resolve(force=False):
 
 def _resolve_once():
     """(folder, where_it_came_from, survives_an_update, which_of_the_four)."""
-    env = os.environ.get("CLAUDE_PLUGIN_DATA")
+    env_name, env = _host_data()
 
     for label, _fp, raw in _pointers():
         path, complaint = check_pointer_text(raw, label)
@@ -265,12 +310,11 @@ def _resolve_once():
         # The host made this folder up, and may not have created it yet, so its
         # parent is not required to exist. The rest of the checks still apply: a
         # backslash in here would build the same junk folder as anywhere else.
-        path, complaint = check_pointer_text(env, "CLAUDE_PLUGIN_DATA",
-                                             require_parent=False)
+        path, complaint = check_pointer_text(env, env_name, require_parent=False)
         if complaint:
             sys.stderr.write("resu-studio: %s\n" % complaint)
         elif _usable(path):
-            return path, "CLAUDE_PLUGIN_DATA", True, "env"
+            return path, env_name, True, "env"
 
     if _usable(HOME_DIR):
         return HOME_DIR, "~/.resu-studio (nothing else was named)", True, "home"
@@ -409,7 +453,7 @@ def _bring_forward(dest, kind):
     """Copy the old in-plugin folder into the person's folder, once, and say so.
 
     This runs for the folder nobody named (`~/.resu-studio`) and for a folder
-    somebody pointed at. It does not run for CLAUDE_PLUGIN_DATA, because that was
+    somebody pointed at. It does not run for the host's data folder, because that was
     already preferred over the in-plugin folder before any of this changed, so
     nobody's files were ever in the old place while that was set.
 
@@ -531,7 +575,7 @@ def _warn_once(path):
     _WARNED = True
     sys.stderr.write(
         "resu-studio: WARNING your files are in %s, inside the plugin, and a plugin "
-        "update deletes it. Run python3 scripts/paths.py to move them.\n" % path)
+        "update deletes it. Run %s scripts/paths.py to move them.\n" % (path, PY))
 
 
 def data_dir():
@@ -632,10 +676,10 @@ def main(argv=None):
     others = [lbl for lbl, _fp, _raw in _pointers() if lbl != src]
     if others:
         print("  also present, not used: %s" % ", ".join(others))
-    env = os.environ.get("CLAUDE_PLUGIN_DATA")
-    if env and src != "CLAUDE_PLUGIN_DATA":
-        print("  CLAUDE_PLUGIN_DATA is set to %s and was not used: a pointer file "
-              "is a person's own choice and comes first." % env)
+    env_name, env = _host_data()
+    if env and src != env_name:
+        print("  %s is set to %s and was not used: a pointer file "
+              "is a person's own choice and comes first." % (env_name, env))
 
     print()
     print("  documents : %s" % os.path.join(path, DOCUMENTS))
@@ -644,7 +688,7 @@ def main(argv=None):
     print("  the CV as it arrived : %s" % os.path.join(path, "cv-source"))
     print()
     print("  For a command line, one path and nothing else:")
-    print("    python3 scripts/paths.py --facts")
+    print("    %s scripts/paths.py --facts" % PY)
     print("    %s" % " ".join(sorted(_ONE_PATH)))
     return 0
 

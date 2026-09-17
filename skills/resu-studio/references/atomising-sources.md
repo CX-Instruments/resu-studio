@@ -83,7 +83,7 @@ carries `parent: role-example`.
 A `kind: skill` entry carries `group`, which is the heading the skill prints under, and
 its level lives inside the source text in brackets rather than in a field of its own.
 
-A fact the person told Claude rather than wrote down has a `stated:` source instead of
+A fact the person told you rather than wrote down has a `stated:` source instead of
 a `cv:` one, with who said it and when, and `confirmed: true`, because they said it.
 
 ## Read the bodies, not the headings

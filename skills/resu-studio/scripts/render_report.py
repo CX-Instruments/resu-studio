@@ -24,6 +24,15 @@ import os
 import re
 import sys
 
+if os.name == "nt":
+    # An agent reads this through a pipe, and a pipe on Windows uses the old code
+    # page, so one accented letter would stop the script. See paths.utf8_output.
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(os.path.dirname(HERE), "assets")
 

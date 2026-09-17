@@ -7,7 +7,7 @@ a proposal, or a sentence of chat.
 
 **Everything written for the person.** The CV, the statement of claims, the cover
 letter, every proposal, every template the person is shown or handed, and every
-sentence Claude says to them in chat. If a person can read it, these rules hold, and
+sentence you say to them in chat. If a person can read it, these rules hold, and
 `scripts/check.py` fails the dash rule on the drafts in their folder.
 
 **Not the reference files in this folder.** `references/*.md` are internal working

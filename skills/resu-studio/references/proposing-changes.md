@@ -203,7 +203,7 @@ that say what it buys them. Not an argument.
 Once the studio is built and handed over, **stop proposing and wait.** Do not walk them
 through the list, do not ask which ones they accept, and do not offer a way to work
 through them in the conversation. They press through the suggestions themselves and
-bring back the hand-to-Claude block. Asking them to approve a list they have not seen
+bring back the hand-to-AI block. Asking them to approve a list they have not seen
 on the page is the failure this studio was built to prevent.
 
 ## Never

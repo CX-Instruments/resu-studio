@@ -611,7 +611,7 @@ selectable text.
 
 **When the browser will not print at all,** the third route is the most reliable of the
 three: **Copy settings**, the button next to Save as PDF on the bar above the page,
-handed to Claude, who runs `render_cv.py` and writes both PDFs into the person's folder.
+handed to the AI, which runs `render_cv.py` and writes both PDFs into the person's folder.
 The button is on the bar rather than on a tab, so it is there whichever tab is open and
 whether the view is Working or Final.
 
@@ -735,7 +735,7 @@ that never answers costs three seconds, not the document.
 The button tries the browser's own print first, which is the real thing and works
 when the studio is open as its own page. Inside a preview frame a page is not allowed
 to open a print dialog, and that failure is silent, so the button falls back to
-copying the `--pdf` command for the exact skin on screen. Handing that to Claude
+copying the `--pdf` command for the exact skin on screen. Handing that to the AI
 prints both documents where the files are.
 
 It does not save the pages as HTML. That was the old fallback, and it left people

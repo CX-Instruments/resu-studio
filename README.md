@@ -88,7 +88,11 @@ never have to ask to see where things stand.
 
 ## Installing it
 
-In Cowork, open Customize, then Plugins, then Add marketplace, and enter:
+Resu Studio is one skill, written to the open [Agent Skills](https://agentskills.io)
+standard, so the same repository installs into Claude and into other AI tools. Every
+install reads this repository, so an update here reaches all of them.
+
+**Claude (Cowork).** Open Customize, then Plugins, then Add marketplace, and enter:
 
 ```
 CX-Instruments/resu-studio
@@ -97,6 +101,25 @@ CX-Instruments/resu-studio
 Resu Studio then appears in your plugin browser to install. To install a downloaded
 file instead, use the upload option on the same page and pick the `.plugin` file from
 [Releases](https://github.com/CX-Instruments/resu-studio/releases).
+
+**Claude Code, Codex, GitHub Copilot, Cursor, Gemini CLI and other agents.** Install it
+with the [Skills CLI](https://github.com/vercel-labs/skills), which needs Node.js:
+
+```
+npx skills add CX-Instruments/resu-studio
+```
+
+It asks which of your AI tools to install it into. To pick one yourself, add
+`-a codex`, `-a cursor`, `-a github-copilot`, `-a gemini-cli` or `-a claude-code`. To
+pick up a later version:
+
+```
+npx skills update
+```
+
+The Skills CLI counts installs anonymously, which is how skills are ranked on
+[skills.sh](https://skills.sh). That count is the CLI's, not Resu Studio's. Set
+`DISABLE_TELEMETRY=1` before running it to turn it off.
 
 ## Getting started
 
@@ -120,10 +143,12 @@ To choose the folder yourself, put a single line, the path you want, in
 `SKILL.md` still works, and the first time it is used it is copied out to
 `.resu-studio/location`, so the next update cannot take the pointer with it.
 
-Write the path the way the machine doing the work sees it. It starts with a `/` and
-has no drive letter and no backslashes. A Windows path like `D:\Users\you\CVs` is
-refused with a message saying so, and where it can, the message names the folder on
-the working machine that looks like the one you meant.
+Write the path the way the machine doing the work sees it. In an AI tool running on
+your own Windows computer, that is the ordinary path, like `D:\Users\you\CVs`. In a
+cloud session such as Cowork, the machine doing the work is not your computer: the
+path starts with a `/` and has no drive letter and no backslashes, and a Windows path
+there is refused with a message naming the folder on that machine that looks like the
+one you meant.
 
 If you used this before it stopped keeping files inside the plugin, your old folder is
 copied out to the new one the first time it runs. Nothing is moved, nothing already in
@@ -134,15 +159,41 @@ advertisement. Only the job-specific work is replaced, and you are told before i
 
 ## What you need to install
 
-Nothing.
+**In Claude's Cowork: nothing.** You will not be asked to run a command, set a path, or
+install anything. The work happens in Claude's own session, and the finished documents
+come back to you as files. You should never have to know what any of it is written in.
 
-You will not be asked to run a command, set a path, or install anything. The work
-happens where Claude is running, and the finished documents come back to you as files.
-You should never have to know what any of it is written in.
+**In an AI tool that runs on your own computer** (Claude Code, Codex, Copilot, Cursor,
+Gemini CLI), the work happens on your machine, so it needs two things most computers
+already have:
+
+- **Python 3.** The scripts use only what comes with Python, so there is nothing else
+  to install alongside it.
+- **Chrome, Edge or Chromium**, to print the PDF. Without one, everything else still
+  works, and the studio prints the PDF from your own browser with **Save as PDF**.
+
+**In a chat that cannot run code**, the scoring, the suggested changes and the cover
+letter still work. The studio and the PDF need somewhere to run.
 
 The typefaces are carried inside the plugin, so your documents print the same whether
 or not the machine doing the printing has ever been online. The studio you look at on
 screen carries the same ones, so the page breaks you see are the page breaks you get.
+
+## What the scripts do
+
+Skills that ship scripts deserve a look before they run on your computer. These are
+all in [`skills/resu-studio/scripts`](skills/resu-studio/scripts), use only Python's
+standard library, and do three things beyond reading and writing files:
+
+- **They write only to your own folder**, `.resu-studio` in your home folder or the
+  one you chose. Nothing is sent anywhere.
+- **`to_pdf.py` and `render_cv.py` start your browser** in headless mode, with no
+  window, to print the finished page to PDF and to measure page breaks. Starting a
+  browser is the only other program they run.
+- **`fetch_fonts.py` downloads typefaces from Google Fonts**, and only when you run it.
+  The fonts are already in the repository, so it is for adding a new one. A page set
+  in a face that is not carried falls back to linking Google Fonts, and the PDF check
+  refuses a document whose face did not arrive.
 
 ## Support
 

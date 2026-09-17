@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.5.0, 16 September 2026
+
+Resu Studio now installs into other AI tools from this same repository, and nothing it
+does assumes it is running inside Claude.
+
+**A strict installer could not read the skill at all.** The description in SKILL.md
+held `only: not`, and a colon followed by a space inside an unquoted YAML value is not
+valid YAML. Claude read it anyway. The Skills CLI, and anything else that parses the
+frontmatter strictly, skipped the skill with a parse error. The colon is now a comma.
+
+**The skill says what it needs.** SKILL.md carries `license`, `compatibility` (Python 3
+and a Chromium-family browser) and `metadata`, the optional fields of the Agent Skills
+standard, so a tool can say so before anyone installs it.
+
+**One version number, in SKILL.md.** The studio's version stamp read
+`.claude-plugin/plugin.json` two folders above the skill. The Skills CLI, Gemini CLI and
+Copilot install only the skill folder, so every studio built there said `Resu Studio ?`.
+The version now lives in SKILL.md under `metadata: version:`, the stamp reads it from
+there, and `tools/sync_version.py` copies it into both Claude manifests and checks the
+frontmatter the way a strict installer would.
+
+**Windows folders work on Windows.** `paths.py` refused any path with a drive letter or
+a backslash, which is right in a Linux session that cannot see `D:` and wrong on a
+Windows computer, where Codex, Copilot, Cursor and Gemini CLI run. The refusal now
+applies only when the scripts are not running on Windows. Every script also writes its
+output as UTF-8 on Windows, where an accented letter in a CV stopped the run with
+`UnicodeEncodeError` when an agent read the output through a pipe.
+
+**`PLUGIN_DATA` is honoured beside `CLAUDE_PLUGIN_DATA`**, as the host's own data folder,
+under the name the Agent Plugins standard uses. A pointer file still comes first.
+
+**Hand to Claude is now Hand to AI.** The studio's queue, its panel, the copy button and
+every sentence that named Claude now name the AI, or the chat, so the page reads
+correctly in whichever tool built it. The stored values behind them are unchanged, so
+marks already saved in a browser and decisions files already written still load.
+
+**Save the decisions file saves a file outside Claude.** Without Claude's downloads
+capability the button only copied the JSON. Opened as its own page in an ordinary
+browser, it now downloads `cv-decisions.json`.
+
+**SKILL.md is under 500 lines**, the size the standard recommends, down from 1,080. It
+now carries the short version of every rule and phase. Nothing was taken out: the full
+text moved into four new references, changed only where it named Claude or pointed
+at another section, `working-with-the-person.md`,
+`sources.md`, `studio.md` and `assemble-and-print.md`, and each phase names the one to
+read when it starts.
+
+**Where the work happens depends on the tool.** A new `references/where-files-go.md`
+covers a temporary cloud session, the person's own computer, and a chat that cannot run
+code, including the Python command on Windows and the PowerShell form of the commands.
+
+**The README says how to install it everywhere**, with the Skills CLI for Claude Code,
+Codex, Copilot, Cursor and Gemini CLI, what each kind of tool needs, and what the
+scripts do on your computer.
+
 ## 0.4.4, 16 September 2026
 
 The cover letter could not be written in the studio, and on a general resume there was

@@ -81,7 +81,7 @@ other than what the source plus the decisions print is refused as a fault in the
 
 An id such as `professional-experience/2/b3` names a line by where it sits. After the
 assembly those ids name lines of the assembled document, so a proposal, a note or a
-hand-to-Claude line still carrying a pre-assembly id points at the wrong line, and a
+hand-to-AI line still carrying a pre-assembly id points at the wrong line, and a
 proposal for a line the person took off names nothing at all. Record every decision
 against its proposal before assembling. Anything the person wants to change after that
 belongs in a new studio built from the assembled CV, where the ids and the page agree.

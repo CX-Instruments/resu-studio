@@ -1,7 +1,10 @@
 studio.html is the live studio. It is a complete HTML document: doctype, head, body,
 the lot. Open it in any browser and it works, with no server and no build step.
 
-**What gets published as an artifact is the same file with the first five lines and the
+Outside Claude, this whole file is what the person opens: Codex, Copilot, Cursor and
+Gemini CLI write it to their disk and it opens straight into a browser.
+
+**In Claude, what gets published as an artifact is the same file with the first five lines and the
 last two removed.** The artifact host supplies its own doctype, head and body and
 refuses a file that brings its own, so publishing strips them:
 

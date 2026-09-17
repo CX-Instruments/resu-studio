@@ -95,7 +95,7 @@ it is not in the markdown the studio hands over. A letter that still says "Role 
 exactly as the advertisement writes it" has not been written, and Save as PDF says so
 rather than printing a sheet of instructions with somebody's name at the bottom.
 
-**A prompt stays a prompt until the person deals with it.** Not Claude. Filling the
+**A prompt stays a prompt until the person deals with it.** Not the AI. Filling the
 letter in unasked is writing on somebody's behalf without being asked to, and it is the
 one thing this scaffold must not invite. The letter is written in Phase 7, when they
 ask for one.

@@ -62,7 +62,7 @@ a paginated page never reflows while they are thinking.
 |---|---|---|
 | ✓ | Read it, happy with it | takes it out of the queue and changes nothing on the page |
 | ⚑ | Flag it | a coloured edge and a note to themselves. No change to the page |
-| ✦ | Needs a rewrite | joins the **hand to Claude** queue, with whatever they said about it |
+| ✦ | Needs a rewrite | joins the **hand to AI** queue, with whatever they said about it |
 | ✎ | Edit it myself | their wording prints exactly as typed, the original kept in the archive |
 | ⊖ | Take it off | off this version, kept in full in the archive |
 | ＋ | Write a new line | their line, printed after the one they pointed at |
@@ -120,7 +120,7 @@ grouped the way the CV reads, each with a tick box and each pressable to jump to
 line on the page and select it there. It counts down as they work. Under it sits the
 panel holding every decision, with the original wording, and one press to undo.
 
-**Hand to Claude** is the rewrite requests. It ends in a block they copy into the chat,
+**Hand to AI** is the rewrite requests. It ends in a block they copy into the chat,
 which names the id, the current wording and what they asked for, then lists what they
 took off, what they rewrote themselves, and what they flagged. Read that block and work
 the list.
