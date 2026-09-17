@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resu Desk</title>
+<!-- Resu Desk. Every application this person has, in one page.
+
+     A template. scripts/build_desk.py fills the DESK block below from each job's job.json
+     and the documents list, and writes the page to 4 Finished documents/Resu Desk.html. It
+     is rebuilt whenever a job, a studio or a PDF changes.
+
+     It is built from the Studio's own parts: the same colour tokens, the same rail with a
+     brand block and tabs, the same Archivo Narrow labels, option chips, segmented controls,
+     call-to-action buttons and drawer, copied from assets/studio.html. Somebody who has
+     used the Studio should recognise every control here without being told.
+
+     The page never writes a record. A stage, a closing date or a note changed here is kept
+     in this browser and goes back to the AI through "Hand to AI" or "Save the desk file";
+     scripts/jobs.py apply-desk writes it. Nothing here asks the network for anything. -->
+<style id="deskfaces"></style>
+<style>
+:root{
+  color-scheme:light;
+  --table:#dee2e8; --panel:#ffffff; --panel2:#f4f6f9;
+  --ink:#12161c; --muted:#5c6674; --line:#c9cfd9; --line2:#e2e6ec;
+  --accent:#14607f; --accent-soft:#e2eef3; --on-accent:#ffffff;
+  --ok:#2e7d52; --warn:#a8681a; --gap:#a63b36; --near:#7a6a3c;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --label:"Archivo Narrow","Arial Narrow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --shadow:0 1px 2px rgba(16,22,32,.06),0 8px 26px rgba(16,22,32,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --table:#14171c; --panel:#1c2027; --panel2:#232830;
+    --ink:#e8ebf0; --muted:#949dab; --line:#2a303a; --line2:#242932;
+    --accent:#4fa3c7; --accent-soft:#1b2c36; --on-accent:#0d1418;
+    --ok:#5cb98a; --warn:#d09a4e; --gap:#e0776f; --near:#c2ad74;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --table:#14171c; --panel:#1c2027; --panel2:#232830;
+  --ink:#e8ebf0; --muted:#949dab; --line:#2a303a; --line2:#242932;
+  --accent:#4fa3c7; --accent-soft:#1b2c36; --on-accent:#0d1418;
+  --ok:#5cb98a; --warn:#d09a4e; --gap:#e0776f; --near:#c2ad74;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--table);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.5;
+     -webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+[hidden]{display:none!important}
+a{color:var(--accent)}
+
+/* ---------------------------------------------------------------- frame, as the Studio */
+.app{display:grid;grid-template-columns:352px 1fr;height:100dvh}
+.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;
+      min-height:0;min-width:0}
+.stage{position:relative;overflow:auto;min-width:0}
+.brand{padding:16px 18px 12px;border-bottom:1px solid var(--line2);flex:none}
+.brand h1{margin:0;font-size:16px;font-weight:700;letter-spacing:-.15px}
+.brand p{margin:3px 0 0;font-size:12.5px;color:var(--muted);line-height:1.4}
+.tabs{display:flex;gap:2px;padding:9px 12px 0;border-bottom:1px solid var(--line2);flex:none}
+.tabs button{flex:1;background:none;border:0;padding:8px 4px 9px;cursor:pointer;
+             font-family:var(--label);font-size:12px;font-weight:600;letter-spacing:.9px;
+             text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.panes{flex:1;overflow-y:auto;padding:4px 18px 30px;min-height:0}
+.pane{display:none}
+.pane.on{display:block}
+.grp{margin:18px 0 0}
+.grp:first-child{margin-top:14px}
+.grp>h2{margin:0 0 8px;font-family:var(--label);font-size:11.5px;font-weight:600;letter-spacing:1.3px;
+        text-transform:uppercase;color:var(--muted)}
+.hint{margin:7px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{background:var(--panel2);border:1px solid var(--line2);border-radius:2px;padding:7px 10px;font-size:13px;
+     cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;line-height:1.25}
+.opt:hover{border-color:var(--line)}
+.opt[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
+.opt b{font-variant-numeric:tabular-nums;font-weight:600;color:var(--muted)}
+.opt[aria-pressed="true"] b{color:var(--accent)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--sc,var(--muted))}
+.seg{display:flex;border:1px solid var(--line2);border-radius:2px;overflow:hidden}
+.seg button{flex:1;background:var(--panel2);border:0;border-right:1px solid var(--line2);padding:7px 2px;
+            font-family:var(--label);font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+            color:var(--muted);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tile{background:var(--panel2);border:1px solid var(--line2);border-radius:2px;padding:9px 11px}
+.tile b{display:block;font-size:22px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{display:block;margin-top:3px;font-family:var(--label);font-size:10.5px;font-weight:600;
+           letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.tile.warn b{color:var(--warn)}
+
+.cta{background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:2px;
+     padding:8px 13px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;
+     align-items:center;gap:7px;line-height:1.2}
+.cta.ghost{background:transparent;color:var(--accent);border-color:var(--line)}
+.cta.ghost:hover{background:var(--panel2);border-color:var(--accent)}
+.cta:disabled{opacity:.45;cursor:default}
+.cta .n{background:var(--on-accent);color:var(--accent);border-radius:2px;padding:0 5px;font-size:11.5px}
+.small{border:1px solid var(--line2);background:var(--panel);border-radius:2px;padding:4px 9px;font-size:12.5px;
+       cursor:pointer;color:var(--muted)}
+.small:hover{color:var(--accent);border-color:var(--accent)}
+.small:disabled{opacity:.45;cursor:default;color:var(--muted);border-color:var(--line2)}
+.actions{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+
+.steps{margin:6px 0 0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding:0 0 12px 32px;font-size:13.5px;line-height:1.5}
+.steps li:before{content:counter(s);position:absolute;left:0;top:0;width:22px;height:22px;border-radius:2px;
+                 background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:12px;
+                 display:flex;align-items:center;justify-content:center}
+.stagedef{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:13px;margin:6px 0 0}
+.stagedef dt{margin:0}
+.stagedef dd{margin:0;color:var(--muted)}
+
+/* ---------------------------------------------------------------- the list */
+.stagebar{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);
+          padding:9px 20px;display:flex;align-items:center;gap:12px;font-size:12.5px}
+.stagebar .now{color:var(--muted);flex:1;min-width:0}
+.list{max-width:900px;margin:0 auto;padding:18px 20px 80px}
+.embedded{max-width:900px;margin:14px auto 0;padding:10px 14px;border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--panel2);font-size:13px;line-height:1.45}
+.section{margin:22px 0 8px;font-family:var(--label);font-size:11.5px;font-weight:600;letter-spacing:1.3px;
+         text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
+.section:after{content:"";flex:1;border-top:1px solid var(--line)}
+.section:first-child{margin-top:4px}
+
+.job{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--sc,var(--line));border-radius:3px;
+     box-shadow:var(--shadow);margin:0 0 14px}
+.job.changed{border-left-color:var(--warn)}
+.jhead{display:grid;grid-template-columns:1fr auto;gap:4px 14px;padding:14px 16px 10px}
+.jhead h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
+.jhead .role{margin:1px 0 0;font-size:14px;color:var(--muted)}
+.tag{font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
+     padding:3px 8px;border-radius:2px;white-space:nowrap;border:1px solid var(--sc,var(--line));color:var(--sc,var(--muted));
+     align-self:start}
+.flag{display:inline-block;font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.7px;
+      text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-left:6px;vertical-align:1px}
+.flag.soon{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.flag.past{background:color-mix(in srgb,var(--gap) 14%,transparent);color:var(--gap)}
+.banner{margin:0 16px 10px;padding:8px 11px;border-left:3px solid var(--warn);background:var(--panel2);
+        font-size:13px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.banner.stale{border-left-color:var(--gap)}
+.banner b{font-family:var(--label);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--warn)}
+.banner.stale b{color:var(--gap)}
+.banner span{flex:1;min-width:200px}
+
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line2)}
+.fact{padding:10px 16px;border-right:1px solid var(--line2);min-width:0}
+.fact:last-child{border-right:0}
+.lab{display:block;font-family:var(--label);font-size:10.5px;font-weight:600;letter-spacing:.8px;
+     text-transform:uppercase;color:var(--muted);margin:0 0 3px}
+.fact .v{font-size:14px}
+.meter{height:6px;background:var(--line2);border-radius:1px;margin:6px 0 0;position:relative;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+.meter i.before{background:var(--line)}
+
+.next{margin:0;padding:10px 16px;border-top:1px solid var(--line2);background:var(--panel2);font-size:13.5px}
+.next .lab{display:inline;margin-right:8px;color:var(--accent)}
+
+.docs{padding:12px 16px;border-top:1px solid var(--line2)}
+.docs .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.docs .none{font-size:13.5px;color:var(--muted);margin:0}
+.where{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.where code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;overflow-wrap:anywhere}
+.gone{font-size:12.5px;color:var(--muted);text-decoration:line-through}
+
+details.update{border-top:1px solid var(--line2)}
+details.update>summary{list-style:none;cursor:pointer;padding:10px 16px;font-family:var(--label);font-size:11.5px;
+     font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--accent);display:flex;gap:8px;align-items:center}
+details.update>summary::-webkit-details-marker{display:none}
+details.update>summary:before{content:"+";font-family:var(--ui);font-size:15px;width:12px}
+details.update[open]>summary:before{content:"\2212"}
+details.update>summary:hover{background:var(--panel2)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;padding:4px 16px 14px}
+.form .full{grid-column:1 / -1}
+.form select,.form input,.form textarea{width:100%;background:var(--panel);border:1px solid var(--line2);border-radius:2px;
+     padding:7px 9px;font-size:14px}
+.form textarea{min-height:70px;resize:vertical;font:14px/1.45 var(--ui)}
+.notes{padding:0 16px 12px}
+.notes ul{margin:0;padding:0;list-style:none}
+.notes li{font-size:13px;padding:6px 0;border-top:1px solid var(--line2);color:var(--ink)}
+.notes li time{font-family:var(--label);font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-right:8px}
+
+.empty{background:var(--panel);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:26px 22px}
+.empty h2{margin:0 0 6px;font-size:18px}
+.empty p{margin:0 0 6px;color:var(--muted);font-size:14px}
+.closedjob .facts,.closedjob .next,.closedjob .docs{display:none}
+
+/* ---------------------------------------------------------------- hand to AI drawer, as the Studio */
+.veil{position:fixed;inset:0;background:rgba(16,22,32,.35);z-index:20}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:min(460px,100%);z-index:21;background:var(--panel);
+        border-left:1px solid var(--line);box-shadow:-6px 0 30px rgba(16,22,32,.18);overflow-y:auto;padding:18px 18px 40px}
+.drawer h3{margin:0 0 4px;font-size:16px;font-weight:700;letter-spacing:-.15px}
+.drawer>p{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.45}
+.dclose{position:absolute;right:10px;top:10px;width:30px;height:30px;border:0;background:none;color:var(--muted);
+        font-size:20px;cursor:pointer;line-height:1}
+.copybox{width:100%;min-height:220px;font:11.5px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:8px;
+         border:1px solid var(--line2);border-radius:2px;background:var(--panel2);color:var(--ink);margin:8px 0 0;resize:vertical}
+
+@media (max-width:900px){
+  /* On a phone the applications come first; the filters and the how-to follow them. */
+  .app{display:flex;flex-direction:column;height:auto}
+  .stage{order:1}
+  .rail{order:2;border-right:0;border-top:1px solid var(--line)}
+  .mtitle{display:inline!important;font-weight:700;color:var(--ink);margin-right:6px}
+  .panes{overflow:visible;padding-bottom:16px}
+  .stage{overflow:visible}
+  .stagebar{padding:8px 12px}
+  .list{padding:14px 12px 60px}
+  .facts{grid-template-columns:1fr 1fr}
+  .fact:nth-child(2){border-right:0}
+  .fact:nth-child(3){grid-column:1 / -1;border-top:1px solid var(--line2)}
+  .form{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <h1>Resu Desk</h1>
+      <p>Every job you are applying for, in one place. Nothing here changes your records until you hand it to the AI.</p>
+      <p class="buildstamp">BUILD_STAMP</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabApps" aria-selected="true">Applications</button>
+      <button type="button" role="tab" id="tabHow" aria-selected="false">How it works</button>
+    </div>
+    <div class="panes">
+      <div class="pane on" id="paneApps">
+        <div class="grp">
+          <h2>At a glance</h2>
+          <div class="tiles" id="tiles"></div>
+        </div>
+        <div class="grp">
+          <h2>Show</h2>
+          <div class="opts" id="filters" role="group" aria-label="Show applications at a stage"></div>
+        </div>
+        <div class="grp">
+          <h2>Sort by</h2>
+          <div class="seg" id="sort" role="group" aria-label="Sort applications">
+            <button type="button" data-sort="closes" aria-pressed="true">Closing date</button>
+            <button type="button" data-sort="updated" aria-pressed="false">Last change</button>
+            <button type="button" data-sort="employer" aria-pressed="false">Employer</button>
+          </div>
+        </div>
+        <div class="grp">
+          <h2>Your changes</h2>
+          <p class="hint" id="changesMsg"></p>
+          <div class="actions">
+            <button type="button" class="cta" id="handBtn">Hand to AI</button>
+            <button type="button" class="cta ghost" id="saveBtn">Save the desk file</button>
+          </div>
+          <div class="actions"><button type="button" class="small" id="clearBtn">Undo all my changes</button></div>
+        </div>
+      </div>
+      <div class="pane" id="paneHow">
+        <div class="grp">
+          <h2>What this page is</h2>
+          <p class="hint">A list of every job you are applying for, with where each one is up to, when it closes, how well your CV answers the ad, and the documents made for it. It is rebuilt every time the AI works on one of your jobs.</p>
+        </div>
+        <div class="grp">
+          <h2>To update a job</h2>
+          <ol class="steps">
+            <li>On the job, open <b>Update this application</b> and change the stage, the closing date, or add a note.</li>
+            <li>Press <b>Hand to AI</b>, then <b>Copy</b>.</li>
+            <li>Paste it into your chat with the AI. It updates your records and gives you a fresh Resu Desk.</li>
+          </ol>
+          <p class="hint">If a job changed after this page was built, the AI tells you and asks which is right. Nothing is written over.</p>
+        </div>
+        <div class="grp">
+          <h2>The buttons on a job</h2>
+          <p class="hint"><b>Open Studio</b> opens that job's Studio: your CV scored against the ad, where you accept or reject suggested changes. <b>CV PDF</b> and <b>Cover letter PDF</b> open the finished documents. Each opens in a new browser tab, so this page stays open. The line under them says which folder they are in.</p>
+          <p class="hint">If a button opens a file view instead of a browser tab, this page is being shown inside another program, such as a code editor. Open <b>Resu Desk.html</b> from your folder by double-clicking it, so it opens in Chrome, Edge or your usual browser.</p>
+        </div>
+        <div class="grp">
+          <h2>The stages</h2>
+          <dl class="stagedef" id="stagedef"></dl>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <div class="stagebar"><span class="now"><span class="mtitle" hidden>Resu Desk</span><span id="now"></span></span>
+      <button type="button" class="cta" id="barHand" hidden>Hand to AI <span class="n" id="barCount"></span></button>
+    </div>
+    <p class="embedded" id="embedded" hidden>This page is showing inside another program, so its buttons may open files here instead of in your browser. For the full Resu Desk, double-click <b>Resu Desk.html</b> in your folder to open it in Chrome, Edge or your usual browser.</p>
+    <div class="list" id="list"></div>
+  </main>
+</div>
+
+<div class="veil" id="veil" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Hand to AI">
+  <button type="button" class="dclose" id="dclose" aria-label="Close">&times;</button>
+  <h3>Hand your changes to the AI</h3>
+  <p>Copy this and paste it into your chat with the AI. It will update your records and give you a new Resu Desk.</p>
+  <div class="actions"><button type="button" class="cta" id="copyBtn">Copy</button>
+    <button type="button" class="cta ghost" id="saveBtn2">Save as a file instead</button></div>
+  <textarea class="copybox" id="handText" readonly aria-label="Text to paste into the chat"></textarea>
+</aside>
+
+<script>
+/* The records, written in by scripts/build_desk.py. Empty in the template. */
+const DESK = {"schema":1,"built":"","key":"template","stages":[],"closed":[],"jobs":[]};
+
+const MEANS = {
+  "Saved":"You have the ad. Nothing has been done with it yet.",
+  "Scoring":"Your CV is being checked against the ad.",
+  "Tailoring":"You are deciding on suggested changes in the Studio.",
+  "Ready":"Your CV and letter are finished and ready to send.",
+  "Applied":"Sent. Waiting to hear back.",
+  "Interview":"They want to talk to you.",
+  "Offer":"They have made you an offer.",
+  "Rejected":"Not this time. Kept for your records.",
+  "Withdrawn":"You decided not to go ahead."
+};
+const NEXT = {
+  "Saved":"Ask the AI to check your CV against this ad. The Studio appears here when it is done.",
+  "Scoring":"The AI is checking your CV against the ad. Open the Studio when it appears to see where you stand.",
+  "Tailoring":"Open the Studio, accept or reject each suggested change, then press hand to AI in the Studio.",
+  "Ready":"Your documents are ready. Send them, then set this job to Applied.",
+  "Applied":"Waiting to hear back. Set this job to Interview when they get in touch.",
+  "Interview":"Ask the AI to help you prepare, using this job's Studio and the ad.",
+  "Offer":"Decide on the offer. Add a note with the details so they are all in one place.",
+  "Rejected":"", "Withdrawn":""
+};
+const COLOUR = {
+  "Saved":"var(--muted)","Scoring":"var(--near)","Tailoring":"var(--warn)","Ready":"var(--accent)",
+  "Applied":"var(--accent)","Interview":"var(--ok)","Offer":"var(--ok)","Rejected":"var(--gap)","Withdrawn":"var(--muted)"
+};
+
+/* One store per person's folder: pages opened from disk share one storage area. */
+const STORE = "resu-desk:" + DESK.key;
+let EDITS = {};
+try{ EDITS = JSON.parse(localStorage.getItem(STORE) || "{}") || {}; }catch(e){ EDITS = {}; }
+let FILTER = "open", SORT = "closes";
+
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(EDITS)); }catch(e){} }
+function byId(id){ return DESK.jobs.find(j => j.id === id); }
+
+/* A change the records already hold was applied by apply-desk and this page was rebuilt
+   since: drop it, so a rebuilt Desk opens clean. A change the records do not hold stays. */
+function settle(){
+  Object.keys(EDITS).forEach(id => {
+    const j = byId(id), e = EDITS[id];
+    if(!j){ delete EDITS[id]; return; }
+    if(e.stage && j.stage === e.stage.to) delete e.stage;
+    if(e.closes && (j.closes || "") === (e.closes.to || "")) delete e.closes;
+    if(e.note && (j.notes || []).some(n => n.text === e.note)) delete e.note;
+    if(!e.stage && !e.closes && !e.note) delete EDITS[id];
+  });
+  save();
+}
+
+function el(tag, attrs, kids){
+  const n = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(k => {
+    if(k === "text") n.textContent = attrs[k];
+    else if(k === "cls") n.className = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  });
+  (kids || []).forEach(c => { if(c) n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return n;
+}
+function today(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function asDate(iso){ const p = iso.split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function daysUntil(iso){ return iso ? Math.round((asDate(iso) - today()) / 86400000) : null; }
+function niceDate(iso){
+  if(!iso) return "";
+  try{ return asDate(iso).toLocaleDateString(undefined, {weekday:"short", day:"numeric", month:"short", year:"numeric"}); }
+  catch(e){ return iso; }
+}
+function stageOf(j){ const e = EDITS[j.id]; return e && e.stage ? e.stage.to : j.stage; }
+function closesOf(j){ const e = EDITS[j.id]; return e && e.closes ? e.closes.to : (j.closes || ""); }
+function isClosed(j){ return DESK.closed.indexOf(stageOf(j)) >= 0; }
+function beforeApplying(s){ return ["Saved","Scoring","Tailoring","Ready"].indexOf(s) >= 0; }
+
+function change(id, field, value){
+  const j = byId(id); if(!j) return;
+  const e = EDITS[id] || (EDITS[id] = {base: j.updated || ""});
+  const was = field === "stage" ? j.stage : (j.closes || "");
+  if(field === "note"){ if(value.trim()) e.note = value.trim(); else delete e.note; }
+  else if(value === was){ delete e[field]; }
+  else { e[field] = {from: was, to: value}; }
+  if(!e.stage && !e.closes && !e.note) delete EDITS[id];
+  save(); draw(id);
+}
+
+function closingFlag(j){
+  const n = daysUntil(closesOf(j));
+  if(n === null || isClosed(j) || !beforeApplying(stageOf(j))) return null;
+  if(n < 0) return el("span", {cls:"flag past", text:"closed " + (-n) + (n === -1 ? " day" : " days") + " ago"});
+  if(n <= 7) return el("span", {cls:"flag soon", text: n === 0 ? "closes today" : "closes in " + n + (n === 1 ? " day" : " days")});
+  return null;
+}
+
+function scoreFact(j){
+  const f = el("div", {cls:"fact"}, [el("span", {cls:"lab", text:"Found on your CV"})]);
+  const b = j.before, a = j.after, s = a || b;
+  if(!s || !s.asks_total){ f.appendChild(el("div", {cls:"v", text:"Not checked yet"})); return f; }
+  f.appendChild(el("div", {cls:"v", text: a && b
+    ? b.a_reader_would_find + " \u2192 " + a.a_reader_would_find + " of " + a.asks_total + " asks"
+    : s.a_reader_would_find + " of " + s.asks_total + " asks"}));
+  const m = el("div", {cls:"meter", title: a && b ? "after tailoring" : "before tailoring"});
+  m.appendChild(el("i", {style:"width:" + Math.round(100 * s.a_reader_would_find / s.asks_total) + "%"}));
+  f.appendChild(m);
+  return f;
+}
+
+function card(j){
+  const e = EDITS[j.id] || {};
+  const st = stageOf(j), closed = isClosed(j);
+  const c = el("article", {cls:"job" + (EDITS[j.id] ? " changed" : "") + (closed ? " closedjob" : ""),
+                           "data-job": j.id, style:"--sc:" + COLOUR[st]});
+
+  const titles = el("div", {}, [el("h3", {text: j.employer || "Employer not recorded"}), el("p", {cls:"role", text: j.role})]);
+  c.appendChild(el("div", {cls:"jhead"}, [titles, el("span", {cls:"tag", text: st})]));
+
+  if(EDITS[j.id]){
+    const undo = el("button", {type:"button", cls:"small", text:"Undo"});
+    undo.addEventListener("click", () => { delete EDITS[j.id]; save(); draw(); });
+    c.appendChild(el("div", {cls:"banner"}, [el("b", {text:"Changed here"}),
+      el("span", {text:"Not in your records yet. Press Hand to AI to send it."}), undo]));
+  }
+  const stale = [];
+  if(e.stage && e.stage.from !== j.stage) stale.push("stage is " + j.stage);
+  if(e.closes && (e.closes.from || "") !== (j.closes || "")) stale.push("closing date is " + (niceDate(j.closes) || "not set"));
+  if(stale.length) c.appendChild(el("div", {cls:"banner stale"}, [el("b", {text:"Out of date"}),
+      el("span", {text:"Your records now say the " + stale.join(" and the ") + ". Undo to use that."})]));
+
+  const cl = closesOf(j);
+  const closes = el("div", {cls:"fact"}, [el("span", {cls:"lab", text:"Closes"}),
+    el("div", {cls:"v"}, [cl ? niceDate(cl) : "No closing date", closingFlag(j)])]);
+  const updated = el("div", {cls:"fact"}, [el("span", {cls:"lab", text:"Last change"}),
+    el("div", {cls:"v", text: j.updated ? niceDate(j.updated) : "Not recorded"})]);
+  c.appendChild(el("div", {cls:"facts"}, [closes, scoreFact(j), updated]));
+
+  if(NEXT[st]) c.appendChild(el("p", {cls:"next"}, [el("span", {cls:"lab", text:"Next step"}), NEXT[st]]));
+
+  const docs = el("div", {cls:"docs"});
+  const live = j.docs.filter(d => d.exists), gone = j.docs.filter(d => !d.exists);
+  if(!live.length){
+    docs.appendChild(el("p", {cls:"none", text:"No documents yet. The Studio appears here once your CV has been checked against this ad."}));
+  } else {
+    const row = el("div", {cls:"row"});
+    const seen = {};
+    live.forEach(d => {
+      if(seen[d.kind]) return;                 /* the newest of each kind; older ones are in the folder */
+      seen[d.kind] = 1;
+      const label = d.kind === "studio" ? "Open Studio" : d.kind === "letter" ? "Cover letter PDF" : "CV PDF";
+      row.appendChild(el("a", {cls: d.kind === "studio" ? "cta" : "cta ghost", href: d.href, target:"_blank", rel:"noopener", title: d.name + " (opens in a new tab)", text: label}));
+    });
+    docs.appendChild(row);
+    const folder = live[0].where.split("/").slice(0, -1).join("/");
+    docs.appendChild(el("p", {cls:"where"}, ["In your folder: ", el("code", {text: folder + "/"})]));
+  }
+  gone.forEach(d => docs.appendChild(el("p", {cls:"gone", text: d.name + " (moved or deleted)"})));
+  c.appendChild(docs);
+
+  const upd = el("details", {cls:"update"});
+  if(EDITS[j.id]) upd.open = true;
+  upd.appendChild(el("summary", {text:"Update this application"}));
+  const form = el("div", {cls:"form"});
+  const sel = el("select", {cls:"stage", id:"st-" + j.id});
+  DESK.stages.forEach(s => { const o = el("option", {value:s, text:s}); if(s === st) o.selected = true; sel.appendChild(o); });
+  sel.addEventListener("change", () => change(j.id, "stage", sel.value));
+  const date = el("input", {type:"date", cls:"date", id:"cl-" + j.id, value: cl});
+  date.addEventListener("change", () => change(j.id, "closes", date.value));
+  const note = el("textarea", {cls:"note", id:"nt-" + j.id, placeholder:"Anything worth remembering: who called, what they said, what happens next"});
+  note.value = e.note || "";
+  note.addEventListener("change", () => change(j.id, "note", note.value));
+  form.appendChild(el("label", {for:"st-" + j.id}, [el("span", {cls:"lab", text:"Stage"}), sel]));
+  form.appendChild(el("label", {for:"cl-" + j.id}, [el("span", {cls:"lab", text:"Closing date"}), date]));
+  form.appendChild(el("label", {cls:"full", for:"nt-" + j.id}, [el("span", {cls:"lab", text:"Add a note"}), note]));
+  upd.appendChild(form);
+  if(j.link) upd.appendChild(el("p", {cls:"hint", style:"margin:0 16px 12px"}, [el("a", {href:j.link, target:"_blank", rel:"noopener", text:"Open the job ad"})]));
+  c.appendChild(upd);
+
+  const notes = (j.notes || []).slice(-3).reverse();
+  if(notes.length){
+    const ul = el("ul");
+    notes.forEach(n => ul.appendChild(el("li", {}, [el("time", {text: niceDate(n.on) || n.on}), n.text])));
+    c.appendChild(el("div", {cls:"notes"}, [el("span", {cls:"lab", text:"Notes"}), ul]));
+  }
+  return c;
+}
+
+function sorted(list){
+  return list.slice().sort((a, b) => {
+    if(SORT === "employer") return (a.employer || "").localeCompare(b.employer || "") || a.role.localeCompare(b.role);
+    if(SORT === "updated") return (b.updated || "").localeCompare(a.updated || "");
+    /* Closing date puts the jobs still waiting to be sent first, soonest first: a date
+       that has passed on a job already applied for is history, not a deadline. */
+    return (beforeApplying(stageOf(b)) - beforeApplying(stageOf(a)))
+        || (closesOf(a) || "9999").localeCompare(closesOf(b) || "9999") || a.id.localeCompare(b.id);
+  });
+}
+
+function tile(n, label, warn){ return el("div", {cls:"tile" + (warn && n ? " warn" : "")}, [el("b", {text:String(n)}), el("span", {text:label})]); }
+
+function draw(keepOpen){
+  const jobs = DESK.jobs, open = jobs.filter(j => !isClosed(j)), closed = jobs.filter(isClosed);
+  const soon = open.filter(j => { const n = daysUntil(closesOf(j)); return n !== null && n >= 0 && n <= 7 && beforeApplying(stageOf(j)); }).length;
+
+  const tiles = document.getElementById("tiles"); tiles.textContent = "";
+  tiles.append(tile(open.length, "Open"), tile(soon, "Closing this week", true),
+               tile(jobs.filter(j => stageOf(j) === "Applied").length, "Waiting to hear"),
+               tile(jobs.filter(j => ["Interview","Offer"].indexOf(stageOf(j)) >= 0).length, "Interviews and offers"));
+
+  const f = document.getElementById("filters"); f.textContent = "";
+  const addFilter = (key, label, count, colour) => {
+    const b = el("button", {type:"button", cls:"opt", "aria-pressed": String(FILTER === key)},
+                 [colour ? el("span", {cls:"dot", style:"--sc:" + colour}) : null, label + " ", el("b", {text:String(count)})]);
+    b.addEventListener("click", () => { FILTER = key; draw(); });
+    f.appendChild(b);
+  };
+  addFilter("open", "All open", open.length);
+  DESK.stages.forEach(s => { const n = jobs.filter(j => stageOf(j) === s).length; if(n && DESK.closed.indexOf(s) < 0) addFilter(s, s, n, COLOUR[s]); });
+  if(closed.length) addFilter("closed", "Closed", closed.length, "var(--gap)");
+
+  const n = Object.keys(EDITS).length;
+  document.getElementById("changesMsg").textContent = n
+    ? "You changed " + n + " application" + (n === 1 ? "" : "s") + " on this page. Nothing reaches your records until you hand it to the AI."
+    : "No changes yet. Change a job under Update this application, then hand it to the AI here.";
+  ["handBtn","saveBtn","clearBtn"].forEach(id => document.getElementById(id).disabled = !n);
+  document.getElementById("barHand").hidden = !n;
+  document.getElementById("barCount").textContent = n;
+  document.getElementById("now").textContent = jobs.length
+    ? open.length + " open application" + (open.length === 1 ? "" : "s") + (closed.length ? ", " + closed.length + " closed" : "")
+      + (soon ? ". " + soon + " closing this week." : ".")
+    : "No applications yet.";
+
+  const openIds = keepOpen ? [keepOpen] : [];
+  document.querySelectorAll("details.update[open]").forEach(d => { const a = d.closest(".job"); if(a) openIds.push(a.dataset.job); });
+  const list = document.getElementById("list"); list.textContent = "";
+  if(!jobs.length){
+    list.appendChild(el("div", {cls:"empty"}, [el("h2", {text:"No applications yet"}),
+      el("p", {text:"Give the AI a job ad and your CV. It starts the job, and it appears here with its Studio."})]));
+    return;
+  }
+  let shown, heading;
+  if(FILTER === "open"){ shown = open; heading = "Open applications"; }
+  else if(FILTER === "closed"){ shown = closed; heading = "Closed"; }
+  else { shown = jobs.filter(j => stageOf(j) === FILTER); heading = FILTER; }
+  const openList = el("div", {id:"open"});
+  list.appendChild(el("div", {cls:"section", text: heading + " (" + shown.length + ")"}));
+  if(!shown.length) list.appendChild(el("p", {cls:"hint", text:"Nothing here right now."}));
+  sorted(shown).forEach(j => openList.appendChild(card(j)));
+  list.appendChild(openList);
+  if(FILTER === "open" && closed.length){
+    list.appendChild(el("div", {cls:"section", id:"closedSum", text:"Closed (" + closed.length + ")"}));
+    const cl = el("div", {id:"closed"});
+    sorted(closed).forEach(j => cl.appendChild(card(j)));
+    list.appendChild(cl);
+  }
+  openIds.forEach(id => { const d = document.querySelector('[data-job="' + id + '"] details.update'); if(d) d.open = true; });
+  if(!document.getElementById("drawer").hidden) document.getElementById("handText").value = handText();
+}
+
+function updatesFile(){
+  return JSON.stringify({desk: 1, built: DESK.built, key: DESK.key,
+    changes: Object.keys(EDITS).map(id => Object.assign({job: id}, EDITS[id]))}, null, 1);
+}
+function handText(){
+  const L = ["Changes from Resu Desk. Please save the JSON below as desk-updates.json and run",
+             "scripts/jobs.py apply-desk on it.", ""];
+  Object.keys(EDITS).forEach(id => {
+    const j = byId(id), e = EDITS[id];
+    L.push("- " + j.role + " at " + (j.employer || "(no employer)"));
+    if(e.stage) L.push("    stage: " + e.stage.from + " to " + e.stage.to);
+    if(e.closes) L.push("    closes: " + (e.closes.from || "not set") + " to " + (e.closes.to || "not set"));
+    if(e.note) L.push("    new note: " + e.note);
+  });
+  L.push("", "```json", updatesFile(), "```");
+  return L.join("\n");
+}
+async function copyText(text){
+  try{
+    if(!navigator.clipboard || !navigator.clipboard.writeText) return false;
+    return await Promise.race([navigator.clipboard.writeText(text).then(() => true, () => false),
+                               new Promise(r => setTimeout(() => r(false), 1200))]);
+  }catch(e){ return false; }
+}
+function openDrawer(){
+  document.getElementById("handText").value = handText();
+  document.getElementById("veil").hidden = false;
+  document.getElementById("drawer").hidden = false;
+}
+function closeDrawer(){ document.getElementById("veil").hidden = true; document.getElementById("drawer").hidden = true; }
+
+document.getElementById("handBtn").addEventListener("click", openDrawer);
+document.getElementById("barHand").addEventListener("click", openDrawer);
+document.getElementById("dclose").addEventListener("click", closeDrawer);
+document.getElementById("veil").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", ev => { if(ev.key === "Escape") closeDrawer(); });
+document.getElementById("copyBtn").addEventListener("click", async ev => {
+  const ok = await copyText(document.getElementById("handText").value);
+  if(!ok){ const t = document.getElementById("handText"); t.focus(); t.select(); }
+  ev.target.textContent = ok ? "Copied" : "Selected, press Ctrl+C";
+  setTimeout(() => ev.target.textContent = "Copy", 2000);
+});
+async function saveFile(ev){
+  const data = updatesFile(), btn = ev.target, label = btn.textContent;
+  const done = t => { btn.textContent = t; setTimeout(() => btn.textContent = label, 1800); };
+  try{
+    if(typeof claude !== "undefined" && claude.use){
+      const dl = await claude.use("downloads");
+      if(dl){ await dl.save({filename:"desk-updates.json", data:data}); done("Saved"); return; }
+    }
+  }catch(e){}
+  try{
+    const url = URL.createObjectURL(new Blob([data], {type:"application/json"}));
+    const a = document.createElement("a"); a.href = url; a.download = "desk-updates.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    done("Saved");
+  }catch(e){ done((await copyText(data)) ? "Copied instead" : "Use Hand to AI instead"); }
+}
+document.getElementById("saveBtn").addEventListener("click", saveFile);
+document.getElementById("saveBtn2").addEventListener("click", saveFile);
+document.getElementById("clearBtn").addEventListener("click", () => { EDITS = {}; save(); draw(); });
+document.querySelectorAll("#sort button").forEach(b => b.addEventListener("click", () => {
+  SORT = b.dataset.sort;
+  document.querySelectorAll("#sort button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  draw();
+}));
+function tab(which){
+  const apps = which === "apps";
+  document.getElementById("tabApps").setAttribute("aria-selected", String(apps));
+  document.getElementById("tabHow").setAttribute("aria-selected", String(!apps));
+  document.getElementById("paneApps").classList.toggle("on", apps);
+  document.getElementById("paneHow").classList.toggle("on", !apps);
+}
+document.getElementById("tabApps").addEventListener("click", () => tab("apps"));
+document.getElementById("tabHow").addEventListener("click", () => tab("how"));
+(function(){
+  const dl = document.getElementById("stagedef");
+  (DESK.stages.length ? DESK.stages : Object.keys(MEANS)).forEach(s => {
+    dl.appendChild(el("dt", {}, [el("span", {cls:"tag", style:"--sc:" + COLOUR[s], text:s})]));
+    dl.appendChild(el("dd", {text: MEANS[s] || ""}));
+  });
+})();
+
+/* Shown inside an editor or app preview (a frame), links cannot reach the real browser. Say so. */
+try { if(window.self !== window.top) document.getElementById("embedded").hidden = false; }
+catch(e){ document.getElementById("embedded").hidden = false; }
+settle();
+draw();
+</script>
+</body>
+</html>

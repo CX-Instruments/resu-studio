@@ -798,11 +798,30 @@ def main():
                     help="how deep the advertisement was scored, when scorecard.md "
                          "does not say so in its frontmatter")
     ap.add_argument("--out", default=None, help="where to write. Default: their documents folder")
+    ap.add_argument("--job", default=None,
+                    help="the job this studio is for (scripts/jobs.py list). Role and "
+                         "employer come from its job.json unless given, and the studio "
+                         "is written into that job's documents folder")
     a = ap.parse_args()
+
+    # A job knows its own role and employer, so they are read from its record rather
+    # than typed again, and typed differently, on every rebuild. Given explicitly they
+    # still win. The browser store is keyed on role and employer exactly as before, so
+    # a studio rebuilt for a job keeps every mark made in the studio built without one.
+    job = None
+    if a.job:
+        try:
+            import jobs
+            job = jobs.load(a.job)
+        except paths.NoSuchJob as e:
+            sys.stderr.write("--job: %s\n" % e)
+            return 3
+        a.role = a.role or job.get("role", "")
+        a.employer = a.employer or job.get("employer", "")
 
     if not (a.role or "").strip():
         sys.stderr.write(
-            "--role is required and was not given. It names the studio's file and keys "
+            "--role is required and was not given, and no --job was named to read it from. It names the studio's file and keys "
             "this application's own browser storage, so without it every application "
             "for this person shares one store and a line marked in one shows up in "
             "another.\n")
@@ -959,7 +978,8 @@ def main():
     fp = fingerprint(CV, L)
     s = swap_const(s, "FINGERPRINT", fp)
 
-    out = a.out or os.path.join(paths.documents_dir(), studio_filename(a, doc))
+    out = a.out or os.path.join(paths.job_documents_dir(job["id"]) if job
+                                else paths.documents_dir(), studio_filename(a, doc))
     # `--out studio.html` gives a bare filename, whose dirname is "", and makedirs
     # of "" raises. Writing beside the working directory is what was asked for.
     if os.path.dirname(out):
@@ -969,14 +989,15 @@ def main():
     # commoner case and the one that costs somebody their work.
     kept = documents.protect(out, a.role, a.cv, employer=a.employer)
     io.open(out, "w", encoding="utf-8", newline="").write(s)
-    documents.note(out, a.role, "studio", a.cv, employer=a.employer)
+    documents.note(out, a.role, "studio", a.cv, employer=a.employer,
+                   job=job["id"] if job else "")
 
     print("wrote %s" % out)
     if kept:
         print("  kept the earlier studio as %s" % os.path.basename(kept))
     print("  person : %s, %d roles, %d skills groups, %d training lines"
           % (CV["name"], len(CV["roles"]), len(CV["skills"]), len(CV["training"])))
-    print("  job    : %s" % head)
+    print("  job    : %s%s" % (head, ("   (%s)" % job["id"]) if job else ""))
     print("  asks   : %d%s" % (len(asks), "" if asks else "   (not scored yet)"))
     print("  key ach: %d drafted%s"
           % (len(drafted.get("achievements", [])),
@@ -986,6 +1007,11 @@ def main():
     print("  content: %s. Marks saved against a different one are checked against "
           "their own\n           wording before any of them is put back on a line."
           % fp)
+    try:
+        import build_desk
+        build_desk.refresh(quiet=False)
+    except Exception as e:                                     # noqa: BLE001
+        sys.stderr.write("resu-studio: Resu Desk was not updated (%s).\n" % e)
     print()
     print("Hand the file over so they can open it themselves. It draws their own CV live")
     print("with every layout, palette and typeface as a control, and prints the command for")

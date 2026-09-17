@@ -60,5 +60,5 @@ the contact block, the trade in `Why:`, and a blank `Decision:`.
 
 If they take it off for one application, the assembly takes it out of that version's
 `cv-<variant>.md` and writes it into `cv-<variant>-archive.md` in full. The CV as it
-arrived, in `cv-source/`, still carries it, and that is what the next application is
+arrived, in `1 About me`, still carries it, and that is what the next application is
 assembled from, so nothing has to be typed again.

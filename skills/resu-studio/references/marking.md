@@ -213,7 +213,7 @@ add it on their behalf: both are silent edits to what the employer is told about
 
 Taking it off is one press, and the wording survives twice over: the assembly writes it
 into `cv-<variant>-archive.md` in full, and the CV as it arrived still carries it in
-`cv-source/` for the next application that does want it. `templates/cv.md`,
+`1 About me` for the next application that does want it. `templates/cv.md`,
 `references/assembling.md` and `references/achievements.md` all say this the same way.
 
 **Each line of the contact block is its own line.** Consecutive lines under the name

@@ -1,6 +1,5 @@
 ---
 updated: YYYY-MM-DD
-depth: essentials
 ---
 
 # Answers
@@ -19,14 +18,16 @@ newer one. What they said and when is part of the record.
 ## The scoring depth has a field of its own
 
 `depth:` is how far the person asked you to take the scoring, and it is either
-`essentials` or `all`. It goes in two places in this file. In the frontmatter above, so
-a later session finds it without reading the whole thing. And on the block that recorded
-the question, as a sixth field, so what was asked and what they said stays on the record
-like every other answer. Copy the same word into `scorecard.md`'s frontmatter in Phase 3,
-because that is where `build_studio.py` reads it.
+`essentials` or `all`, and it belongs to one job ad, so every new ad is asked again. Record
+it on the job with `python3 scripts/jobs.py set <job id> depth <word>`, and here, on the
+block that recorded the question, as a sixth field with the job named in the question, so
+what was asked and what they said stays on the record like every other answer. Copy the
+same word into that job's `scorecard.md` frontmatter in Phase 3, because that is where
+`build_studio.py` reads it. The `depth:` line in the frontmatter above is from before jobs
+had folders; leave an old one alone and do not add one.
 
-If they widen it later, append a second block carrying `depth: all` and use the newer
-one, the same as any other changed answer, and change the frontmatter to match.
+If they widen it later, append a second block carrying `depth: all`, use the newer one, and
+set it on the job again.
 
 ```
 q: Before I go through this, how far do you want me to take it? The must-haves only,

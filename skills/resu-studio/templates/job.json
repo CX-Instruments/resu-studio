@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "id": "employer-role-title-2026-09",
+  "role": "The job title, as the advertisement writes it",
+  "employer": "The employer, as the advertisement writes it",
+  "documents_folder": "Employer - Role title",
+  "link": "",
+  "reference": "",
+  "location": "",
+  "closes": "",
+  "depth": "",
+  "stage": "Saved",
+  "history": [
+    {"stage": "Saved", "on": "2026-09-17"}
+  ],
+  "scores": {
+    "before": null,
+    "after": null
+  },
+  "notes": [
+    {"on": "2026-09-17", "text": "A note in the person's own words."}
+  ],
+  "created": "2026-09-17",
+  "updated": "2026-09-17"
+}

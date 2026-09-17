@@ -45,7 +45,7 @@ _MIGRATED = False       # an old ledger is rewritten once per run, never discard
 
 
 def _ledger_path():
-    return os.path.join(paths.data_dir(), LEDGER)
+    return paths.documents_ledger()
 
 
 def key_for(path):
@@ -183,8 +183,12 @@ def employer_of(path):
     return (rec or {}).get("employer", "")
 
 
-def record(path, role, kind, source="", employer=""):
-    """Record what a file is, so a later render can tell same-job from new-job."""
+def record(path, role, kind, source="", employer="", job=""):
+    """Record what a file is, so a later render can tell same-job from new-job.
+
+    `job` is the id of the job folder this document was made for, when there is one.
+    Resu Desk reads it to list each job's documents under that job.
+    """
     data = _load()
     key, old = _find(data, path)
     if old is not None and key in data:
@@ -198,12 +202,14 @@ def record(path, role, kind, source="", employer=""):
         "path": os.path.abspath(os.path.expanduser(path)),
         "written": time.strftime("%Y-%m-%d %H:%M"),
     }
+    if job:
+        data[key_for(path)]["job"] = job
     _save(data)
 
 
-def note(path, role, kind, source="", employer=""):
+def note(path, role, kind, source="", employer="", job=""):
     """The older name for `record`. Kept so existing callers keep working."""
-    record(path, role, kind, source=source, employer=employer)
+    record(path, role, kind, source=source, employer=employer, job=job)
 
 
 def keep_aside(path):
@@ -280,6 +286,10 @@ def _heading(rec):
     """How one application is named on screen: the role, and the employer if known."""
     role = (rec.get("role") or "").strip()
     emp = (rec.get("employer") or "").strip()
+    job = (rec.get("job") or "").strip()
+    if job:
+        return "%s%s   [job %s]" % (role or "(role not recorded)",
+                                   (" at " + emp) if emp else "", job)
     if role and emp:
         return "%s at %s" % (role, emp)
     if role:

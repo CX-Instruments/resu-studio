@@ -18,10 +18,10 @@ separation is the fix. Ledgers hold what is true. The markdown holds what prints
 ## Assembling, with assemble.py
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/assemble.py "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
-    --decisions "$D/cv-decisions.json" \
-    --out "$D/cv-<variant>.md"
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/assemble.py "$(python3 scripts/paths.py --about)/<their CV>.md" \
+    --decisions "$J/cv-decisions.json" \
+    --out "$J/cv-<variant>.md"
 ```
 
 The first argument is the CV the studio was built from, which is the markdown written in
@@ -101,7 +101,7 @@ below.
 
 ### Checking it
 
-`python3 scripts/check.py` reads each `cv-*.md` against the decisions file beside it and
+`python3 scripts/check.py --job <job id>` reads each `cv-*.md` against the decisions file beside it and
 names anything the two disagree about: a line the decisions take off that the markdown
 still holds, a line the person added that is missing from it, a rewrite the file has not
 taken, a ticked section that is not there. Each fault comes with the `assemble.py`

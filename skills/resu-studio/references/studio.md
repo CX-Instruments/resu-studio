@@ -26,7 +26,7 @@ occur to them to ask for one. Somebody who has just approved four changes and be
 handed nothing back has no way of seeing what those four changes did to their page, and
 is left taking your description of it on trust.
 
-**Pass the same `--role` and `--employer` on every rebuild**, so it replaces the page
+**Pass the same `--job <job id>` on every rebuild**, so it replaces the page
 they already have instead of leaving them holding two, and pass the ledgers as well or
 the Score tab opens empty. Phase 6 in `references/assemble-and-print.md`, *Pass the ledgers on this rebuild too*, has the
 flags and says what goes missing without them.
@@ -50,7 +50,7 @@ Say how many are unscored every time you report a score, in the same sentence as
 number. A score of sixteen of eighteen essentials with eleven asks untouched is an
 honest answer; the same number with the untouched ones unmentioned is not.
 
-`scorecard.md`, in the person's folder. Copy the depth they chose in Phase 1 into its
+`scorecard.md`, in the job's folder. Copy the depth they chose in Phase 1 into its
 frontmatter as `depth: essentials` or `depth: all`; that is where `build_studio.py`
 reads it. Necessity on every row is one of five words: `must`, `nice`, `implied`,
 `condition`, `not a cv question`. The studio draws all five with labels of their own,
@@ -100,19 +100,22 @@ person has something real to look at: their own CV, drawn, with the score beside
 Everything up to here has been the skill's working papers.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
-    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their CV>.md" \
+    --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
     --facts "$(python3 scripts/paths.py --facts)" \
-    --role "<the job title>" --employer "<the employer>"
+    --job <job id>
 ```
 
 The `--cv` is the markdown written in Phase 1: their CV as it arrived, converted into
 the `templates/cv.md` shape and changed in no other way.
 
-**`--role` is required and the build refuses without it.** It names the file, and it
-is half of the key the studio's browser storage uses. `--employer` is the other half,
-so two employers hiring the same job title do not share one set of marks.
+**`--job` is required.** The job's role and employer, read from its `job.json`, name the
+file, put it in the job's own documents folder, and are the key the studio's browser
+storage uses, so two employers hiring the same job title do not share one set of marks.
+The key is built the same way it always was, so marks made before jobs had folders are
+still there when the same application is rebuilt with `--job`. Building a studio also
+rebuilds Resu Desk, and the build prints the Desk's path: hand both over.
 
 The Score tab is the scorecard. It reads the three files you have just written: the
 advertisement's own wording from `asks.md`, the state of each ask from `scorecard.md`,
@@ -179,9 +182,9 @@ after. Removals say `Suggested: delete this bullet` and always carry a reason.
 Run the budget check and the duplication check before writing the file, not after.
 
 **Then rebuild the studio with the proposals in it.** Same command as Phase 3 with
-`--proposals` added, and the same `--role` and `--employer` for the reason given under
+`--proposals` added, and the same `--job <job id>` for the reason given under
 *Rebuild the studio every time the page changes* above. Their marks live in the browser
-keyed to that role and employer, so nothing they have already decided is lost.
+keyed to that job's role and employer, so nothing they have already decided is lost.
 
 **Draft the key achievements too, into `achievements.md`.** Draft six lines at career
 level, each reaching across more than one employer, from `templates/achievements.md`.
@@ -192,12 +195,12 @@ offers them as picks. Nothing prints until the person ticks it. Full rules:
 `references/achievements.md`.
 
 ```bash
-D="$(python3 scripts/paths.py --data)"
-python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --cv-source)/<their CV>.md" \
-    --scorecard "$D/scorecard.md" --asks-md "$D/asks.md" \
+J="$(python3 scripts/paths.py --job <job id>)"
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their CV>.md" \
+    --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
     --facts "$(python3 scripts/paths.py --facts)" \
-    --proposals "$D/proposals.md" --achievements "$D/achievements.md" \
-    --role "<the job title>" --employer "<the employer>"
+    --proposals "$J/proposals.md" --achievements "$J/achievements.md" \
+    --job <job id>
 ```
 
 Same `--cv` as Phase 3, because nothing has been assembled yet and every proposal sits
@@ -220,7 +223,7 @@ studio was built from and build again.
 Then run the check.
 
 ```bash
-python3 scripts/check.py
+python3 scripts/check.py --job <job id>
 ```
 
 It reads the person's own folder, so it needs nothing typed after it. Exit 0 means
@@ -248,7 +251,7 @@ that unsaid is the single most expensive omission in this whole skill.
 Full instructions: `references/proposing-changes.md`.
 
 **Done when:** every proposal carries a `Line:` that names a line the CV actually has,
-`python3 scripts/check.py` has been run and everything it named has been fixed or
+`python3 scripts/check.py --job <job id>` has been run and everything it named has been fixed or
 answered, the studio has been built with `--proposals` and handed over, and the person
 has been told that their CV is unchanged until they press a button in it.
 

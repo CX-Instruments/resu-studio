@@ -1,5 +1,74 @@
 # Changelog
 
+## Unreleased (branch feature/multi-job-desk)
+
+Resu Studio now works on more than one job at a time, shows every application on one page,
+and asks where a person's private files should live before it keeps any.
+
+**Every job ad is its own job.** A new advertisement used to replace the last one's asks,
+scorecard, proposals and letter. Each ad now gets a folder of its own under `3 Jobs`, with a
+`job.json` holding its role, employer, link, closing date, stage, scores and notes.
+`scripts/jobs.py` starts, lists and moves jobs through nine stages, from Saved to Offer,
+Rejected or Withdrawn. The CV and the facts ledger are shared by every job.
+
+**The Studio, the PDF and `check.py` take `--job`.** Role and employer come from the job's
+record, and every document lands in that job's own folder. The studio's browser storage is
+keyed exactly as before, so marks already made are still there. `studio.html` itself did not
+change.
+
+**Resu Desk.** `4 Finished documents/Resu Desk.html` lists every application: stage, closing
+date (flagged in the last week), the score before and after tailoring, and links to each
+Studio and PDF. It rebuilds itself whenever a job, a studio or a PDF changes. A stage, a
+closing date or a note changed on the page comes back through hand to AI or a saved
+`desk-updates.json`, and `jobs.py apply-desk` writes it. A change made on an out of date Desk
+is refused by name instead of written over the newer value.
+
+**Where private files live is the person's choice.** Every install used to share
+`~/.resu-studio`, so an install inside one project found an application started somewhere
+else. Nothing is kept now until the person chooses, once per install, with
+`paths.py --status` and `paths.py --choose`. Older work anywhere on the computer is listed
+and brought in only when they say so, with `--bring`.
+
+**A new folder layout, private by default.** `Resu - CV Builder` holds `1 About me`,
+`2 My record`, `3 Jobs` and `4 Finished documents`, with a `README.txt` and its own
+`.gitignore` of `*`, so git ignores all of it wherever it sits. Work from before jobs had
+folders becomes a job with `jobs.py adopt`. Nothing is moved or deleted anywhere.
+
+**Python is found where it actually is.** On Windows an assistant tried `python3`,
+`python` and `py`, and gave up on a machine whose Python came with Miniconda or Anaconda,
+which their installers leave off the PATH. `scripts/find_python.ps1` (PowerShell) and
+`scripts/find_python.sh` (bash, zsh, Git Bash) look in an active conda environment, every
+usual Anaconda, Miniconda, Miniforge and Mambaforge folder, the `py` launcher, python.org
+installs and the PATH, run each one, keep the first real Python 3.8 or newer, and remember
+it. SKILL.md runs the finder before the first script and uses the path it prints.
+
+**Plain words in the chat, and the Studio named up front.** A test run asked "Shall I
+continue by turning Alex's CV into a facts ledger and the advertisement into a requirements
+ledger?", which tells a person nothing about what they will get. SKILL.md now forbids the
+skill's internal words in the chat (ledger, asks, scorecard, proposals, phases, job id,
+depth), gives the plain words for each, says what to tell the person at every stop, and
+promises the Studio from the first message. Reading the CV and the ad now runs straight on
+into scoring, so the first thing back after the depth question is the Studio.
+
+**Resu Desk rebuilt from the Studio's own parts.** The first Desk used its own look. It now
+has the Studio's rail, brand block, tabs, labels, chips, segmented control, buttons and
+drawer: a card per job with Open Studio and PDF buttons, a Next step line, an Update this
+application panel, at-a-glance counts, and a How it works tab explaining every action and
+stage.
+
+**Resu Desk opens documents in a new browser tab.** Open Studio, CV PDF and Cover letter PDF
+open in a new tab so the Desk stays open. Shown inside an editor or app preview, where links
+cannot reach the browser, the Desk says to open it by double-clicking instead, and SKILL.md
+tells assistants to open the Desk and Studio in the person's web browser, never a preview.
+
+**SKILL.md and the references** now ask where files live first, start a job per ad, pass
+`--job` on every command, move stages as the work moves and hand Resu Desk over.
+
+**Tests** in `tools/`: `test_jobs.py`, `test_jobs_build.py`, `test_desk.py`,
+`test_data_folder.py`, `test_end_to_end.py`, and `test_skill_commands.py`, which runs every
+command SKILL.md documents, as written. `docs/TESTING.md` says how to run them and how to
+try the branch by hand.
+
 ## 0.5.0, 16 September 2026
 
 Resu Studio now installs into other AI tools from this same repository, and nothing it

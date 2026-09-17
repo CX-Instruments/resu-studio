@@ -7,3 +7,13 @@ Thumbs.db
 *.zip
 
 Claude outputs/
+
+# A person's private Resu Studio files. They live outside the plugin and carry their
+# own .gitignore, but never let one reach this repository by accident.
+Resu - CV Builder/
+.resu-studio/
+.resu/
+skills/resu-studio/data/
+desk-updates.json
+cv-decisions.json
+*-decisions.json
