@@ -212,6 +212,7 @@ the top left of any studio page you have open.
 
 Resu Studio collects nothing. No account, no server, no analytics. Your CV and
 your finished documents stay in your own folder. See [PRIVACY.md](PRIVACY.md).
+The terms of use are in [TERMS.md](TERMS.md).
 
 ## Licence
 
