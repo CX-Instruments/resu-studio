@@ -37,7 +37,7 @@ adds **Resu Desk**, an HTML page listing every application with its stage and li
 | 4 | `build_desk.py`, `assets/desk.html`, `jobs.py apply-desk` | Done, tested by `tools/test_desk.py` |
 | 4b | Private data folder: ask on first run, new layout, self-ignoring folder | Done, tested by `tools/test_data_folder.py` |
 | 5 | `SKILL.md`, the references, `README.md`, `CHANGELOG.md`, `docs/TESTING.md` | Done, commands proven by `tools/test_skill_commands.py` |
-| 6 | The owner's own test on Windows (`docs/TESTING.md`), fixes from it, version bump to 0.6.0 via `tools/sync_version.py`, merge | **Next** |
+| 6 | The owner's own test on Windows (`docs/TESTING.md`), fixes from it, version bump to 0.6.0 via `tools/sync_version.py`, merge | Done: merged to `main`, released as 0.6.0 |
 
 Check `git log --oneline` to confirm what has landed.
 
@@ -244,7 +244,7 @@ shows nothing from the data folder, bring from old layout, choice remembered.
   `build_desk.py` stamps the skill version like the Studio. `tools/test_desk.py` updated to
   the new page (48 checks). `docs/images/desk.png` refreshed.
 
-## Step 6 in detail (next)
+## Step 6 in detail (done, 17 September 2026)
 
 - The owner runs `docs/TESTING.md` Part 1 and Part 2 on Windows. Fix anything found, with a
   test that fails first.
@@ -269,7 +269,7 @@ shows nothing from the data folder, bring from old layout, choice remembered.
 - **Run `python tools/run_all_tests.py` before handing anything back.** It must say ALL PASSED.
 - **Writing for the owner**: no em dashes or en dashes, plain language, beginner-friendly
   explanations of tooling. Show evidence of testing, screenshots preferred.
-- **Do not bump the version** until step 6.
+- **Bump the version only for a release**: change `version:` in SKILL.md, run `tools/sync_version.py`, then `tools/build_plugin.py`.
 
 ## Environment notes from the last session
 
