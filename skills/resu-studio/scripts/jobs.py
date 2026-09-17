@@ -27,6 +27,11 @@ Finished documents for a job go in their own folder too, inside
     python3 scripts/jobs.py note <job> "Recruiter called, interview next week"
     python3 scripts/jobs.py set <job> closes 2026-10-01
     python3 scripts/jobs.py score <job> --scorecard <scorecard.md> --as before|after
+    python3 scripts/jobs.py adopt [--dry-run] [--role R --employer E | --job <job>]
+
+`adopt` is for somebody who used this before jobs had folders. Their last
+application's working files are still loose in their folder; it copies them into a job,
+leaves the originals exactly where they were, and remembers it has done so.
 
 `<job>` is the id, or the start of exactly one id.
 
@@ -165,8 +170,9 @@ def new_id(role, employer, on=None):
 def documents_folder_for(role, employer, jid):
     """`<Employer> - <Role>`, or the id when neither gives a usable name.
 
-    Two open jobs can share a role and employer only when `--again` was given, and
-    then the folder name carries the id's suffix so their documents stay apart.
+    When another job already uses the name, a second application for the same job
+    after `--again`, or a fresh one after an earlier job was closed, a number is added,
+    `(2)`, `(3)`, so their documents stay apart.
     """
     name = " - ".join(b for b in (safe_folder_name(employer), safe_folder_name(role)) if b)
     if not name:
@@ -174,10 +180,12 @@ def documents_folder_for(role, employer, jid):
     used = set()
     for r in all_jobs():
         used.add((r.get("documents_folder") or "").lower())
-    if name.lower() in used:
-        m = re.search(r"-(\d+)$", jid)
-        name = "%s (%s)" % (name, m.group(1) if m else jid)
-    return name
+    if name.lower() not in used:
+        return name
+    n = 2
+    while ("%s (%d)" % (name, n)).lower() in used:
+        n += 1
+    return "%s (%d)" % (name, n)
 
 
 def create(role, employer, link="", reference="", location="", closes="", depth="",
@@ -326,6 +334,230 @@ def record_score(job_id, scorecard, which):
     return rec
 
 
+# ------------------------------------------------------------------ bringing old work in
+
+#: The working files one application leaves in the person's folder, from before each
+#: job had a folder of its own. Named exactly, because a pattern loose enough to
+#: catch a file the person put there themselves would copy it into a job it has
+#: nothing to do with. `facts.md`, `answers.md`, `documents.json` and `cv-source/`
+#: belong to the person, not to a job, and are never matched.
+LOOSE_RE = re.compile(
+    r"^(asks\.(md|json)"
+    r"|scorecard(-before)?\.md"
+    r"|proposals\.md"
+    r"|achievements\.md"
+    r"|cv-[^/\\]+\.(md|json)"
+    r"|cover-letter[^/\\]*\.md)$", re.I)
+
+#: Dropped in the person's folder after the loose files have been brought into a job,
+#: holding the size and time of each one. The originals are left where they were, so
+#: without this every later run would offer to bring them in again.
+ADOPTED = ".adopted-into-jobs.json"
+
+
+def _stamp(path):
+    st = os.stat(path)
+    return [st.st_size, int(st.st_mtime)]
+
+
+def _adopted_record():
+    try:
+        with io.open(os.path.join(paths.data_dir(), ADOPTED), encoding="utf-8") as fh:
+            data = json.load(fh)
+            return data if isinstance(data, dict) else {}
+    except (IOError, OSError, ValueError):
+        return {}
+
+
+def loose_job_files(include_adopted=False):
+    """The loose working files in the person's folder, sorted by name.
+
+    A file already brought into a job, and unchanged since, is left out unless
+    `include_adopted` is set. One that has changed since is included again, because
+    somebody kept working the old way and that work is not in the job yet.
+    """
+    base = paths.data_dir()
+    done = (_adopted_record().get("files") or {}) if not include_adopted else {}
+    out = []
+    for name in sorted(os.listdir(base)):
+        full = os.path.join(base, name)
+        if not os.path.isfile(full) or not LOOSE_RE.match(name):
+            continue
+        if name in done and done[name] == _stamp(full):
+            continue
+        out.append(name)
+    return out
+
+
+def guess_application():
+    """(role, employer, every application the ledger knows) from documents.json.
+
+    The newest document on record is the application the loose files most likely
+    belong to, because each new advertisement used to replace them. It is only a
+    guess, and it is always shown to the person before anything is copied.
+    """
+    import documents
+    seen = {}
+    for rec in documents.load_ledger(paths.documents_ledger()).values():
+        role = (rec.get("role") or "").strip()
+        if not role:
+            continue
+        key = (role, (rec.get("employer") or "").strip())
+        seen[key] = max(seen.get(key, ""), rec.get("written") or "")
+    ranked = sorted(seen.items(), key=lambda kv: kv[1], reverse=True)
+    apps = [k for k, _w in ranked]
+    if not apps:
+        return "", "", []
+    return apps[0][0], apps[0][1], apps
+
+
+def _stage_from(files):
+    """How far the old work had got, read from which files exist. Never further."""
+    names = set(n.lower() for n in files)
+    if any(n.startswith("cover-letter") for n in names):
+        return "Ready"
+    if any(n.endswith("decisions.json") for n in names) or "proposals.md" in names:
+        return "Tailoring"
+    if "scorecard.md" in names or "asks.md" in names:
+        return "Scoring"
+    return "Saved"
+
+
+def adopt(role="", employer="", job=None, dry_run=False):
+    """Copy the loose working files into a job. Returns a report dict.
+
+    Copies only. Nothing in the person's folder is moved, renamed or deleted, and
+    nothing already in the job's folder is written over: a file of the same name
+    there is the newer one and is kept, and its name is reported.
+    """
+    import shutil
+    import documents
+    base = paths.data_dir()
+    files = loose_job_files()
+    if not files:
+        raise ValueError("there are no loose working files in %s to bring into a job."
+                         % base)
+
+    guessed = False
+    if job:
+        rec = load(job)
+    else:
+        if not role:
+            role, g_emp, _apps = guess_application()
+            if not role:
+                raise ValueError(
+                    "found %s, but nothing on record says which job %s for. "
+                    "Ask the person, then pass --role and --employer."
+                    % (", ".join(files), "it was" if len(files) == 1 else "they were"))
+            employer = employer or g_emp
+            guessed = True
+        dups = open_duplicates(role, employer)
+        rec = dups[0] if dups else None
+
+    report = {"files": files, "guessed": guessed, "dry_run": dry_run,
+              "role": rec["role"] if rec else role,
+              "employer": rec.get("employer", "") if rec else employer,
+              "existing_job": bool(rec), "copied": [], "kept": [], "tagged": 0}
+
+    if dry_run:
+        report["job"] = rec["id"] if rec else new_id(role, employer) + " (new)"
+        report["stage"] = rec["stage"] if rec else _stage_from(files)
+        return report
+
+    if rec is None:
+        report["new_job"] = True
+        rec = create(role, employer)
+        rec["stage"] = _stage_from(files)
+        if rec["stage"] != "Saved":
+            rec["history"].append({"stage": rec["stage"], "on": today()})
+        save(rec)
+    folder = os.path.join(paths.jobs_root(), rec["id"])
+
+    import filecmp
+    for name in files:
+        src = os.path.join(base, name)
+        target = os.path.join(folder, name)
+        if os.path.exists(target):
+            if filecmp.cmp(src, target, shallow=False):
+                report["kept"].append(name)
+                continue
+            # Different wording under the same name: somebody kept working in the old
+            # place after the job was made. Neither copy is the obvious winner, so
+            # both are kept and the second one says where it came from.
+            stem, ext = os.path.splitext(name)
+            n, target = 1, os.path.join(folder, "%s (brought in %s)%s" % (stem, today(), ext))
+            while os.path.exists(target):
+                n += 1
+                target = os.path.join(folder, "%s (brought in %s, %d)%s"
+                                      % (stem, today(), n, ext))
+            report.setdefault("beside", []).append(os.path.basename(target))
+            shutil.copy2(src, target)
+            continue
+        shutil.copy2(src, target)
+        report["copied"].append(name)
+
+    # The scores, when the scorecards carry them. scorecard-before.md is the first
+    # score and scorecard.md the rescore; with no before file, scorecard.md is the first.
+    before = os.path.join(folder, "scorecard-before.md")
+    now = os.path.join(folder, "scorecard.md")
+    scores = rec.setdefault("scores", {"before": None, "after": None})
+    first, second = (before, now) if os.path.isfile(before) else (now, None)
+    for which, path in (("before", first), ("after", second)):
+        if path and os.path.isfile(path) and not scores.get(which):
+            counts = scorecard_counts(path)
+            if counts:
+                counts["on"] = today()
+                scores[which] = counts
+                if counts.get("depth") and not rec.get("depth"):
+                    rec["depth"] = counts["depth"]
+    rec.setdefault("notes", []).append({
+        "on": today(),
+        "text": "Brought in %d file%s from the folder used before each job had its own: %s."
+                % (len(report["copied"]) + len(report.get("beside", [])),
+                   "" if len(report["copied"]) + len(report.get("beside", [])) == 1 else "s",
+                   ", ".join(report["copied"] + report.get("beside", [])) or "none")})
+    save(rec)
+
+    # Say in the documents ledger which job each earlier document belongs to. Only a
+    # record with this role and employer, and no job already, is touched.
+    ledger_path = paths.documents_ledger()
+    ledger = documents.load_ledger(ledger_path)
+    for r in ledger.values():
+        if (not r.get("job") and _norm(r.get("role")) == _norm(rec["role"])
+                and _norm(r.get("employer")) == _norm(rec.get("employer"))):
+            r["job"] = rec["id"]
+            report["tagged"] += 1
+    if report["tagged"]:
+        documents.save_ledger(ledger, ledger_path)
+
+    done = _adopted_record()
+    stamps = done.get("files") or {}
+    for name in files:
+        stamps[name] = _stamp(os.path.join(base, name))
+    done.update({"job": rec["id"], "on": today(), "files": stamps})
+    with io.open(os.path.join(base, ADOPTED), "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(json.dumps(done, indent=2, ensure_ascii=False) + "\n")
+
+    report["job"] = rec["id"]
+    report["stage"] = rec["stage"]
+    return report
+
+
+def loose_notice():
+    """One sentence for anybody listing jobs while old loose files are waiting, or ""."""
+    try:
+        files = loose_job_files()
+    except OSError:
+        return ""
+    if not files:
+        return ""
+    return ("%d working file%s from before each job had its own folder %s still loose in "
+            "the person's folder (%s). %s scripts/jobs.py adopt --dry-run shows which job "
+            "they would go into." % (len(files), "" if len(files) == 1 else "s",
+                                     "is" if len(files) == 1 else "are",
+                                     ", ".join(files), paths.PY))
+
+
 # ------------------------------------------------------------------ printing
 
 def _score_text(s):
@@ -399,6 +631,12 @@ def main(argv=None):
     p.add_argument("--scorecard", required=True)
     p.add_argument("--as", dest="which", required=True, choices=("before", "after"))
 
+    p = sub.add_parser("adopt", help="copy loose working files from before jobs into a job")
+    p.add_argument("--role", default="")
+    p.add_argument("--employer", default="")
+    p.add_argument("--job", default=None, help="an existing job to bring them into")
+    p.add_argument("--dry-run", action="store_true", help="say what would happen, change nothing")
+
     try:
         a = ap.parse_args(argv)
     except SystemExit as e:
@@ -415,11 +653,49 @@ def main(argv=None):
             print(describe(rec))
             return 0
 
+        if a.cmd == "adopt":
+            r = adopt(a.role, a.employer, a.job, a.dry_run)
+            verb = "would bring" if r["dry_run"] else "brought"
+            print("%s %d file%s into %s" % (verb, len(r["files"]),
+                                           "" if len(r["files"]) == 1 else "s", r["job"]))
+            print("  role     : %s%s" % (r["role"], "   (guessed from the newest document "
+                                          "on record, check with the person)"
+                                          if r["guessed"] else ""))
+            print("  employer : %s" % (r["employer"] or "-"))
+            print("  stage    : %s" % r["stage"])
+            if r["dry_run"]:
+                print("  files    : %s" % ", ".join(r["files"]))
+                print("  nothing was changed.")
+                return 0
+            if r["copied"]:
+                print("  copied   : %s" % ", ".join(r["copied"]))
+            if r["kept"]:
+                print("  kept     : %s   (already in the job and identical)"
+                      % ", ".join(r["kept"]))
+            if r.get("beside"):
+                print("  beside   : %s   (the job already had a different file of that "
+                      "name, so both are kept; ask the person which one is current)"
+                      % ", ".join(r["beside"]))
+            if r["tagged"]:
+                print("  documents: %d earlier document%s now say%s which job %s for"
+                      % (r["tagged"], "" if r["tagged"] == 1 else "s",
+                         "s" if r["tagged"] == 1 else "", "it was" if r["tagged"] == 1
+                         else "they were"))
+            print("  the originals are still in %s, untouched." % paths.data_dir())
+            if r.get("new_job"):
+                print("  the advertisement itself stays in cv-source/. Copy it into %s"
+                      % os.path.join(paths.jobs_root(), r["job"], "ad"))
+                print("  once you know which file it is.")
+            return 0
+
         if a.cmd == "list":
             recs = all_jobs()
             if a.json:
                 print(json.dumps(recs, indent=2, ensure_ascii=False))
                 return 0
+            notice = loose_notice()
+            if notice:
+                sys.stderr.write("jobs.py: %s\n" % notice)
             if not recs:
                 print("No jobs yet.")
                 return 0
