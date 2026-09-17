@@ -4,6 +4,7 @@
     python3 check.py                    the person's own folder, from paths.py
     python3 check.py <folder>           somewhere else
     python3 check.py <folder> tight     only cv-tight.md, not every variant
+    python3 check.py --job <id> [variant]   one job's folder
 
 Checks the things that look fine on screen and are wrong on the page: a proposal
 that traces to nothing, a claim printed twice, a budget quietly exceeded, a role
@@ -413,15 +414,51 @@ def _cv_files(root, variant):
     return out
 
 
+def _facts_for(root):
+    """facts.md for this folder: in it, or, for a job folder, in the person's folder.
+
+    Since each job has its own folder, the ledgers that belong to one advertisement
+    sit in `jobs/<id>/` and the facts ledger, which belongs to the person, sits two
+    levels up. A job folder with no facts.md beside it is the normal case, not a
+    Phase 2 that has not run.
+    """
+    here = os.path.join(root, "facts.md")
+    if os.path.isfile(here):
+        return here
+    parent = os.path.dirname(root)
+    if os.path.basename(parent) == "jobs":
+        up = os.path.join(os.path.dirname(parent), "facts.md")
+        if os.path.isfile(up):
+            return up
+    return here
+
+
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("-")]
-    if [a for a in sys.argv[1:] if a in ("-h", "--help")]:
+    argv = sys.argv[1:]
+    if [a for a in argv if a in ("-h", "--help")]:
         sys.stdout.write(__doc__.split("Checks the things")[0])
         return 0
-    if len(args) > 2:
-        sys.stderr.write("usage: check.py [folder] [variant]\n")
+    job = None
+    if "--job" in argv:
+        i = argv.index("--job")
+        if i + 1 >= len(argv):
+            sys.stderr.write("check.py: --job needs a job id after it.\n")
+            return 2
+        job = argv[i + 1]
+        argv = argv[:i] + argv[i + 2:]
+    args = [a for a in argv if not a.startswith("-")]
+    if len(args) > (1 if job else 2):
+        sys.stderr.write("usage: check.py [folder] [variant]   or   check.py --job <id> [variant]\n")
         return 2
 
+    if job:
+        try:
+            import paths
+            root = paths.job_dir(job)
+        except Exception as e:                                 # noqa: BLE001
+            sys.stderr.write("check.py: %s\n" % e)
+            return NO_FOLDER
+        args = [root] + args
     if args:
         root = os.path.abspath(os.path.expanduser(args[0]))
     else:
@@ -445,7 +482,9 @@ def main():
     faults, notes = [], []
 
     facts_ids, ask_ids = set(), set()
-    fp = os.path.join(root, "facts.md")
+    fp = _facts_for(root)
+    if fp != os.path.join(root, "facts.md"):
+        print("facts from %s" % fp)
     if os.path.isfile(fp):
         for b in parse_blocks(read(fp)):
             if b.get("id"):
@@ -464,6 +503,9 @@ def main():
                 ask_ids.add(b["id"])
     else:
         notes.append("No asks.md. Phase 2 has not run.")
+        if not job and os.path.isdir(os.path.join(root, "jobs")):
+            notes.append("This is the person's folder, and each job's asks.md is in its "
+                         "own folder now. Run check.py --job <id>.")
 
     pp = os.path.join(root, "proposals.md")
     if os.path.isfile(pp):

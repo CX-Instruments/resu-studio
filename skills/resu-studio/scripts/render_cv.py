@@ -2131,6 +2131,10 @@ def _keep_earlier(dest, role, source, employer=""):
         return None
 
 
+#: The job id named with --job, recorded against every document this run writes.
+JOB_ID = ""
+
+
 def _record(path, role, tag, source, employer=""):
     d = _documents()
     if not d:
@@ -2141,7 +2145,10 @@ def _record(path, role, tag, source, employer=""):
         return
     try:
         try:
-            write(path, role, kind, source, employer=employer)
+            if JOB_ID:
+                write(path, role, kind, source, employer=employer, job=JOB_ID)
+            else:
+                write(path, role, kind, source, employer=employer)
         except TypeError:
             write(path, role, kind, source)
     except Exception:
@@ -2255,7 +2262,7 @@ def write_pdfs(a, doc, letter, skins, cv_html):
         sys.stderr.write(to_pdf.ADVICE + "\n")
         return 3
 
-    outdir = outdir_for(a.cv, a.pdf_dir)
+    outdir = outdir_for(a.cv, a.pdf_dir or getattr(a, "job_docs", None))
 
     # What to print. One --pdf run produces every document it was given, because the
     # two are posted together and a person who has one and not the other has neither.
@@ -2525,7 +2532,30 @@ def main():
     ap.add_argument("--order", default=None,
                     help="section order and column, e.g. "
                          "profile,key-skills:side,professional-experience,education")
+    ap.add_argument("--job", default=None,
+                    help="the job these documents are for (scripts/jobs.py list). Role "
+                         "and employer come from its job.json unless given, and the "
+                         "files go into that job's documents folder unless --pdf-dir "
+                         "names another")
     a = ap.parse_args()
+
+    # See build_studio.py: a job supplies its own role and employer, and its own
+    # documents folder, so two jobs rendered on one afternoon land in two folders.
+    global JOB_ID
+    a.job_docs = None
+    if a.job:
+        try:
+            sys.path.insert(0, HERE)
+            import jobs
+            import paths
+            rec = jobs.load(a.job)
+            a.job_docs = paths.job_documents_dir(rec["id"])
+        except Exception as e:                                 # noqa: BLE001
+            sys.stderr.write("--job: %s\n" % e)
+            return 3
+        JOB_ID = rec["id"]
+        a.role = a.role or rec.get("role") or None
+        a.employer = a.employer or rec.get("employer", "")
 
     OPTS["skills"] = a.skills
     OPTS["marks"] = a.marks
@@ -2736,7 +2766,7 @@ def main():
     # The employer belongs in this name for the same reason it belongs in the PDF's:
     # two applications for the same job title otherwise write over each other.
     emp = slug(getattr(a, "employer", "") or "")
-    out = a.out or os.path.join(outdir_for(a.cv),
+    out = a.out or os.path.join(outdir_for(a.cv, getattr(a, "job_docs", None)),
                                 "%s-%s-%s.html" % (stem + ("-" + emp if emp else ""),
                                                    a.layout, a.palette))
     with open(out, "w", encoding="utf-8") as f:

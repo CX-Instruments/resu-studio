@@ -25,9 +25,9 @@ adds **Resu Desk**, an HTML page listing every application with its stage and li
 | Step | What | State |
 |---|---|---|
 | 1 | `scripts/jobs.py` (new, list, show, stage, note, set, score), `templates/job.json`, `paths.py --job` | Done, committed as `feat(jobs): one folder per job ad, with job.json and paths --job` |
-| 2 | `jobs.py adopt`: copy loose single-job files into a job folder | Done. Commit `feat(jobs): adopt loose single-job files into a job folder` if not already committed |
-| 3 | `build_studio.py`, `render_cv.py`, `check.py`, `documents.py` use job folders | **Next** |
-| 4 | `build_desk.py` and `assets/desk.html` | Not started |
+| 2 | `jobs.py adopt`: copy loose single-job files into a job folder | Done, with `tools/test_jobs.py` and these notes |
+| 3 | `build_studio.py`, `render_cv.py`, `check.py`, `documents.py` take `--job` | Done, tested by `tools/test_jobs_build.py` |
+| 4 | `build_desk.py` and `assets/desk.html` | **Next** |
 | 5 | `SKILL.md`, `references/where-files-go.md`, `references/studio.md`, `README.md`, `CHANGELOG.md` | Not started |
 | 6 | Full test run with a fake person and two fake ads, version bump to 0.6.0 via `tools/sync_version.py` | Not started |
 
@@ -61,25 +61,44 @@ Check `git log --oneline` to confirm what has landed.
 `CLAUDE_PLUGIN_DATA` pointed at it. Run `python3 tools/test_jobs.py` after any change to
 `jobs.py` or `paths.py`. It must print `34 of 34 checks passed` (more once you add checks).
 
-## Step 3 in detail (next)
+## What step 3 changed
 
-- `build_studio.py`: add `--job <id>`. When given, default `--out` is
-  `paths.job_documents_dir(id)`, and role and employer default from `job.json` if not passed.
-  Keep `--role` required when `--job` is absent, so old commands still work. Pass `job=` into
-  `documents.note()` / `record()`.
-- `render_cv.py`: same `--job` rule for where PDFs go (see `_pdf_names` and `paths.documents_dir()`
-  near line 74).
-- `documents.py`: `record()` accepts and stores `job`. `main()` groups output by job.
-- `check.py`: accept a job folder as its root. It looks for `asks.md` and `proposals.md` there,
-  and must find `facts.md` in the data folder one level up (`paths.data_dir()`).
-- Do not change the browser store key rule in `build_studio.py`
-  (`cvwb:` + slug of role and employer). Existing marks in people's browsers depend on it.
-- Prove it with a real Studio built for two jobs, and a screenshot of each.
+- `build_studio.py --job <id>`: role and employer are read from `job.json` when not passed (passed
+  values still win). The studio is written to `paths.job_documents_dir(id)` unless `--out` is given.
+  `--role` stays required when there is no `--job`, so every existing command still works. The
+  browser store key rule is unchanged (`cvwb:` + slug of role and employer), proven by a test that
+  builds the same application both ways and compares the keys.
+- `render_cv.py --job <id>`: same role and employer rule. PDFs and the HTML preview go to the job's
+  documents folder unless `--pdf-dir`, `--outdir` or `--out` names another. Module global `JOB_ID`
+  carries the id into `_record()`.
+- `documents.py`: `record()` and `note()` take `job=""` and store it on the record. The listing
+  shows `[job <id>]` beside each application that has one.
+- `check.py --job <id> [variant]`: checks that job's folder. `facts.md` is looked for in the folder
+  first, then two levels up when the folder sits in `jobs/`. Run with no job on a person's folder
+  that has `jobs/`, it says to use `--job`.
+- Tests: `tools/test_jobs_build.py`, 10 scenarios, 23 checks, uses the fictional CV in
+  `docs/review/sample-cv.md`. It prints a PDF, so it needs Chromium, Chrome or Edge (`CV_BROWSER`).
+
+## Step 4 in detail (next)
+
+- `scripts/build_desk.py`: read `jobs.all_jobs()` and `documents.load_ledger(paths.documents_ledger())`.
+  Group documents by their `job` field. Write `_Your Documents Are Here/Resu Desk.html` from
+  `assets/desk.html`, swapping `const` blocks the way `build_studio.swap_const` does.
+- One row per job: employer, role, stage, closing date (flag ones closing within 7 days), before
+  and after score (`a_reader_would_find` of `asks_total`), last updated, relative links to its
+  Studio and PDFs. Open jobs first, closed below.
+- Filter by stage, sort by closing date. Stage, closing date and notes editable in the page,
+  saved in localStorage under `resu-desk` (wrapped in try/catch), returned through a
+  **hand to AI** block and a **Save the desk file** button (`desk-updates.json`), matching the
+  Studio's pattern. Then add `jobs.py apply-desk <desk-updates.json>` to write those changes.
+- Match the Studio's look: read the `:root` tokens and fonts in `assets/studio.html`. Do not edit it.
+- Call `build_desk.py` at the end of `build_studio.py`, `render_cv.py --pdf` and every `jobs.py`
+  command that changes a record, so the Desk is never stale. Never let a Desk failure fail those.
 
 ## Rules for working in this repo
 
-- **Line endings are CRLF** in the working tree on the owner's Windows machine. Keep new and
-  edited files CRLF. `job.json` written at runtime uses `\n`, which is fine.
+- **Keep each file's existing line endings.** Most files are CRLF on the owner's Windows machine,
+  but `check.py` and `documents.py` are LF. New files are CRLF. Check with `file` first.
 - **Python standard library only.** Python 3, runs on Windows, Mac and Linux.
 - **Code comments and docstrings** follow the house style: plain prose that explains why,
   written for a careful reader. Read a few functions in `paths.py` before writing new ones.
