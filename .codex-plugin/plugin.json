@@ -30,6 +30,9 @@
       "Help me tailor my CV to this job ad",
       "Am I a good fit for this role?",
       "Write a cover letter for this application"
-    ]
+    ],
+    "brandColor": "#D9CCBA",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
   }
 }
