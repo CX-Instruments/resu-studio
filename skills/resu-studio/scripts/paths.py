@@ -47,6 +47,8 @@ copies into it.
 
     python3 scripts/paths.py            where everything goes, and why
     python3 scripts/paths.py --facts    just the path, for a command line
+    python3 scripts/paths.py --job <id> [--job-dir|--job-ad|--job-documents|--job-file]
+                                        one job's folder, see scripts/jobs.py
 """
 
 import io
@@ -632,6 +634,112 @@ def cv_source_dir():
     return sub("cv-source")
 
 
+# ------------------------------------------------------------------ one job each
+
+#: The folder holding one working folder per advertisement. Everything that belongs
+#: to a single application lives in its own folder under here: the advertisement as
+#: it arrived, the asks ledger, the scorecard, the proposals, the decisions, the
+#: tailored CV and the letter. What belongs to the person, `facts.md`, `answers.md`
+#: and `cv-source/`, stays where it always was, so every job reads the same history.
+JOBS = "jobs"
+
+#: A job id is a folder name, so it is held to letters, digits and hyphens. Anything
+#: else, a slash or a `..` above all, would let a typo name a folder outside `jobs/`.
+_JOB_ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-"
+
+
+class NoSuchJob(Exception):
+    """A job id that names no folder under `jobs/`. The message says what does exist."""
+
+
+def valid_job_id(job_id):
+    """True when `job_id` is safe to use as one folder name under `jobs/`."""
+    return bool(job_id) and job_id[0] != "-" and all(c in _JOB_ID_CHARS for c in job_id)
+
+
+def jobs_root():
+    """`<their folder>/jobs`, created."""
+    return sub(JOBS)
+
+
+def known_jobs():
+    """Every job id with a folder and a `job.json`, sorted."""
+    root = os.path.join(data_dir(), JOBS)
+    try:
+        names = os.listdir(root)
+    except OSError:
+        return []
+    return sorted(n for n in names if valid_job_id(n)
+                  and os.path.isfile(os.path.join(root, n, "job.json")))
+
+
+def find_job(given):
+    """The one job id `given` means: an exact id, or the start of exactly one id.
+
+    A person, or an assistant, will write `acme` for `acme-data-analyst-2026-09`, and
+    refusing that helps nobody. Two jobs starting the same way is not guessed at: it
+    is refused with both names, because working on the wrong application writes one
+    employer's answers into another's folder.
+    """
+    given = (given or "").strip().lower()
+    ids = known_jobs()
+    if given in ids:
+        return given
+    hits = [i for i in ids if given and i.startswith(given)]
+    if len(hits) == 1:
+        return hits[0]
+    if not ids:
+        raise NoSuchJob("there are no jobs yet, so %r names nothing. Start one with "
+                        "%s scripts/jobs.py new --role \"<title>\" --employer "
+                        "\"<employer>\"." % (given, PY))
+    if hits:
+        raise NoSuchJob("%r could be any of %s. Use the whole id."
+                        % (given, ", ".join(hits)))
+    raise NoSuchJob("no job called %r. The jobs are: %s." % (given, ", ".join(ids)))
+
+
+def job_dir(job_id):
+    """`jobs/<id>/` for a job that exists. Raises NoSuchJob for one that does not.
+
+    It is never created here. A job folder is made by `jobs.py new`, which also
+    writes its record, so a folder that exists always has a `job.json` saying what
+    it is for.
+    """
+    return os.path.join(data_dir(), JOBS, find_job(job_id))
+
+
+def job_file(job_id):
+    """The `job.json` for one job."""
+    return os.path.join(job_dir(job_id), "job.json")
+
+
+def job_ad_dir(job_id):
+    """Where the advertisement and its job pack are kept, verbatim, created."""
+    path = os.path.join(job_dir(job_id), "ad")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def job_documents_dir(job_id):
+    """`_Your Documents Are Here/<Employer - Role>/`, created.
+
+    The name is read from the job's own record, where it was fixed when the job was
+    made, so correcting a typo in the role later does not split one application's
+    documents across two folders.
+    """
+    import json
+    jid = find_job(job_id)
+    name = jid
+    try:
+        with io.open(job_file(jid), encoding="utf-8") as fh:
+            name = json.load(fh).get("documents_folder") or jid
+    except (IOError, OSError, ValueError):
+        pass
+    path = os.path.join(documents_dir(), name)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 #: What each one-path flag prints. Nothing else is printed with these, so they can
 #: be used as `--facts "$(python3 scripts/paths.py --facts)"`.
 _ONE_PATH = {
@@ -640,25 +748,65 @@ _ONE_PATH = {
     "--answers": lambda: answers_file(),
     "--documents": lambda: documents_dir(),
     "--cv-source": lambda: cv_source_dir(),
+    "--jobs": lambda: jobs_root(),
 }
+
+#: The same, for one job. Each needs `--job <id>` alongside it.
+_JOB_PATH = {
+    "--job-dir": job_dir,
+    "--job-ad": job_ad_dir,
+    "--job-documents": job_documents_dir,
+    "--job-file": job_file,
+}
+
+
+def _usage():
+    return ("usage: paths.py [--data|--facts|--answers|--documents|--cv-source|--jobs]\n"
+            "       paths.py --job <id> [--job-dir|--job-ad|--job-documents|--job-file]\n"
+            "  no arguments : where everything goes, and why\n"
+            "  a flag       : that one path, on its own line, and nothing else\n"
+            "  --job <id>   : with no other flag, the job's own folder\n")
 
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
 
+    if "--job" in argv:
+        i = argv.index("--job")
+        if i + 1 >= len(argv) or argv[i + 1].startswith("-"):
+            sys.stderr.write("paths.py: --job needs a job id after it. %s scripts/jobs.py "
+                             "list shows them.\n" % PY)
+            return 2
+        given = argv[i + 1]
+        rest = argv[:i] + argv[i + 2:]
+        flags = [a for a in rest if a in _JOB_PATH] or ["--job-dir"]
+        stray = [a for a in rest if a not in _JOB_PATH]
+        if stray:
+            sys.stderr.write("paths.py: with --job, only %s can be asked for, not %s.\n"
+                             % (" ".join(sorted(_JOB_PATH)), " ".join(stray)))
+            return 2
+        try:
+            sys.stdout.write(_JOB_PATH[flags[0]](given) + "\n")
+        except NoSuchJob as e:
+            sys.stderr.write("paths.py: %s\n" % e)
+            return 3
+        return 0
+
     for arg in argv:
         if arg in _ONE_PATH:
             sys.stdout.write(_ONE_PATH[arg]() + "\n")
             return 0
+        if arg in _JOB_PATH:
+            sys.stderr.write("paths.py: %s is for one job, so it needs --job <id> "
+                             "beside it.\n" % arg)
+            return 2
         if arg in ("-h", "--help"):
-            sys.stdout.write(
-                "usage: paths.py [--data|--facts|--answers|--documents|--cv-source]\n"
-                "  no arguments : where everything goes, and why\n"
-                "  a flag       : that one path, on its own line, and nothing else\n")
+            sys.stdout.write(_usage())
             return 0
         if arg.startswith("-"):
-            sys.stderr.write("paths.py: unknown option %s. Known: %s\n"
-                             % (arg, " ".join(sorted(_ONE_PATH))))
+            sys.stderr.write("paths.py: unknown option %s. Known: %s --job %s\n"
+                             % (arg, " ".join(sorted(_ONE_PATH)),
+                                " ".join(sorted(_JOB_PATH))))
             return 2
 
     path, src, safe = resolve()
@@ -686,6 +834,7 @@ def main(argv=None):
     print("  facts     : %s" % os.path.join(path, "facts.md"))
     print("  answers   : %s" % os.path.join(path, "answers.md"))
     print("  the CV as it arrived : %s" % os.path.join(path, "cv-source"))
+    print("  jobs      : %s  (%d so far)" % (os.path.join(path, JOBS), len(known_jobs())))
     print()
     print("  For a command line, one path and nothing else:")
     print("    %s scripts/paths.py --facts" % PY)
