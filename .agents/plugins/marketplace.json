@@ -1,0 +1,20 @@
+{
+  "name": "resu-studio",
+  "interface": {
+    "displayName": "Resu Studio, from CX Instruments"
+  },
+  "plugins": [
+    {
+      "name": "resu-studio",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -102,6 +102,12 @@ Resu Studio then appears in your plugin browser to install. To install a downloa
 file instead, use the upload option on the same page and pick the `.plugin` file from
 [Releases](https://github.com/CX-Instruments/resu-studio/releases).
 
+**ChatGPT and Codex.** Open Plugins, choose to add a plugin marketplace, and enter
+`CX-Instruments/resu-studio` as the source, with `main` as the Git ref and nothing under
+sparse paths. Resu Studio then appears in the list to install. Where ChatGPT can run
+the scripts, everything works; where it cannot, the scoring, suggestions and letter
+still do, and the studio and PDF do not.
+
 **Claude Code, Codex, GitHub Copilot, Cursor, Gemini CLI and other agents.** Install it
 with the [Skills CLI](https://github.com/vercel-labs/skills), which needs Node.js:
 

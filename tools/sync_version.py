@@ -29,6 +29,7 @@ SKILL_MD = os.path.join(SKILL_DIR, "SKILL.md")
 MANIFESTS = (
     (os.path.join(ROOT, ".claude-plugin", "plugin.json"), ("version",)),
     (os.path.join(ROOT, ".claude-plugin", "marketplace.json"), ("plugins", 0, "version")),
+    (os.path.join(ROOT, ".codex-plugin", "plugin.json"), ("version",)),
 )
 
 
