@@ -105,44 +105,18 @@ never have to ask to see where things stand.
 
 ## Installing it
 
-Resu Studio is one skill, written to the open [Agent Skills](https://agentskills.io)
-standard, so the same repository installs into Claude and into other AI tools. Every
-install reads this repository, so an update here reaches all of them.
+Full instructions for every tool are in [docs/INSTALL.md](docs/INSTALL.md). The short
+version:
 
-**Claude (Cowork).** Open Customize, then Plugins, then Add marketplace, and enter:
-
-```
-CX-Instruments/resu-studio
-```
-
-Resu Studio then appears in your plugin browser to install. To install a downloaded
-file instead, use the upload option on the same page and pick the `.plugin` file from
-[Releases](https://github.com/CX-Instruments/resu-studio/releases).
-
-**ChatGPT and Codex.** Open Plugins, choose to add a plugin marketplace, and enter
-`CX-Instruments/resu-studio` as the source, with `main` as the Git ref and nothing under
-sparse paths. Resu Studio then appears in the list to install. Where ChatGPT can run
-the scripts, everything works; where it cannot, the scoring, suggestions and letter
-still do, and the studio and PDF do not.
-
-**Claude Code, Codex, GitHub Copilot, Cursor, Gemini CLI and other agents.** Install it
-with the [Skills CLI](https://github.com/vercel-labs/skills), which needs Node.js:
-
-```
-npx skills add CX-Instruments/resu-studio
-```
-
-It asks which of your AI tools to install it into. To pick one yourself, add
-`-a codex`, `-a cursor`, `-a github-copilot`, `-a gemini-cli` or `-a claude-code`. To
-pick up a later version:
-
-```
-npx skills update
-```
-
-The Skills CLI counts installs anonymously, which is how skills are ranked on
-[skills.sh](https://skills.sh). That count is the CLI's, not Resu Studio's. Set
-`DISABLE_TELEMETRY=1` before running it to turn it off.
+- **Claude (Cowork or Claude Code):** search the plugin directory for **Resu Studio**,
+  or add the marketplace `CX-Instruments/resu-studio` until the listing is live.
+- **ChatGPT and Codex:** search Plugins for **Resu Studio**, or add
+  `CX-Instruments/resu-studio` as a plugin marketplace with `main` as the Git ref.
+- **Claude Code, Codex, Copilot, Cursor, Gemini CLI and others:** `npx skills add
+  CX-Instruments/resu-studio`, then `npx skills update` for later versions.
+- **A downloaded file:** the `.plugin` file on the
+  [Releases page](https://github.com/CX-Instruments/resu-studio/releases), uploaded in
+  Cowork's plugin page.
 
 ## Getting started
 
