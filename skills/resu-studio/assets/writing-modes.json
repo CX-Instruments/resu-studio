@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "default": "credible-conviction",
+  "modes": [
+    {
+      "id": "credible-conviction", "version": 1, "name": "Credible conviction",
+      "impression": "A capable person whose relevant contribution is easy to understand and believe.",
+      "emphasis": "Lead with the strongest relevant contribution pattern, then make its evidence visible.",
+      "voice": "Assured, specific, human and measured.",
+      "behaviour": "Use concrete work, context and proof. Vary sentence openings and give each section a purpose. Preserve meaningful difficulty and scale.",
+      "boundaries": "No praise in place of proof, invented motivation, promoted ownership or compulsory metrics."
+    },
+    {
+      "id": "direct-impact", "version": 1, "name": "Direct and focused",
+      "impression": "The contribution and its relevance are apparent at a glance.",
+      "emphasis": "Bring supported outcomes, scale and the most relevant capabilities forward.",
+      "voice": "Compact, confident and plain.",
+      "behaviour": "Lead with the most informative action or result. Cut repetition while retaining context, attribution and uncertainty. Do not force every bullet into the same rhythm.",
+      "boundaries": "Brevity cannot remove qualifying facts. Directness cannot enlarge a claim."
+    },
+    {
+      "id": "warm-collaborative", "version": 1, "name": "Warm and grounded",
+      "impression": "A recognisable practitioner whose work matters to colleagues and the people it serves.",
+      "emphasis": "Show supported judgement, collaboration, beneficiaries and working habits alongside outcomes.",
+      "voice": "Approachable, concrete and professionally assured.",
+      "behaviour": "Keep the people and circumstances in the work visible. Use natural language and specific actions to carry warmth, without personal pronouns on the CV.",
+      "boundaries": "Do not invent care, passion, personality or motivation. Keep employer relevance and proof visible."
+    },
+    {
+      "id": "expressive", "version": 1, "name": "Expressive and distinctive",
+      "impression": "A memorable account of a real contribution, in language the person recognises.",
+      "emphasis": "Highlight supported combinations of work, method and context that distinguish this application.",
+      "voice": "Lively, persuasive and natural.",
+      "behaviour": "Allow more variation in rhythm and phrasing, including light playfulness where it suits the person and target. Keep facts and searchable terminology explicit.",
+      "boundaries": "No metaphors that imply new facts, slogans, self-praise or theatrical verb promotion. Application clarity and scanning requirements still apply."
+    }
+  ]
+}

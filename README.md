@@ -62,33 +62,33 @@ flagged. Change a stage, a date or add a note right on the page, then hand it ba
 AI, which writes it into your records. If a job changed in the meantime, it asks you which
 is right instead of writing over it. The Desk rebuilds itself whenever anything changes.
 
-## The seven phases
+## Choose how your CV makes its case
 
-Each one stops and waits for you, so nothing of yours is rewritten without your say. The
-one exception is reading your CV and the ad, which runs straight on into scoring, so the
-first thing you get back after saying how deep to go is the Studio with your score.
+After reading your CV and the advertisement, the Studio shows a guiding brief and
+profile-summary and experience-bullet samples in different writing modes. Credible
+conviction is the default; direct, warm and expressive options are included. Explore
+your own direction conversationally and save a personal mode for later applications.
+Each advertisement gets its own positioning, even when you reuse a mode.
 
-```mermaid
-flowchart TD
-    A["1 Sources<br/><small>the advertisement and your CV, captured verbatim</small>"]
-    B["2 Atomise<br/><small>your history into a facts ledger, the advertisement into an asks ledger</small>"]
-    C["3 Score<br/><small>one against the other, before anything is changed</small>"]
-    D["4 Propose<br/><small>current text, suggested text, reason</small>"]
-    E["5 Decide<br/><small>you accept or reject, one at a time</small>"]
-    F["6 Assemble<br/><small>the tailored CV, then rescore and show the movement</small>"]
-    G["7 Cover letter<br/><small>one page, in your voice</small>"]
-    A --> B --> C --> D --> E --> F --> G
-    C -. "the studio first appears here" .-> S(["The studio"])
-    D -. "rebuilt with the suggestions on the page" .-> S
-    F -. "rebuilt from the assembled CV, score moves" .-> S
-    G -. "rebuilt with the letter" .-> S
-```
+Every mode must combine evidenced strengths, working habits, impact and distinctive
+contribution with readable ATS content, human engagement and relevance to the job.
+Unsupported pillars stay out. Tone never creates experience or changes a fact.
 
-The facts ledger is built once and reused. A second advertisement reads it rather
-than asking you for your CV again.
+Choose **Use this mode and rewrite my CV**. That choice and request travel together:
+copy the handoff into your AI chat to start generation, without another confirmation.
+The local HTML page collects your choices; it does not run an AI by itself. Review the
+resulting wording, keep or edit it, reject it, or ask for another version. The accepted
+changes are assembled and the complete CV is reviewed against the same brief.
 
-The studio is rebuilt and handed back every time something on the page changes, so you
-never have to ask to see where things stand.
+Resu Desk shows the selected mode and next writing step alongside each application.
+Earlier directions and decisions are retained in your private data folder. The built-in
+mode definitions travel with skill-only installs too; no service or new runtime
+dependency is required. Cover letters remain optional.
+
+The default CV layout is a single reading flow. The actual finished PDF still needs
+its full text extraction checked, including role/date associations and every section.
+Coverage counts describe the evidence and terminology; they do not grade the prose or
+predict a hiring outcome. A partial match is never counted as a full one.
 
 ## What it will not do
 

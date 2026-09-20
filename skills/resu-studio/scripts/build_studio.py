@@ -87,7 +87,7 @@ def _unheld(section_title, blocks, dropped):
                        % (n, kind, "" if n == 1 else "s", section_title.strip()))
 
 
-def cv_block(doc, dropped=None, achievements=None):
+def _legacy_cv_block(doc, dropped=None, achievements=None):
     """The CV as the studio wants it, built from the parsed markdown.
 
     Anything this does not recognise used to fall on the floor without a word. A CV
@@ -200,6 +200,53 @@ def cv_block(doc, dropped=None, achievements=None):
     return out
 
 
+def cv_block(doc, dropped=None, achievements=None):
+    """Keep all source sections, using the specialised editors where lossless."""
+    out = _legacy_cv_block(dict(doc, sections=[]), [], [])
+    out.update(other=[], order=[])
+    used = set()
+    for sec in doc["sections"]:
+        missed, ach = [], []
+        one = _legacy_cv_block(dict(doc, sections=[sec]), missed, ach)
+        keys = list(one["head"])
+        key = keys[0] if len(keys) == 1 else None
+        if key and key not in used and not missed and not ach:
+            field = "roles" if key == "experience" else key
+            out[field] = one[field]
+            out["sid"][key] = one["sid"][key]
+            out["head"][key] = one["head"][key]
+            out["order"].append(key)
+            used.add(key)
+            continue
+        sid = R.slug(sec["title"]) or "section"
+        ident = "source-" + sid
+        units, flat, role = [], 0, 0
+        if R.is_skills(sec["title"]) and all(b["kind"] in ("labelled", "item", "para") for b in sec["blocks"]):
+            units = [dict(id=g["gid"], kind="labelled", text=g["orig"], label=g["label"])
+                     for g in R.skill_groups(sec["blocks"])]
+            out["other"].append(dict(id=ident, slug=sid, name=sec["title"], units=units))
+            out["order"].append(ident)
+            continue
+        for block in sec["blocks"]:
+            if block["kind"] == "role":
+                base = "%s/%d" % (sid, role)
+                role += 1
+                units.append(dict(id=base+"/h", kind="rolehead", text=block["title"]))
+                if block.get("dates"):
+                    units.append(dict(id=base+"/d", kind="roledates", text=block["dates"]))
+                for kind, prefix in (("scope", "s"), ("bullets", "b")):
+                    for i, text in enumerate(block.get(kind, [])):
+                        units.append(dict(id=base+"/"+prefix+str(i),
+                                          kind="bullet" if prefix == "b" else "scope", text=text))
+            else:
+                units.append(dict(id="%s/%d" % (sid, flat), kind=block["kind"],
+                                  text=block.get("text", ""), label=block.get("label", "")))
+                flat += 1
+        out["other"].append(dict(id=ident, slug=sid, name=sec["title"], units=units))
+        out["order"].append(ident)
+    return out
+
+
 def letter_block(path, doc):
     """The cover letter as the studio wants it, or None."""
     if not path or not os.path.isfile(path):
@@ -242,7 +289,7 @@ def swap_const(text, name, value):
     """Replace one top-level `const NAME = ...;` with new JSON."""
     i, j = _const_span(text, name)
     return (text[:i] + "const %s = " % name
-            + json.dumps(value, ensure_ascii=False, separators=(",", ":")) + ";"
+            + json.dumps(value, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/") + ";"
             + text[j:])
 
 
@@ -334,6 +381,8 @@ def cv_ids(cv, letter=None):
     """
     sid = cv.get("sid") or DEFAULT_SID
     ids = {"name/0"}
+    for section in cv.get("other", []):
+        ids.update(u["id"] for u in section["units"])
     for i, _c in enumerate(cv.get("contact") or []):
         ids.add("contact/%d" % i)
     for i, _p in enumerate(cv.get("profile") or []):
@@ -423,6 +472,8 @@ def fingerprint(cv, letter=None):
         "education": [[_norm(e.get("lab")), _norm(e.get("txt"))]
                       for e in cv.get("education") or []],
         "training": [_norm(t) for t in cv.get("training") or []],
+        "other": cv.get("other", []),
+        "order": cv.get("order", []),
         "letter": None if not letter else [
             _norm(letter.get("date")), [_norm(x) for x in letter.get("to") or []],
             _norm(letter.get("ref")), _norm(letter.get("re")),
@@ -887,7 +938,25 @@ def main():
                          "Each one needs a fenced block with id: and text:.\n"
                          % a.achievements)
 
+    import writing
+    writing_data = writing.page_data(job["id"], a.cv) if job else {"phase": "unprepared"}
+    s = swap_const(s, "WRITING", writing_data)
+    s = swap_const(s, "SOURCE_HASH", writing.file_hash(a.cv))
     proposed, skipped, unmatched = proposals_block(a.proposals, cv_ids(CV, L))
+    active = writing_data.get("active_batch")
+    if active:
+        proposed = {}
+        if writing_data.get("display_is_source") and writing_data["phase"] != "stale":
+            for rec in active["records"]:
+                proposed.setdefault(rec["line"], []).append(rec)
+        skipped, unmatched = [], []
+    else:
+        # Legacy proposals gain content identities too. Reusing P1 for new wording
+        # must never inherit the previous suggestion's decision.
+        import proposal_records
+        for entries in proposed.values():
+            for rec in entries:
+                rec["uid"] = proposal_records.identity(rec, writing.file_hash(a.cv))
     s = swap_const(s, "PROPOSED", proposed)
     if a.proposals:
         n = sum(len(v) for v in proposed.values())
@@ -972,6 +1041,11 @@ def main():
     # state as it stood before a rebuilt CV was migrated, so that copy is inside this
     # application's own namespace too and the line printed below stays true.
     key = slug(". ".join(x for x in (a.role, a.employer) if x) or doc["name"])
+    legacy_key = "cvwb:%s" % key
+    if job:
+        root_key = hashlib.sha256(os.path.normcase(os.path.abspath(paths.data_dir())).encode("utf-8")).hexdigest()[:12]
+        key += ":%s:%s" % (root_key, job["id"])
+    s = swap_const(s, "LEGACY_STORE", legacy_key)
     s = swap_const(s, "STORE", "cvwb:%s" % key)
 
     # What the saved marks are checked against. See `fingerprint`.
@@ -988,6 +1062,11 @@ def main():
     # record cannot tell two employers hiring the same job title apart, which is the
     # commoner case and the one that costs somebody their work.
     kept = documents.protect(out, a.role, a.cv, employer=a.employer)
+    writing_ui = _asset_text("writing.js")
+    if writing_ui is None:
+        sys.stderr.write("assets/writing.js is missing. Restore it before building the Studio.\n")
+        return 2
+    s = s.replace("</body>", "<script>\n" + writing_ui + "\n</script>\n</body>")
     io.open(out, "w", encoding="utf-8", newline="").write(s)
     documents.note(out, a.role, "studio", a.cv, employer=a.employer,
                    job=job["id"] if job else "")

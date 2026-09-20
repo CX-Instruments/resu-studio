@@ -145,16 +145,19 @@ SA = os.path.join(DOCS, "Northside Community Care - Operations Coordinator",
                   "Operations Coordinator - Northside Community Care - Studio.html")
 SB = os.path.join(DOCS, "Riverbend Events - Venue Manager", "Venue Manager - Riverbend Events - Studio.html")
 
-step("4. The old way still works, and keeps the same browser store",
+step("4. Legacy builds remain readable, with explicit migration into an isolated job",
      "Built with --role and --employer and no --job, as every existing command in SKILL.md does today. "
      "It goes to the top of the documents folder, and its store key matches the job build, so marks a person "
      "already made are still there.",
      ["scripts/build_studio.py", "--cv", CV, "--role", "Operations Coordinator",
       "--employer", "Northside Community Care", "--out", os.path.join(SCR, "old-way-studio.html")],
      checks=[("exit code 0", lambda c, o: c == 0),
-             ("same store key as the job build",
-              lambda c, o: store_key(os.path.join(SCR, "old-way-studio.html")) == store_key(SA)
-              == "cvwb:operations-coordinator-northside-community-care")])
+             ("legacy key stays available without sharing the new job's approvals",
+              lambda c, o: store_key(os.path.join(SCR, "old-way-studio.html"))
+              == "cvwb:operations-coordinator-northside-community-care" and
+              store_key(SA).startswith("cvwb:operations-coordinator-northside-community-care:") and
+              'const LEGACY_STORE = "cvwb:operations-coordinator-northside-community-care"' in
+              open(SA, encoding="utf-8").read())])
 
 browser = os.environ.get("CV_BROWSER") or next(iter(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome")), "")
 if browser:

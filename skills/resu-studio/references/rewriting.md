@@ -1,7 +1,8 @@
 # Rewriting a line
 
-`voice.md` says what a line must not be. This says what a good one looks like. Read it
-before drafting any `Suggested:` text.
+Read the saved application brief and `writing-engine.md`, then `positioning.md`. It sets the case the whole CV should make and the positive
+target of credible conviction. `voice.md` says what a line must not be. This file says
+how to execute the selected line. Read all three before drafting any `Suggested:` text.
 
 There are no worked before-and-after pairs in this file, and that is deliberate. The
 patterns are named instead, at *The patterns to look for*, and the before and after
@@ -14,19 +15,7 @@ that is not on the record, the correct output is the question rather than the re
 
 ## What a rewrite is for
 
-**Every change has to earn its place against this advertisement.** Not "this reads
-better". Better writing that answers nothing is a CV editor's work, and the person
-could have had that anywhere. What they came for is the match.
-
-So the question on every proposed line is two-part, and both halves need an answer:
-
-> **Which ask does this now answer that it did not answer before?**
-> **Which fact does it rest on?**
-
-If the first has no answer, the line is a style opinion and does not go in the
-proposals. If the second has no answer, it is an invention and does not go anywhere.
-This is why every entry in `proposing-changes.md` carries `Answers:` and `Draws on:`
-and why neither may be empty.
+Every change needs a concrete purpose: relevance, evidence visibility, comprehension, differentiation, voice, economy, accuracy or structure. Every factual clause needs supporting evidence. Name requirement ids when the change improves relevance; never invent one to justify clearer or warmer writing. Improved writing need not increase the coverage score.
 
 **Three shapes a useful change takes.** Almost everything worth proposing is one of
 these:
@@ -44,10 +33,7 @@ these:
 with should be near the top of the page. A perfect bullet on page three, answering
 their first criterion, is a bullet the reader never reaches.
 
-**And a rewrite that moves nothing is worth saying out loud.** If their line already
-answers the ask and simply reads awkwardly, say so and leave it. Rescoring after the
-decisions is what proves the work was worth their evening; changes that move the score
-nowhere make that number a lie.
+Keep a strong existing line. Improve an awkward or inaccessible line when the benefit is clear, even if the score stays the same. Judge the document against the brief and all shared objectives.
 
 ## Shorten by cutting repetition, never by cutting content
 
@@ -90,7 +76,7 @@ work, a reader discounts them on sight, and they are what the trait rules exist 
 remove. If somebody else said it, in an award, a rating or a citation, it is a fact and
 it stays, attributed.
 
-**An adjective about the work does not.** Fast-paced, compliance-driven, high-volume,
+**An adjective about the work also needs source support.** Fast-paced, compliance-driven, high-volume,
 tightly constrained, regulated, legacy, cross-jurisdictional. These describe the
 conditions, not the person's excellence in them. They are the person's own account of
 where they worked and they are not a claim about themselves at all. Keep them.
@@ -103,21 +89,8 @@ matters. Cutting both halves is the mistake this section exists to stop.
 
 **A rewrite is their sentence made stronger. It is not a new sentence.**
 
-- **Keep the person.** If the CV is written in the first person, the rewrite is in the
-  first person. Verbless third person, "Writes", "Defines", "Manages", is the
-  grammar of a position description, and a page written in it reads as though the
-  advertisement was pasted back at the employer.
+- **Preserve identity, ownership and the selected voice.** Every proposed CV sentence uses implied subject and no personal pronouns. If the source uses pronouns, propose the corresponding wording changes visibly; do not silently apply them. Warmth comes from concrete work, beneficiaries and readable cadence. Chat and letters follow their own grammar.
 
-  **This is the rule that settles it, and it beats `voice.md`'s default.** `voice.md`
-  says a CV is third person with no pronouns. That is what a line gets written in when
-  it is being written from nothing and there is no established voice to keep. On a line
-  that already exists, the person's own grammar decides, and plenty of good CVs are in
-  the first person. Rewriting one of those into the third person changes every line on
-  the page, and that is a change they get asked about rather than a tidy-up. If it is
-  worth doing, it is one proposal with a reason on it, and they can say no.
-
-  A line written from nothing for a first-person CV goes in the first person too, so the
-  finished page is in one voice throughout.
 - **Keep the tense.** A current role stays present. Putting a role they still hold
   into the past tense reads as though they have left, and that is a factual error, not
   a style one.
@@ -145,7 +118,7 @@ the fuller version was honest too.
 
 ## The shape of a bullet
 
-**One claim.** A bullet that says two things is two bullets, or one bullet and a cut.
+**One main message.** Related problem, action, context and result can form one accomplishment. Split unrelated messages; do not split a coherent accomplishment merely because it contains several evidence-backed clauses.
 
 **Under about thirty words.** A bullet needing a third comma-spliced clause has stopped
 being a bullet. Length is not thoroughness; it is the reader's attention being spent

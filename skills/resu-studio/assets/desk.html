@@ -446,7 +446,12 @@ function card(j){
     el("div", {cls:"v", text: j.updated ? niceDate(j.updated) : "Not recorded"})]);
   c.appendChild(el("div", {cls:"facts"}, [closes, scoreFact(j), updated]));
 
-  if(NEXT[st]) c.appendChild(el("p", {cls:"next"}, [el("span", {cls:"lab", text:"Next step"}), NEXT[st]]));
+  if(j.writing && !closed){
+    c.appendChild(el("p", {cls:"next"}, [el("span", {cls:"lab", text:"Writing"}),
+      j.writing.mode + ". " + j.writing.next + "."]));
+    const studio=j.docs.find(d=>d.kind==="studio" && d.exists);
+    if(studio) c.appendChild(el("a", {cls:"cta", href:studio.href+"#writing", target:"_blank", rel:"noopener", text:j.writing.next}));
+  }else if(NEXT[st]) c.appendChild(el("p", {cls:"next"}, [el("span", {cls:"lab", text:"Next step"}), NEXT[st]]));
 
   const docs = el("div", {cls:"docs"});
   const live = j.docs.filter(d => d.exists), gone = j.docs.filter(d => !d.exists);

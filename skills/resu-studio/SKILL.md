@@ -11,16 +11,16 @@ metadata:
 
 # Resu Studio
 
-Seven phases, in order. Each writes files and stops. The person decides between phases.
+One application journey. Continue authorised work through its internal steps; pause for missing facts, the writing choice or decisions on proposed wording.
 
 ```
 1. SOURCES     capture the ad and every CV variant, verbatim, unedited
 2. ATOMISE     facts ledger from the CVs, asks ledger from the ad
-3. SCORE       you against it, before any changes
-4. PROPOSE     every change as current / suggested / why, inside a bullet budget
+3. SCORE       assess the source, prepare the guiding brief and writing samples
+4. REWRITE     the selected mode and brief drive reviewable changes within the budget
 5. DECIDE      the person accepts, rejects or asks for a rewrite, item by item
 6. ASSEMBLE    assemble.py bakes the decisions into the markdown, then rescore
-7. LETTER      one page, written last, because it needs the score to exist
+7. LETTER      optional companion, only when requested
 ```
 
 **Read `references/voice.md` before writing a single sentence for this person.** It
@@ -36,7 +36,7 @@ the reference that holds the whole of it, read when that phase starts.
 ## Say what this is, once, before asking for anything
 
 **Somebody who typed "can you help with my CV" does not know a tool engaged.** They do
-not know it runs in steps, that it stops for them at every one, or that it will score
+not know it runs in steps, that it preserves their control, or that it will score
 before it changes a word. If you go straight to asking for files, they cannot tell you
 apart from any other answer, and they will not know what they are being offered.
 
@@ -79,38 +79,15 @@ is, and where they will see it:
 the thing they are waiting for. "Next I'll check your CV against the ad and give you the
 Studio" tells them. "Shall I continue by building a requirements ledger?" does not.
 
-## End every phase by saying what happens next
+## Keep the application moving
 
-**Each phase stops and waits for them. That is the design, and it is invisible.** From
-where they sit the work simply stopped, with no way to tell whether you are finished,
-stuck, or waiting.
+Read `references/writing-engine.md` after assessing the sources and on every rewrite or revision. It governs the shared objectives, versioned state and request lifecycle. Read `positioning.md` for the evidence-backed pillars and `rewriting.md` for execution. Modes vary the expression; truth, ATS readability, human engagement and job relevance apply together in every mode.
 
-So close every phase with three things, in two or three plain sentences:
+After scoring, continue into an application brief and actual profile/bullet samples in the Studio's Writing tab. Give a short comparison in chat and the Studio link. The user can explore or create a mode without changing their CV. **“Use this mode and rewrite my CV” selects the direction and requests generation together.** A returned handoff or equivalent chat instruction authorises generation: do not add a second permission question.
 
-- **what just came out of it**, in one line
-- **what you need from them**, if anything, and why it changes the outcome
-- **what the next phase does**, so they know what they are agreeing to before they
-  agree to it
+After generation, hand over the suggestions for acceptance, rejection, editing or another version. Returned decisions authorise their assembly. Preserve unresolved requests and unaffected decisions. Read the assembled CV as a whole before finishing. Explain what is ready and what, if anything, needs their input. The score is a coverage diagnostic, not a writing-quality grade.
 
-Then stop. **Their answer starts the next phase. Finishing one is not permission to
-begin the next**, and this matters most after scoring: somebody who has just been handed
-a hard number deserves to be asked before anything of theirs gets rewritten.
-
-**One exception: reading the CV and the ad (Phase 2) runs straight on into checking one
-against the other (Phase 3).** Their answer to the depth question is their go-ahead for
-both, and neither changes a word of theirs. Stop between them only when Phase 2 needs
-something from them, such as two CV versions that disagree. The first stop after the depth
-question is the Studio, handed over with their score.
-
-What to say at each stop, in plain words:
-
-| After | Say, in your own words |
-|---|---|
-| Phase 1 (the depth question) | what you have (their CV, the ad, the job started), then the must-haves-or-everything question, and "once you answer I'll check your CV against the ad and give you the Studio" |
-| Phase 3 | the Studio, handed over: "this is your CV as it stands, scored against the ad"; the two numbers in one sentence; the biggest gaps plainly; "next I'll suggest changes, shown in the Studio beside each line, if you'd like" |
-| Phase 4 | the rebuilt Studio with the suggestions on the page; "accept or reject each one in the Studio, then press hand to AI and paste what it gives you here" |
-| Phase 6 | the rebuilt Studio from the finished CV, the score before and after; "want me to print the PDF, and write a cover letter?" |
-| Phase 7 | the letter in the Studio and the PDFs; Resu Desk; "the job is marked Ready" |
+The optional letter and PDF design follow the person's request and application format. Do not request permission again for output they already asked for.
 
 ## Rebuild the studio every time the page changes
 
@@ -118,8 +95,7 @@ What to say at each stop, in plain words:
 matches what they have decided is worse than none: they read it as the state of their
 application, and it is out of date.
 
-The minimum is four builds: end of Phase 3, Phase 4 with the proposals, Phase 6 from the
-assembled CV, Phase 7 with the letter. **The rule is larger: any time something that
+Build after preparing samples, publishing suggestions and assembling decisions; rebuild with a letter only if requested. **The rule is larger: any time something that
 would appear on the page changes, build the studio again and hand the file back in the
 same reply.** Do not wait to be asked; they do not know it can be rebuilt. Pass the same
 `--job <job id>` and the ledgers on every rebuild, and say in one line what
@@ -299,8 +275,7 @@ bullet count, the skills column a line count, the page a page count. An addition
 requires a removal, or an explicit decision by the person to raise the budget. Nothing
 is ever cut silently: a removal is a proposal like any other, with its own reason.
 
-**3. A claim prints once.** Before proposing any line, check every other slot on the
-page for the same claim. See `references/proposing-changes.md` for how to split a
+**3. Reinforce with purpose; remove padding.** A profile may state the capability that experience proves. Before proposing a line, distinguish that useful relationship from repeating the same achievement or metric. See `references/proposing-changes.md` for how to split a
 partial overlap so each half keeps what is unique to it.
 
 ---
@@ -377,7 +352,7 @@ CV again only when there is no facts ledger, or when they say something has chan
 
 The asks ledger is per advertisement. Split compound asks: a duty naming seven subjects
 in one sentence is seven asks, or the person reads as failing all of it when they answer
-five.
+five. Preserve alternatives such as “X or Y” as one disjunctive requirement; retain conditions and context when splitting independently required capabilities.
 
 Full instructions: `references/atomising-sources.md`.
 
@@ -415,7 +390,7 @@ as well as an inferred one. Every ask gets one state:
 Two counts: what the person has, and what a reader would find on the current page. The
 gap between them is the value of the exercise.
 
-**Then build the studio.** This is where it first exists.
+**Then prepare the writing brief and samples** with `writing.py prepare`, following `references/writing-engine.md`. This is part of the assessment handover, before the full rewrite. Build the Studio from that same CV and job:
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
@@ -428,28 +403,19 @@ python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their
 **`--job` is required**: the job's role and employer name the file, put it in the job's
 documents folder and key the studio's browser storage, so two jobs never share marks. **Never build a separate scorecard page.** The Score tab is the
 scorecard. Hand the studio over and say what it is: their CV as it stands, scored, before
-anything has changed.
+anything has changed, plus the writing options and how to request a rewrite.
 
-**Done when:** the studio has been built and handed over with a populated Score tab,
+**Done when:** the studio has been built and handed over with populated Score and Writing tabs,
 everything the build said it had nowhere to put has been dealt with, and the gaps are
 named plainly with no softening.
 
 ## Phase 4: Propose
 
-Read the Phase 4 section of `references/studio.md`, and `references/proposing-changes.md`
-and `references/rewriting.md` before drafting any line. Move the job to `Tailoring`.
+Import the selected mode and generation request using `writing.py request`, as described in `references/writing-engine.md`. Read its returned brief and source versions. Move the job to `Tailoring`, then plan the whole document before writing lines. Do not ask again whether to proceed.
 
-`proposals.md`, in the person's folder, one entry per change, in the fields
-`templates/proposals.md` shows: `Kind`, `Line`, `Currently`, `Suggested`, `Why`,
-`Answers`, `Draws on`, `Costs`, and a blank `Decision`. **Entries run in page order**,
-numbered P1 upward. **`Line:` is not optional**: it is the id the studio and
-`render_cv.py` both build, such as `professional-experience/2/b3`, and a proposal without
-a real one never reaches the person. `references/marking.md` has the table of ids. Run
-the budget check and the duplication check before writing the file.
+Write `proposals.md` in the job folder. Use `templates/proposals.md`: complete current/suggested text, a real line or addition target, reason, purpose, claim map and evidence. Requirement ids are necessary for relevance changes; clarity, voice and other useful changes do not need a fabricated requirement. Keep the page and bullet budget. Optional achievements must earn their space and need neither a fixed count nor multiple employers.
 
-**Draft the key achievements too, into `achievements.md`**: six lines at career level,
-each reaching across more than one employer, for the person to tick four to six. Rules:
-`references/achievements.md`.
+Review all shared objectives and publish with `writing.py publish` before rebuilding. The Studio reads the published record; a loose proposals file cannot replace an approved version.
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
@@ -495,8 +461,7 @@ follows the `answers.md` rules; something they ask you directly; and a suggestio
 back with *Ask for another*. If they would rather go through it in the chat, do that, but
 it is offered by them, never by you.
 
-Record their decisions against the proposals; a rejected one stays marked rejected. **Silence
-on a line is agreement**: never ask them to tick everything in the final check.
+Record their decisions against the proposals; a rejected one stays marked rejected. **Untouched source lines need no tick. Unreviewed suggestions are not approval.**
 
 **Done when:** the hand-to-AI block has come back, every proposal carries a yes, a no, or
 a rewording in their own words, and none of it was extracted from them in the chat.
@@ -537,11 +502,11 @@ python3 scripts/check.py --job <job id>
 
 The rebuilt studio says the CV changed, and that is right after an assembly.
 
-**Design and the PDF are a separate, optional step.** Do not pick the design for them:
+**Render the requested deliverable and verify it.** The default is the single-flow `spine` layout;
 the studio shows every skin live. **Every render carries `--decisions` once a decisions
 file exists**, and the PDF is printed by a real browser from the studio's own page. Then
 read the PDF back as a screener would with `pdftotext`, and when a sidebar layout
-interleaves, offer the trade rather than switching quietly. The commands, the file names,
+interleaves, explain the finding and produce a readable application version before calling it ATS-ready. Read the full extraction, not a forty-line sample. The commands, the file names,
 the typeface check and the ATS read-back are all in `references/assemble-and-print.md`,
 with `references/rendering.md` and `references/ats.md` behind them.
 
@@ -549,7 +514,7 @@ Record the rescore on the job with `jobs.py score <job id> --scorecard ... --as 
 
 **Where the documents go:** the job's own folder inside `4 Finished documents`, which
 `python3 scripts/paths.py --job <job id> --job-documents` names, and into the chat as well when
-the session is temporary. When the final PDFs are printed, move the job to `Ready`.
+the session is temporary. Complete the whole-document review and `writing.py finish` from `references/writing-engine.md`. Move the job to `Ready` only when the requested deliverables and their checks pass.
 
 **Done when:** `assemble.py` exited 0, `cv-<variant>.md` and its archive are in the
 person's folder, what it printed accounts for the whole decisions file, `check.py` has
@@ -573,7 +538,7 @@ pack.
 J="$(python3 scripts/paths.py --job <job id>)"
 python3 scripts/render_cv.py "$J/cv-<variant>.md" --letter "$J/cover-letter-<variant>.md" \
     --decisions "$J/cv-decisions.json" \
-    --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
+    --layout spine --palette forest --head-font lora --body-font source-sans \
     --job <job id> --pdf
 ```
 
@@ -618,6 +583,8 @@ print and how they are worded, and never what is true.
 | `references/studio.md` | Phases 3, 4 and 5 in full, and the rebuild rule |
 | `references/scoring.md` | Phase 3 |
 | `references/proposing-changes.md` | Phase 4, before writing any proposal |
+| `references/writing-engine.md` | After source assessment, every mode preview, rewrite, revision and final review |
+| `references/positioning.md` | Phase 4, before selecting or rewriting lines |
 | `references/rewriting.md` | Before drafting any suggested line |
 | `references/marking.md` | Before touching the studio's per-line decisions |
 | `references/achievements.md` | Before drafting key achievements or adding a section |

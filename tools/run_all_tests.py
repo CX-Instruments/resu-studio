@@ -14,6 +14,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 TESTS = [
+    ("test_writing.py", "writing modes, approvals, assembly and browser handoff"),
     ("test_find_python.py", "finding Python, conda installs included"),
     ("test_jobs.py", "jobs, and bringing old work in (steps 1 and 2)"),
     ("test_jobs_build.py", "Studio, PDF and check.py per job (step 3)"),

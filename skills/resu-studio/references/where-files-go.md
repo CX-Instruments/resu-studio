@@ -189,3 +189,6 @@ $J = & $PY scripts/paths.py --job <job id>
 & $PY scripts/build_studio.py --cv "$(& $PY scripts/paths.py --about)/<their CV>.md" `
     --scorecard "$J/scorecard.md" --job <job id>
 ```
+
+
+Writing state belongs to each job: `writing.json` and immutable `.writing` revisions/source snapshots. Inputs, reviews, handoffs and proposal rounds stay there too. Reusable personal modes belong in `2 My record/writing-modes`; only generic built-ins ship with the skill. See `writing-engine.md`.

@@ -5,29 +5,7 @@ are printed on the same page as the claim, and anyone can add them up.
 
 ## Career span claims
 
-**A span claim is measured from the start of the first qualifying role to the end of
-the last one.** It is not the sum of the qualifying periods with the gaps subtracted.
-
-Worked example. Somebody claims "seven years leading teams". Their roles:
-
-- Leading role A, Jan 2019 to Apr 2022
-- A role, Aug 2022 to May 2023, not leading
-- A four month career break in between
-- Leading role B, May 2023 to Jun 2026
-
-Summing the two leading roles gives six years four months, and concluding "six years,
-not seven" is wrong. Nobody states a career span as a sum of qualifying time net of
-gaps, and no reader reads it that way. Jan 2019 to Jun 2026 is seven years five
-months, so seven years is accurate and rounds down.
-
-**What to check instead:**
-
-- Does the span start at a role that genuinely qualifies for the claim being made?
-- Does it end at one?
-- Is the stated figure at or below the elapsed span? Rounding down is safe. Rounding
-  up past the next integer is not.
-- What sits inside the span that does not qualify? That is not a fault, it is the
-  question the person should be ready for if a panel walks the dates.
+Qualifying experience is the union of qualifying periods, excluding gaps and unrelated roles and counting overlaps once. A career date span is a different claim: label it as a span, never as years performing a capability. Use conservative bounds when dates are incomplete; ask if precision matters. Distinguish tenure, frequency and team totals. Do not derive a percentage that implies more precision than its raw figures.
 
 ## Never round up
 
@@ -62,7 +40,7 @@ sentence with a word that invites the question the person cannot answer.
 ## Estimates
 
 If the person gives an estimate rather than a counted figure, print it as an estimate.
-"Let's say 30 percent" becomes "around a third", not "30%". The hedge is the honest
+An estimated 30 percent remains "about 30%", not an exact 30% or a newly rounded fraction. The hedge is the honest
 form and it costs nothing.
 
 ## Tense follows dates

@@ -1,3 +1,7 @@
+# Studio and the writing engine
+
+The Writing tab is the primary application entry. Read `writing-engine.md` for samples, mode selection, one generation request, publication and revision. Score, design and section controls remain part of the same Studio.
+
 # The studio, and Phases 3, 4 and 5 in full
 
 SKILL.md carries the short version of these phases. This is the whole of them, with
@@ -184,15 +188,9 @@ Run the budget check and the duplication check before writing the file, not afte
 **Then rebuild the studio with the proposals in it.** Same command as Phase 3 with
 `--proposals` added, and the same `--job <job id>` for the reason given under
 *Rebuild the studio every time the page changes* above. Their marks live in the browser
-keyed to that job's role and employer, so nothing they have already decided is lost.
+keyed to the data folder and unique job id, so nothing they have already decided is lost.
 
-**Draft the key achievements too, into `achievements.md`.** Draft six lines at career
-level, each reaching across more than one employer, from `templates/achievements.md`.
-The person then ticks four to six of them. If a sixth line only exists to reach six, it
-comes off. They are not proposals, because a proposal sits on a line that exists and
-this section may not be on their CV at all, so they go in their own file and the studio
-offers them as picks. Nothing prints until the person ticks it. Full rules:
-`references/achievements.md`.
+Optional achievements follow `references/achievements.md`. Publish new engine sections as explicit, evidence-mapped proposals. There is no fixed count or cross-employer requirement.
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
@@ -212,9 +210,7 @@ The first is content it had nowhere to put. That is a whole section it does not 
 and now also a block inside a section it does know: a profile written as bullets, an
 intro paragraph above the roles, a skills line it could not read as a group. Any of
 those is a part of their CV that is not on the page, and saying otherwise is the worst
-thing this skill can do. The studio holds six sections: profile, key skills,
-experience, education, training and key achievements. Anything else has to be folded
-into one of those or it does not print, and the person is told which and why.
+thing this skill can do. The Studio preserves additional source sections through its generic section view. A source section must never be dropped to fit a specialised editor.
 
 The second is any proposal whose `Line:` names an id that is not on this CV. Those are
 not in the studio and the person will never see them, so fix the id against the CV the

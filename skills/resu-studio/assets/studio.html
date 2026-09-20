@@ -264,6 +264,29 @@ button,input,select{font:inherit;color:inherit}
   box-shadow:0 0 0 100vw rgba(16,22,32,.30),6px 0 30px rgba(16,22,32,.18)}
 .app[data-view="score"] .rail{max-height:none;border:0}
 .app[data-view="score"] .panes{padding-bottom:60px}
+.app[data-view="writing"]{grid-template-columns:1fr}
+.app[data-view="writing"] .stage{position:fixed;inset:0;overflow:visible;
+  pointer-events:none;background:none;z-index:30}
+.app[data-view="writing"] .stage .scroll{display:none}
+.app[data-view="writing"] .rails{position:fixed;left:0;top:auto;bottom:22px;
+  pointer-events:auto}
+.app[data-view="writing"] .drawer{position:fixed;pointer-events:auto;
+  box-shadow:0 0 0 100vw rgba(16,22,32,.30),6px 0 30px rgba(16,22,32,.18)}
+.app[data-view="writing"] .rail{max-height:none;border:0}
+.app[data-view="writing"] .panes{padding-bottom:60px}
+
+#writing-content{max-width:1180px;margin:0 auto;padding:8px 12px 36px;line-height:1.6}
+#writing-content .writing-samples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin-top:24px}
+#writing-content .writing-card{border:1px solid var(--line2);border-radius:5px;padding:20px;background:var(--panel)}
+#writing-content .writing-card:has(input:checked){border-color:var(--accent);box-shadow:inset 0 3px var(--accent)}
+#writing-content .writing-card>label{font-size:18px;font-weight:600;cursor:pointer}
+#writing-content .writing-card h4{border-top:1px solid var(--line2);padding-top:14px;margin-bottom:8px}
+#writing-content details{margin:10px 0}
+#writing-content summary{cursor:pointer}
+#writing-content .writing-actions{padding:14px 0;margin-top:14px}
+#writing-content .cta{margin:7px 10px 7px 0}
+#writing-content textarea,#writing-content input[type=text]{box-sizing:border-box;padding:10px;border:1px solid var(--line2);border-radius:3px;background:var(--panel);color:var(--text);font:inherit;margin:7px 0}
+@media(max-width:760px){#writing-content .writing-samples{grid-template-columns:1fr}}
 .score{max-width:860px;margin:0 auto}
 .shead{margin:16px 0 4px}
 .shead h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.2px;text-wrap:balance}
@@ -434,19 +457,23 @@ button,input,select{font:inherit;color:inherit}
   <aside class="rail">
     <div class="brand">
       <h1>Resu Studio</h1>
-      <p>Every control below redraws the page beside it. Nothing here edits your wording.</p>
+      <p>Choose your writing direction, review the changes and shape the finished CV.</p>
       <p class="buildstamp">BUILD_STAMP</p>
     </div>
     <div class="tabs" role="tablist">
-      <button role="tab" id="t-skin" aria-selected="true" aria-controls="p-skin">Skin</button>
+      <button role="tab" id="t-writing" aria-selected="true" aria-controls="p-writing">Writing</button>
+      <button role="tab" id="t-skin" aria-selected="false" aria-controls="p-skin">Design</button>
       <button role="tab" id="t-skills" aria-selected="false" aria-controls="p-skills">Skills</button>
       <button role="tab" id="t-order" aria-selected="false" aria-controls="p-order">Sections</button>
       <button role="tab" id="t-score" aria-selected="false" aria-controls="p-score">Score</button>
     </div>
 
     <div class="panes">
+      <section class="pane on" id="p-writing" role="tabpanel" aria-labelledby="t-writing">
+        <div id="writing-content"><p>Your writing samples appear here after your CV and this job have been reviewed.</p></div>
+      </section>
       <!-- SKIN -->
-      <section class="pane on" id="p-skin" role="tabpanel" aria-labelledby="t-skin">
+      <section class="pane" id="p-skin" role="tabpanel" aria-labelledby="t-skin">
         <div class="grp"><h2>Document</h2><div class="opts wide" id="c-doc"></div>
           <p class="hint" id="dochint"></p>
           <p class="hint">Save as PDF at the top does both documents, one file each,
@@ -774,6 +801,7 @@ const SEC = [
    those lines was handed over against an id the renderer had never heard of and was
    dropped without a word. The build now sends the real prefixes in `CV.sid`, and the
    constants above are only the fallback for a section this CV does not have. */
+(CV.other||[]).forEach(x=>SEC.push({id:x.id,name:x.name,slug:x.slug}));
 SEC.forEach(s=>{ if(CV.sid && CV.sid[s.id]) s.slug=CV.sid[s.id]; });
 const SID={};
 SEC.forEach(s=>{ SID[s.id]=s.slug; });
@@ -797,8 +825,8 @@ const EXTRA = {
     name:"Key achievements", slug:"key-achievements", head:"KEY ACHIEVEMENTS",
     kind:"picks",
     blurb:"Lines drawn out of your own record and set against this advertisement. "
-         +"Each one reaches across more than one job, so it says something none of your "
-         +"role bullets say and nothing has to come off the page for it. Tick the ones "
+         +"Each one adds relevant evidence, so it earns space alongside your "
+         +"role bullets. Tick the ones "
          +"you want.",
     empty:"Nothing has been drafted for this application yet. Ask for key "
          +"achievements and they will appear here to pick from. You can also type your "
@@ -829,11 +857,20 @@ const DRAFTS = {};
    the page shows the person's own wording until they press Use this. A suggestion is
    a card in the review queue, not a change to the document, because the whole promise
    of this studio is that they see a change before it happens. */
+const WRITING = {"phase":"unprepared"};
+const SOURCE_HASH = "";
+const LEGACY_STORE = "";
 const PROPOSED = {};
 const GAPS={tight:"5px",normal:"9px",airy:"15px"};
 
+Object.values(PROPOSED).flat().filter(x=>x.kind==="section").forEach(x=>{
+  const id="proposed-"+x.section.slug;
+  EXTRA[id]={name:x.section.title,head:x.section.title,slug:x.section.slug,
+    kind:"lines",format:x.section.format,blurb:"A section proposed from your evidence."};
+});
+
 let S = {
-  layout:"sidebar-dark", palette:"navy",
+  layout:"spine", palette:"navy",
   headFont:"lora", bodyFont:"source-sans", size:"normal",
   skills:"list", skillsBy:{}, hideGroups:{}, groupOrder:{}, groupPlace:{},
   gap:"normal", group:"own",
@@ -897,6 +934,22 @@ try{ RAW_STATE=localStorage.getItem(STORE);
    Nothing is thrown away either way: the state as it stood is copied to PREV_STORE
    before a single key is rewritten. */
 
+if(CV.order){
+  if(!RAW_STATE) S.order=CV.order.map(id=>({id:id,place:"main",show:true}));
+  else{
+    S.order=S.order.map(o=>{
+      if(o.id.indexOf("proposed-")===0){
+        const now=SEC.find(s=>s.slug===o.id.slice(9)&&CV.order.includes(s.id));
+        if(now) return Object.assign({},o,{id:now.id});
+      }
+      return o;
+    }).filter((o,i,all)=>(CV.order.includes(o.id)||EXTRA[o.id])&&all.findIndex(x=>x.id===o.id)===i);
+    CV.order.forEach(id=>{if(!S.order.some(o=>o.id===id)) S.order.push({id:id,place:"main",show:true});});
+    if(S.sectionOrder && S.sectionOrder.length)
+      S.sectionOrder=S.order.filter(o=>!isExtra(o.id)).map(o=>secDef(o.id).slug);
+  }
+}
+
 function normText(t){ return String(t==null?"":t).replace(/\s+/g," ").trim(); }
 
 /* Every line this CV and this letter can address, with the wording each one holds.
@@ -907,6 +960,7 @@ function normText(t){ return String(t==null?"":t).replace(/\s+/g," ").trim(); }
    heading changes with the grouping. */
 function wordingByLine(){
   const out={};
+  (CV.other||[]).forEach(x=>x.units.forEach(u=>{out[u.id]=normText(u.text);}));
   out["name/0"]=normText(CV.name);
   (CV.contact||[]).forEach((c,i)=>{ out["contact/"+i]=normText(c); });
   PROFILE.forEach((t,i)=>{ out[SID.profile+"/"+i]=normText(t); });
@@ -1820,6 +1874,8 @@ function letterAtoms(){
 function atoms(){
   if(S.doc==="letter") return letterAtoms();
   const out=[];
+  (CV.other||[]).forEach(x=>{if(!(S.order||[]).some(o=>o.id===x.id&&o.show===false))
+    x.units.forEach(u=>out.push({id:u.id,where:x.name,text:u.text}));});
   /* Only what is actually on the page. A section switched off under Sections, or a
      skills group hidden under Skills, is not printing — so asking the person to
      decide about its lines is asking about something they cannot see. */
@@ -1867,7 +1923,8 @@ function skillGroup(gid){
 }
 function skillItemsText(gid){
   const g=skillGroup(gid);
-  return g ? g.items.map(rawLine).join("; ") : "";
+  const other=(CV.other||[]).flatMap(s=>s.units).find(u=>u.id===gid);
+  return g ? g.items.map(rawLine).join("; ") : other ? other.text : "";
 }
 /* A group's id is built from its heading, and the heading changes when the grouping
    changes — the same skills sit under "Version control, Git" in their own grouping and
@@ -2067,12 +2124,56 @@ function letterHTML(region, hasAside){
 }
 
 function sectionHTML(id, region, sectionPlace){
+  const original=(CV.other||[]).find(x=>x.id===id);
+  if(original){
+    let body="";
+    let units=original.units.slice();
+    const lists={};
+    units.forEach(u=>{
+      const match=u.id.match(/^(.*)\/(?:b)?(\d+)$/);
+      if(match && !/\/s\d+$/.test(u.id)) (lists[match[1]]=lists[match[1]]||[]).push(u);
+    });
+    Object.entries(lists).forEach(([base,items])=>{
+      const ordered=bOrder(base,items.length).map(i=>items[i]);let at=0;
+      units=units.map(u=>items.includes(u)?ordered[at++]:u);
+    });
+    function content(items){
+      let result="",bullets=[];
+      const flush=()=>{if(bullets.length){result+='<ul class="bul">'+bullets.join("")+'</ul>';bullets=[];}};
+      items.forEach(u=>{
+        const bullet=u.kind==="bullet"||u.kind==="item";
+        if(!bullet) flush();
+        const put=(key,text,extra)=>{
+          if(removed(key)) return;
+          const html=line(bullet?'li':'p',bullet?'':u.kind==="scope"?'scope':'para',key,text);
+          if(bullet) bullets.push(html);else result+=html;
+        };
+        put(u.id,(u.label?u.label+": ":"")+textOf(u.id,u.text));
+        adds(u.id).forEach((t,n)=>put(u.id+"/+"+n,t));
+      });flush();return result;
+    }
+    for(let i=0;i<units.length;){
+      const u=units[i++];
+      if(u.kind!=="rolehead"){body+=content([u]);continue;}
+      const base=u.id.slice(0,-2),items=[];
+      while(i<units.length && units[i].id.startsWith(base+"/"))items.push(units[i++]);
+      if(removed(u.id)) continue;
+      const date=items.find(x=>x.kind==="roledates");
+      body+='<div class="role"><div class="rolehead">'+line('div','roletitle',u.id,textOf(u.id,u.text))
+        +(date&&!removed(date.id)?line('div','roledates',date.id,textOf(date.id,date.text)):"")
+        +'</div>'+content(items.filter(x=>x.kind!=="roledates"))+'</div>';
+    }
+    return (original.name?'<h2 class="sec"><span>'+esc(original.name)+'</span></h2>':"")+body;
+  }
+
   if(EXTRA[id]){
     const def=EXTRA[id];
     const items=extraLines(id).filter(x=>!removed(x.key));
     if(!items.length) return "";
+    if(def.format==="paragraphs") return '<h2 class="sec"><span>'+esc(def.head)+'</span></h2>'
+      +items.map(x=>line('p','para',x.key,textOf(x.key,x.text))).join("");
     const lis=items.map(x=>line('li','',x.key,textOf(x.key,x.text))).join("");
-    return '<h2 class="sec"><span>'+def.head+'</span></h2><ul class="bul'
+    return '<h2 class="sec"><span>'+esc(def.head)+'</span></h2><ul class="bul'
       +(twoCol(id)?' cols2':'')+'">'+lis+'</ul>';
   }
   /* The heading this CV actually uses, because the renderer prints the heading out of
@@ -2535,10 +2636,10 @@ function paintOrder(){
     const g=document.createElement("div"); g.className="rbtns";
     const up=document.createElement("button"); up.className="ico"; up.type="button";
     up.innerHTML="&uarr;"; up.title="Move up"; up.disabled=i===0;
-    up.addEventListener("click",()=>{const x=S.order.splice(i,1)[0];S.order.splice(i-1,0,x);draw();});
+    up.addEventListener("click",()=>{const x=S.order.splice(i,1)[0];S.order.splice(i-1,0,x);S.sectionOrder=S.order.filter(o=>!isExtra(o.id)).map(o=>secDef(o.id).slug);draw();});
     const dn=document.createElement("button"); dn.className="ico"; dn.type="button";
     dn.innerHTML="&darr;"; dn.title="Move down"; dn.disabled=i===S.order.length-1;
-    dn.addEventListener("click",()=>{const x=S.order.splice(i,1)[0];S.order.splice(i+1,0,x);draw();});
+    dn.addEventListener("click",()=>{const x=S.order.splice(i,1)[0];S.order.splice(i+1,0,x);S.sectionOrder=S.order.filter(o=>!isExtra(o.id)).map(o=>secDef(o.id).slug);draw();});
     const sh=document.createElement("button"); sh.className="ico"; sh.type="button";
     sh.innerHTML=o.show?"&#9673;":"&#9675;"; sh.title=o.show?"Hide from this version":"Show again";
     sh.addEventListener("click",()=>{o.show=!o.show;draw();});
@@ -2867,7 +2968,7 @@ function lineIdFor(a){
 
 function paintScore(){
   const t=tally(), total=ASKS.length;
-  const have=t.page+t.buried+t.off+t.near;   // unscored is not a claim
+  const have=t.page+t.buried+t.off;   // partial evidence is not a full match
   const says=t.page;
   $("#g1").innerHTML=gauge(total?have/total*100:0,"You have it","var(--ok)")
     +'<div class="gnum">'+have+' of '+total+'</div>';
@@ -3385,14 +3486,15 @@ function decided(){ return Object.keys(S.marks).length
 function yourTurn(){ return atoms().filter(a=>!S.marks[a.id] && !isChecked(a.id)); }
 
 /* A suggestion is undecided until they press one of the three buttons. */
+function propKey(x){ return x.uid || x.p; }
 function propsFor(id){ if(!S.props) S.props={};
-  return (PROPOSED[id]||[]).filter(x=>!S.props[x.p]); }
+  return (PROPOSED[id]||[]).filter(x=>!S.props[propKey(x)]); }
 function propsWaiting(){ if(!S.props) S.props={}; let n=0;
   Object.keys(PROPOSED).forEach(id=>{ n+=propsFor(id).length; }); return n; }
 function propsDecided(){ if(!S.props) S.props={};
   const out=[];
   Object.keys(PROPOSED).forEach(id=>(PROPOSED[id]||[]).forEach(x=>{
-    if(S.props[x.p]) out.push({id:id, p:x, was:S.props[x.p]}); }));
+    if(S.props[propKey(x)]) out.push({id:id, p:x, was:S.props[propKey(x)]}); }));
   return out; }
 /* What the person said when a suggestion was a question. Kept beside the decision
    rather than inside it, so `S.props` stays one word per proposal and every reader of
@@ -3400,15 +3502,33 @@ function propsDecided(){ if(!S.props) S.props={};
 function propNote(p){ return (S.propNotes||{})[p] || ""; }
 function settleProp(id, x, how, note){
   if(!S.props) S.props={};
-  S.props[x.p]=how;
-  if(note){ S.propNotes=S.propNotes||{}; S.propNotes[x.p]=note; }
+  S.props[propKey(x)]=how;
+  if(note){ S.propNotes=S.propNotes||{}; S.propNotes[propKey(x)]=note; }
   /* Every branch below either returns through something that saves, or falls to the
      save at the end. A decision that changes nothing on the page is still a decision:
      an addition they did not want, a question they had no answer to, and a rejection
      are all recorded, and all of them travel, so a later session does not raise the
      same thing against an explicit no. */
   if(how==="used"){
-    if(x.kind==="add"){ (S.adds[id]=S.adds[id]||[]).push(
+    if(x.kind==="section"){
+      S.extra=S.extra||{};
+      const sid="proposed-"+x.section.slug;
+      S.extra[sid]={picks:null,lines:x.section.lines.map(z=>z.text)};
+      if(!S.order.some(z=>z.id===sid)){
+        const at=x.section.after && x.section.after!=="^" ? S.order.findIndex(z=>secDef(z.id).slug===x.section.after)+1 : 0;
+        S.order.splice(at,0,{id:sid,place:"main",show:true});
+      }
+      save(); draw(); return;
+    }
+    if(x.kind==="order"){
+      if(id==="document/sections"){
+        const rank=slug=>x.order.indexOf(slug);
+        S.order.sort((a,b)=>rank(secDef(a.id).slug)-rank(secDef(b.id).slug));
+        S.sectionOrder=x.order.slice();
+      }else S.bOrder[id]=x.order.slice();
+      save(); draw(); return;
+    }
+    if(x.kind==="add"){ const base=id.split("/+")[0]; (S.adds[base]=S.adds[base]||[]).push(
       {text:x.sug, at:new Date().toISOString(), from:"claude", p:x.p}); }
     else if(x.kind==="remove"){ setMark(id,"remove",{from:"claude", p:x.p}); return; }
     else { setMark(id,"edit",{text:x.sug, from:"claude", p:x.p}); return; }
@@ -3569,12 +3689,12 @@ function editorInto(box){
     if(prop && !S.props) S.props={};
     if(act==="rewrite") setMark(editing.id,"rewrite",{note:v});
     else if(act==="edit" && editing.addAfter){
-      if(v){ if(prop) S.props[prop.p]="edited";
+      if(v){ if(prop) S.props[propKey(prop)]="edited";
              (S.adds[editing.id]=S.adds[editing.id]||[]).push({text:v,
               at:new Date().toISOString(), from:prop?"claude-edited":undefined}); }
     }
     else if(act==="edit"){
-      if(v){ if(prop) S.props[prop.p]="edited";
+      if(v){ if(prop) S.props[propKey(prop)]="edited";
              setMark(editing.id,"edit",{text:v,
                from: prop?"claude-edited":undefined, p: prop?prop.p:undefined}); }
     }
@@ -4098,11 +4218,11 @@ function propCard(id, x){
 
   /* Neither theirs nor mine is the usual answer: most of the time the suggestion is
      nearly right and they want to change three words in it. */
-  if(x.kind!=="remove"){
+  if(x.kind!=="remove" && x.kind!=="order" && x.kind!=="section"){
     const ed=document.createElement("button"); ed.type="button";
     ed.textContent="Edit it first";
     ed.addEventListener("click",()=>{
-      editing={act:"edit", id:id, shown:x.sug, prop:x, addAfter:x.kind==="add"};
+      editing={act:"edit", id:x.kind==="add"?id.split("/+")[0]:id, shown:x.sug, prop:x, addAfter:x.kind==="add"};
       openDrawer("turn");
     });
     row.appendChild(ed);
@@ -4242,7 +4362,7 @@ function handoffText(){
     answered.forEach(x=>{
       L.push("  answered   ["+x.p.p+"] "+x.id);
       L.push("    asked: "+(x.p.q||x.p.why||""));
-      L.push("    you said: "+propNote(x.p.p)); });
+      L.push("    you said: "+propNote(propKey(x.p))); });
     nothing.forEach(x=>{
       L.push("  no answer  ["+x.p.p+"] "+(x.p.q||x.p.why||"")); });
     const undecided=propsWaiting();
@@ -4356,8 +4476,8 @@ function decisionsFile(){
   const sections=S.order.filter(o=>isExtra(o.id) && o.show).map(o=>{
     const def=EXTRA[o.id], at=S.order.findIndex(x=>x.id===o.id);
     const before=S.order.slice(0,at).filter(x=>!isExtra(x.id)).pop();
-    return {id:o.id, title:def.name, slug:def.slug,
-            after:before?secDef(before.id).slug:null,
+    return {id:o.id, title:def.name, slug:def.slug, format:def.format||"bullets",
+            after:before?secDef(before.id).slug:"^",
             lines:extraLines(o.id).filter(x=>!removed(x.key))
                     .map(x=>({key:x.key, text:textOf(x.key,x.text)}))};
   }).filter(x=>x.lines.length);
@@ -4369,12 +4489,19 @@ function decisionsFile(){
      suggestion again against an explicit one. */
   const proposals=propsDecided().map(x=>{
     const m=S.marks[x.id];
-    const rec={p:x.p.p, line:x.id, kind:x.p.kind, was:x.was,
+    const rec={p:x.p.p, uid:propKey(x.p), line:x.id, kind:x.p.kind, was:(x.was==="used" && m && m.a==="edit" && m.text!==x.p.sug)?"edited":x.was,
                decision:PROPWORD[x.was] || x.was,
                where:x.p.where||"", suggested:x.p.sug||""};
     if(x.p.kind==="ask") rec.question=x.p.q||x.p.why||"";
-    if(propNote(x.p.p)) rec.note=propNote(x.p.p);
+    if(x.p.kind==="section" && x.was==="used"){
+      const actual=sections.find(s=>s.slug===x.p.section.slug);
+      const wanted=x.p.section.lines.map(z=>z.text).join(" ");
+      rec.text=actual?actual.lines.map(z=>z.text).join(" "):"";
+      if(rec.text!==wanted) rec.was=actual?"edited":"removed";
+    }
+    if(propNote(propKey(x.p))) rec.note=propNote(propKey(x.p));
     if(m && m.a==="edit" && m.text && m.p===x.p.p) rec.text=m.text;
+    rec.decision=PROPWORD[rec.was]||rec.was;
     return rec;
   });
   /* Named rather than left out, because "not looked at" and "said no" are different
@@ -4384,6 +4511,8 @@ function decisionsFile(){
     undecided.push({p:x.p, line:id, kind:x.kind})));
 
   return JSON.stringify({
+    writing: WRITING.active_batch ? {job:WRITING.job, batch:WRITING.active_batch.id,
+      revision:WRITING.revision, source_hash:SOURCE_HASH} : undefined,
     cv:"CV - draft.md",
     letter:"Cover letter.md",
     document:S.doc,
@@ -4404,7 +4533,7 @@ function decisionsFile(){
        and the bare `<section>` for a flat list. Every entry is an original line number,
        and the renderer lays the list out in that order, so what is on screen is what
        comes out of the printer. */
-    order:S.bOrder||{},
+    order:S.bOrder||{}, section_order:S.sectionOrder||[],
     sections:sections
   }, null, 1);
 }
@@ -4454,7 +4583,7 @@ document.querySelectorAll('.tabs button').forEach(b=>{
     b.setAttribute("aria-selected","true");
     document.getElementById(b.getAttribute("aria-controls")).classList.add("on");
     const score = b.id === "t-score";
-    document.querySelector(".app").setAttribute("data-view", score ? "score" : "design");
+    document.querySelector(".app").setAttribute("data-view", score ? "score" : b.id==="t-writing" ? "writing" : "design");
     if(!score) setTimeout(fit,60);
   });
 });

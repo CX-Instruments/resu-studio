@@ -50,10 +50,10 @@ Every scorecard reports two numbers and they are different on purpose. Both are 
 out of the same list of asks, and both use the same denominator.
 
 **The denominator is every ask on the scorecard.** `none` and `unscored` are in it.
-The studio counts `ASKS.length`; `render_report.py` uses `asks_total` from the
-frontmatter, falling back to the number of rows in the ask table.
+The Studio and report count the actual rows. A legacy scorecard without rows can
+retain its frontmatter totals.
 
-**What you have.** An ask in `page`, `buried`, `off` or `near`. Four states, and no
+**What you have.** An ask in `page`, `buried` or `off`. Three states, and no
 others. This number does not move when the person rejects a rewrite, because rejecting
 a rewrite does not unhave the experience.
 
@@ -68,14 +68,10 @@ flattering either of them.
 The gap between the two numbers is what the whole exercise is for. State it in one
 sentence at the top of the scorecard.
 
-**Where the number comes from, and the one place the two implementations differ.** The
-studio always tallies the list in front of it, so its gauges cannot disagree with the
-rows underneath them. `render_report.py` prints the `you_have` and
-`a_reader_would_find` figures out of the scorecard's frontmatter when they are there
-and non-zero, and tallies the table only when they are missing. So a typed frontmatter
-count that does not match the table produces a report whose gauges and whose rows
-disagree, and the studio will show a third number again. Write the frontmatter counts
-as the tally of the table, every time, or leave them at zero and let the report do it.
+**Where the number comes from.** The Studio, report and Desk use the scored rows.
+The report/job reader retains a frontmatter-only fallback for legacy records without
+rows. Keep frontmatter counts in agreement with the rows; partial and unscored rows
+never count as fully supported.
 
 ## The verdict
 
@@ -211,3 +207,8 @@ but it never competes for attention with the thing that helps.
 The first version of these labels said "this page", meaning the CV. Read on a
 screen, "this page" is the screen. Every label now names the CV, so there is no
 second reading: on your CV, left off this CV, nothing to say yet.
+
+
+## Counts are diagnostics
+
+Use the scored rows as the count source. `page`, `buried` and `off` count as fully supported; `near` remains partial. Only `page` counts as visible in the employer's words. `unscored` contributes to neither numerator and is always reported. The Studio, report and job/Desk use these same rules; update the scorecard frontmatter to match. A better voice need not change a count. Scoring depth never narrows the advertisement read for the writing brief.

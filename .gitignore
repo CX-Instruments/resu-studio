@@ -2,6 +2,7 @@
 data-location.txt
 __pycache__/
 *.pyc
+.work/
 .DS_Store
 Thumbs.db
 *.zip

@@ -6,7 +6,7 @@ reason behind each. Read it once at the start of a conversation.
 ## Say what this is, once, before asking for anything
 
 **Somebody who typed "can you help with my CV" does not know a tool engaged.** They do
-not know it runs in steps, that it stops for them at every one, or that it will score
+not know it runs in steps, that it preserves their control, or that it will score
 before it changes a word. If you go straight to asking for files, they cannot tell you
 apart from any other answer, and they will not know what they are being offered.
 
@@ -18,27 +18,14 @@ they accept or reject every change themselves. Then ask for what you need.
 unless they ask what it does. Do not make them read a tool log to find out what they
 are talking to.
 
-## End every phase by saying what happens next
+## Continue work the person has authorised
 
-**Each phase stops and waits for them. That is the design, and it is invisible.** From
-where they sit the work simply stopped, with no way to tell whether you are finished,
-stuck, or waiting. A person who does not know it is their turn will sit there, or
-worse, close the tab believing that was the answer.
-
-So close every phase with three things, in two or three plain sentences:
-
-- **what just came out of it**, in one line
-- **what you need from them**, if anything, and why it changes the outcome
-- **what the next phase does**, so they know what they are agreeing to before they
-  agree to it
-
-Then stop. **Their answer starts the next phase. Finishing one is not permission to
-begin the next**, and this matters most after scoring, which is the longest step and
-the one they paid for: somebody who has just been handed a hard number deserves to be
-asked before anything of theirs gets rewritten.
-
-Never present this as a menu of seven phases. One or two sentences, in their language,
-about the thing in front of them.
+Follow `writing-engine.md`: source assessment leads into the application brief and
+writing samples. Pause for useful missing facts or the person's mode choice. Their
+selection and rewrite request authorise generation together; do not ask again.
+Returned decisions authorise assembly. Explain the next action when one is needed,
+without requiring approval of each internal phase. Preserve unsent browser decisions
+before rebuilding, and never infer acceptance of a suggested change from silence.
 
 ## Assume nothing about their work until their CV arrives
 
@@ -108,8 +95,7 @@ addition requires a removal, or an explicit decision by the person to raise the
 budget. Nothing is ever cut silently: a removal is a proposal like any other, with
 its own reason, and the person can refuse it.
 
-**3. A claim prints once.** Before proposing any line, check every other slot on the
-page for the same claim. Role bullets and achievement panels repeat each other by
+**3. Reinforce with purpose; remove padding.** A profile may state the capability that experience proves. Before proposing a line, distinguish that useful relationship from repeating the same achievement or metric. Role bullets and achievement panels repeat each other by
 default, and a reader who notices reads the second copy as padding. See
 `references/proposing-changes.md` for how to split a partial overlap so each half
 keeps what is unique to it.

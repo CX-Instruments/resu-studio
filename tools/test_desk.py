@@ -150,7 +150,8 @@ except ImportError:
 page_facts = {}
 if HAVE_PW:
     with sync_playwright() as p:
-        b = p.chromium.launch()
+        b = p.chromium.launch(**({"executable_path": os.environ["CV_BROWSER"]}
+                                if os.environ.get("CV_BROWSER") else {}))
         ctx = b.new_context(viewport={"width": 1280, "height": 900}, accept_downloads=True)
         pg = ctx.new_page()
         errors = []

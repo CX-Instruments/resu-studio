@@ -179,8 +179,12 @@ def effect(d):
         if not lines:
             continue
         sections.append({"title": spec.get("title") or "Added section",
-                         "after": (spec.get("after") or ""), "lines": lines})
-    return {"marks": marks, "adds": adds, "order": order, "sections": sections}
+                         "after": (spec.get("after") or ""), "lines": lines,
+                         **({"format": "paragraphs"} if spec.get("format") == "paragraphs" else {})})
+    result = {"marks": marks, "adds": adds, "order": order, "sections": sections}
+    if d.get("section_order"):
+        result["section_order"] = list(d["section_order"])
+    return result
 
 
 def digest(d):
@@ -1029,7 +1033,7 @@ def _group_html(g):
     return '<div%s>%s%s%s</div>' % (wrap, head, body, tail)
 
 
-DECIDE = {"marks": {}, "adds": {}, "sections": [], "order": {}}
+DECIDE = {"marks": {}, "adds": {}, "sections": [], "order": {}, "section_order": []}
 APPLIED = []      # what the decisions file actually changed, for the report
 REORDERED = {}    # the lists the decisions file put in a different order
 SAID = []         # sentences the run owes the person, printed with the report
@@ -1264,6 +1268,10 @@ def add_sections(doc):
     """Sections the person added in the workbench. They are not in the markdown, so
     they carry no source lines: they never touch the in/out count and are reported
     separately, under their own heading, as additions."""
+    wanted = DECIDE.get("section_order", [])
+    if wanted:
+        order = {s: i for i, s in enumerate(wanted)}
+        doc["sections"].sort(key=lambda s: order.get(slug(s["title"]), len(order)))
     # follow whatever the file does with its own headings
     titles = [x["title"] for x in doc["sections"] if x["title"]]
     shout = bool(titles) and all(t == t.upper() for t in titles)
@@ -1273,11 +1281,11 @@ def add_sections(doc):
             continue
         title = spec.get("title") or "Added section"
         sec = {"title": title.upper() if shout else title,
-               "blocks": [{"kind": "bullet", "text": x["text"].strip(),
+               "blocks": [{"kind": "para" if spec.get("format") == "paragraphs" else "bullet", "text": x["text"].strip(),
                            "id": x.get("key"), "src": 0} for x in lines],
                "added": True}
         after = (spec.get("after") or "").strip().lower()
-        at = len(doc["sections"])
+        at = 0 if spec.get("after") == "^" else len(doc["sections"])
         if after:
             for idx, s2 in enumerate(doc["sections"]):
                 if slug(s2["title"]) == after:
@@ -2419,6 +2427,10 @@ def _decisions_wrong(d):
                         'an object with a "text" in it.' % (key, type(x).__name__))
 
     order = d.get("order")
+    section_order = d.get("section_order")
+    if section_order is not None and (not isinstance(section_order, list) or
+            any(not isinstance(x, str) for x in section_order) or len(set(section_order)) != len(section_order)):
+        return "section_order must be a list of distinct source heading slugs."
     if order is not None and not isinstance(order, dict):
         return ("order has to be an object of list id to the line numbers in the order "
                 "they should print, and it is a %s." % type(order).__name__)
@@ -2450,7 +2462,7 @@ def _decisions_wrong(d):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cv", nargs="?")
-    ap.add_argument("--layout", default="sidebar-dark")
+    ap.add_argument("--layout", default="spine")
     ap.add_argument("--palette", default="forest")
     ap.add_argument("--typeset", default="mixed")
     ap.add_argument("--out",
@@ -2681,6 +2693,7 @@ def main():
             DECIDE["adds"] = decided.get("adds") or {}
             DECIDE["sections"] = decided.get("sections") or []
             DECIDE["order"] = decided.get("order") or {}
+            DECIDE["section_order"] = decided.get("section_order") or []
 
     doc = parse(md)
     src, got = count_source(md), count_doc(doc)

@@ -38,7 +38,9 @@ The fields, in the order `templates/proposals.md` sets them out:
 | `Suggested:` | every entry. The complete replacement text, or `Delete this bullet.` for a removal |
 | `Why:` | every entry. One or two sentences |
 | `Costs:` | an addition. Which existing line comes out, or "budget rises from 8 to 9, confirm" |
-| `Answers:` | every entry that adds or changes text. Ask ids, and never empty |
+| `Answers:` | requirement ids for relevance changes; optional for other purposes |
+| `Purpose:` | relevance, evidence visibility, comprehension, differentiation, voice, economy, accuracy or structure |
+| `Claims:` | ordered JSON text/facts entries covering every word of changed factual text |
 | `Draws on:` | every entry that adds or changes text. Fact ids from `facts.md` |
 | `Decision:` | every entry, left blank. It is the person's to fill in |
 
@@ -52,7 +54,7 @@ An entry whose `Line:` matches no id on the CV is worse: it is loaded and counte
 drawn against an empty stub, and its "Use this" writes a mark the renderer will never
 match. Build the id from `references/marking.md` and check it against the render.
 
-**Read `references/rewriting.md` before drafting any Suggested text.** It carries the
+**Read `references/writing-engine.md` and `references/rewriting.md` before drafting any Suggested text.** It carries the
 shape of a bullet, which verbs to distrust, and the named patterns to look for, which
 are demonstrated on the person's own lines rather than on invented ones. Two of those
 patterns end in a question rather than a rewrite, and the question is the correct

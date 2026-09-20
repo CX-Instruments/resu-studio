@@ -105,10 +105,18 @@ def frontmatter(text):
 
 # The two counts, in the studio's own vocabulary. Answered somewhere in the record
 # is not the same as findable on the page, and `unscored` never counts toward either.
-ANSWERED = ("page", "buried", "off", "near")
+ANSWERED = ("page", "buried", "off")
 ON_THE_PAGE = ("page",)
 
 NECESSITIES = ("must", "nice", "implied", "condition", "not a cv question")
+
+
+def counts_from_rows(rows):
+    """The same coverage counts used by the Studio; partial is not complete."""
+    return {"asks_total": len(rows), "must": sum(r["necessity"] == "must" for r in rows),
+            "you_have": sum(r["state"] in ANSWERED for r in rows),
+            "a_reader_would_find": sum(r["state"] in ON_THE_PAGE for r in rows),
+            "unscored": sum(r["state"] == "unscored" for r in rows)}
 
 
 def asks_table(text):
@@ -355,13 +363,8 @@ def main():
         except ValueError:
             return default
 
-    total = num("asks_total") or len(rows) or 1
-    have = num("you_have")
-    find = num("a_reader_would_find")
-    if not have and rows:
-        have = sum(1 for r in rows if r["state"] in ANSWERED)
-    if not find and rows:
-        find = sum(1 for r in rows if r["state"] in ON_THE_PAGE)
+    actual = counts_from_rows(rows) if rows else {k:num(k) for k in ("asks_total", "you_have", "a_reader_would_find")}
+    total, have, find = actual["asks_total"], actual["you_have"], actual["a_reader_would_find"]
 
     b_have = b_find = None
     if a.before:
@@ -372,10 +375,9 @@ def main():
             sys.stderr.write("the earlier scorecard has malformed rows; "
                              "rendering without the before markers.\n")
             brows = []
-        b_have = (int(re.sub(r"[^0-9]", "", bfm.get("you_have", "")) or 0)
-                  or sum(1 for r in brows if r["state"] in ANSWERED))
-        b_find = (int(re.sub(r"[^0-9]", "", bfm.get("a_reader_would_find", "")) or 0)
-                  or sum(1 for r in brows if r["state"] in ON_THE_PAGE))
+        if brows:
+            before_counts = counts_from_rows(brows)
+            b_have, b_find = before_counts["you_have"], before_counts["a_reader_would_find"]
 
     verdict = fm.get("verdict", "").strip().lower()
     vcol = VERDICT_COLOUR.get(verdict, "#4b5563")

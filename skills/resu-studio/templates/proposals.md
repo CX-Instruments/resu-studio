@@ -32,6 +32,8 @@ Line          the studio's id for the line this lands on
 Currently     the full existing text, verbatim, or `Not on the CV.`
 Suggested     the full replacement text, or `Delete this bullet.`
 Why           one or two sentences
+Purpose       relevance, evidence visibility, comprehension, differentiation, voice, economy, accuracy or structure
+Claims        JSON list of {"text":"exact clause", "facts":["fact-id"]}, covering Suggested in order
 Answers       which ask ids this serves
 Draws on      which fact ids this rests on
 Costs         on an addition, which line comes out or how the budget rises
@@ -75,6 +77,8 @@ The complete existing text, verbatim.
 The complete replacement text, ready to paste.
 
 **Why:** One or two sentences.
+**Purpose:** relevance
+**Claims:** [{"text":"The complete replacement text, ready to paste.","facts":["fact-id"]}]
 
 **Answers:** a1, a4
 **Draws on:** fact-id, fact-id
@@ -85,7 +89,7 @@ The complete replacement text, ready to paste.
 ## P2. Section, role, where the new line goes
 
 **Kind:** missing and worth adding
-**Line:** professional-experience/0/b3
+**Line:** professional-experience/0/b3/+0
 **Currently:** Not on the CV.
 
 **Suggested:**
