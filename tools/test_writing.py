@@ -75,14 +75,19 @@ class WritingTests(unittest.TestCase):
           "section_plan":[{"section":"Experience","purpose":"Prove training and procedure work."}],
           "constraints":{"page_limit":2,"bullet_budgets":{"experience/0":2}},
           "pillars":{k:{"status":"absent","statement":"Not enough evidence."} for k in W.PILLARS}},"samples":[]}
-        for mode in W.modes():
+        examples = [
+          ("Documents procedures and trains venue teams.", "Wrote an incident procedure, then trained 35 staff in its use."),
+          ("Incident procedure writing. Staff training for a team of 35.", "Trained 35 staff in the incident procedure written for the venue."),
+          ("Trains venue staff in incident procedures, drawing on procedure-writing experience.", "Trained a team of 35 staff in the venue's incident procedure after writing it."),
+          ("From writing the incident procedure to training staff in its use: practical venue experience.", "An incident procedure, put into practice through training: wrote the procedure and trained 35 staff.")]
+        for mode, (profile, bullet) in zip(W.modes(), examples):
             self.data["samples"].append({"mode":mode["id"],"why":"Shows supported procedure and team work.",
               "profile":{"line":"profile/0","current":"Coordinates venue teams and improves procedures.",
-                "suggested":"Documents procedures and trains venue teams.",
-                "claims":[{"text":"Documents procedures and trains venue teams.","facts":["f1"]}]},
+                "suggested":profile,
+                "claims":[{"text":profile,"facts":["f1"]}]},
               "bullet":{"line":"experience/0/b0","current":"Wrote an incident procedure and trained 35 staff.",
-                "suggested":"Trained 35 staff in the incident procedure written for the venue.",
-                "claims":[{"text":"Trained 35 staff in the incident procedure written for the venue.","facts":["f1"]}]}})
+                "suggested":bullet,
+                "claims":[{"text":bullet,"facts":["f1"]}]}})
         self.state = W.prepare(self.job, self.cv, self.data)
 
     def request(self, action="rewrite", **extra):
@@ -174,6 +179,22 @@ class WritingTests(unittest.TestCase):
 ''')
         self.assertEqual(P.validate(records,self.cv,paths.facts_file(),str(self.folder/"asks.md"),True),[])
 
+    def test_distinct_samples_and_preview_selection(self):
+        same=copy.deepcopy(self.data)
+        same["samples"][1]["profile"]=copy.deepcopy(same["samples"][0]["profile"])
+        same["samples"][1]["bullet"]=copy.deepcopy(same["samples"][0]["bullet"])
+        with self.assertRaisesRegex(ValueError,"identical samples"):
+            W.prepare(self.job,self.cv,same)
+        bad=copy.deepcopy(self.data);bad["preview_mode"]="not-offered"
+        with self.assertRaisesRegex(ValueError,"must have samples"):
+            W.prepare(self.job,self.cv,bad)
+        self.request("preview",adjustments="More flowing, with concrete detail.")
+        adjusted=copy.deepcopy(self.data);adjusted["preview_mode"]="expressive"
+        state=W.prepare(self.job,self.cv,adjusted)
+        self.assertEqual(state["preview_mode"],"expressive")
+        self.assertEqual(state["phase"],"choose")
+        self.assertIsNone(state["selected"])
+
     def test_generic_sections_and_new_profile(self):
         cv=B.cv_block(R.parse(CV))
         self.assertEqual(cv["order"],["profile","experience","source-projects","source-languages"])
@@ -260,7 +281,18 @@ counts:
             page=browser.new_page(viewport={"width":1400,"height":950})
             errors=[]; page.on("pageerror",lambda e:errors.append(str(e)))
             page.goto(self.html.as_uri()); page.wait_for_selector('#writing-content input[type="radio"]')
-            self.assertEqual(page.locator('#writing-content input[type="radio"]').count(),len(self.data["samples"]))
+            self.assertEqual(page.locator('#writing-content input[type="radio"]:visible').count(),len(self.data["samples"]))
+            boxes=page.locator('#writing-compare-profile .writing-card').all()
+            self.assertEqual(len({round(b.bounding_box()["y"]) for b in boxes}),1)
+            self.assertEqual(page.locator('.writing-original').count(),2)
+            page.get_by_role("button",name=re.compile("ORIGINAL.*Experience bullet")).click()
+            self.assertFalse(page.locator('#writing-compare-profile').is_visible())
+            page.locator('#writing-compare-bullet input[value="warm-collaborative"]').check()
+            self.assertEqual(page.evaluate("S.writing.mode"),"warm-collaborative")
+            page.get_by_role("button",name=re.compile("ORIGINAL.*Profile summary")).click()
+            self.assertTrue(page.locator('#writing-compare-profile input[value="warm-collaborative"]').is_checked())
+            page.locator('#writing-compare-profile input[value="credible-conviction"]').check()
+            page.screenshot(path=str(SCR/"writing-comparison.png"),full_page=True)
             page.get_by_role("button",name="Use this mode and rewrite my CV",exact=True).click()
             handoff=page.get_by_label("Writing request to send to AI").input_value()
             req=json.loads(re.search(r'```json\n(.*)\n```',handoff,re.S)[1])
@@ -282,6 +314,93 @@ counts:
             page.goto(other_html.as_uri());page.wait_for_selector('#writing-content')
             self.assertNotEqual(store,page.evaluate("STORE"))
             self.assertEqual(page.evaluate("Object.keys(S.marks).length"),0)
+            self.assertEqual(errors,[])
+            browser.close()
+
+    def test_browser_personal_mode_preview_and_responsive_comparison(self):
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            self.skipTest("Playwright is needed for the browser check")
+        self.build()
+        with sync_playwright() as pw:
+            browser=pw.chromium.launch(**({"executable_path":os.environ["CV_BROWSER"]} if os.environ.get("CV_BROWSER") else {}))
+            page=browser.new_page(viewport={"width":1440,"height":1100})
+            errors=[];page.on("pageerror",lambda e:errors.append(str(e)))
+            page.goto(self.html.as_uri())
+            page.get_by_role("button",name="Create my own mode",exact=True).click()
+            page.get_by_label("Start from",exact=True).select_option("warm-collaborative")
+            page.get_by_role("button",name="People & collaboration",exact=True).click()
+            page.get_by_role("button",name="Playful",exact=True).click()
+            page.get_by_role("button",name="More flowing",exact=True).click()
+            page.get_by_label("Describe it your way",exact=True).fill("Keep the practical details. A little flair.")
+            page.get_by_label("Anything to avoid?",exact=True).fill("Slogans")
+            self.assertIn("Voice: Playful",page.locator('.writing-direction-text').inner_text())
+            page.get_by_role("button",name="Preview my mode",exact=True).click()
+            def handoff():
+                return json.loads(re.search(r'```json\n(.*)\n```',page.get_by_label("Writing request to send to AI").input_value(),re.S)[1])
+            local=handoff()["writing_request"]
+            self.assertEqual((local["action"],local["scope"],local["save_as"]),("preview","application",""))
+            self.assertEqual(local["mode"],"warm-collaborative")
+            for text in ("People & collaboration","Playful","More flowing","A little flair.","Avoid: Slogans"):
+                self.assertIn(text,local["adjustments"])
+            page.get_by_label("Save this as a reusable personal mode",exact=True).check()
+            page.get_by_role("button",name="Preview my mode",exact=True).click()
+            self.assertIn("Give your reusable mode a name",page.locator('.writing-direction-preview').inner_text())
+            page.get_by_label("Name your mode",exact=True).fill("Practical with flair")
+            page.reload()
+            page.get_by_role("button",name="Create my own mode",exact=True).click()
+            self.assertEqual(page.get_by_label("Name your mode",exact=True).input_value(),"Practical with flair")
+            self.assertEqual(page.get_by_label("Start from",exact=True).input_value(),"warm-collaborative")
+            page.locator('.panes').evaluate('(e)=>{e.scrollTop=0}')
+            page.screenshot(path=str(SCR/"writing-builder.png"),full_page=True)
+            page.get_by_role("button",name="Preview my mode",exact=True).click()
+            reusable=handoff()
+            self.assertEqual(reusable["writing_request"]["scope"],"preference")
+            self.assertEqual(reusable["writing_request"]["save_as"],"Practical with flair")
+            page.get_by_role("button",name="Preview my mode",exact=True).click()
+            self.assertEqual(handoff()["writing_request"]["id"],reusable["writing_request"]["id"])
+            W.request(self.job,reusable);self.build();page.reload()
+            self.assertEqual(page.locator('#writing-content input[type="radio"]:enabled').count(),0)
+            page.get_by_role("button",name="Create my own mode",exact=True).click()
+            self.assertTrue(page.get_by_role("button",name="Preview my mode",exact=True).is_disabled())
+            # Host returns a new application-only mode, highlighted but not authorised.
+            refreshed=copy.deepcopy(self.data)
+            mode=dict(W.modes()[0],id="personal-flair",name="Practical with flair",version=1)
+            sample=copy.deepcopy(refreshed["samples"][0]);sample["mode"]=mode["id"]
+            sample["profile"]["suggested"]="Writes venue incident procedures and trains staff in their use."
+            sample["profile"]["claims"]=[{"text":sample["profile"]["suggested"],"facts":["f1"]}]
+            refreshed["samples"].append(sample);refreshed["custom_modes"]=[mode];refreshed["preview_mode"]=mode["id"]
+            state=W.prepare(self.job,self.cv,refreshed);self.build();page.reload()
+            self.assertEqual(page.evaluate('S.writing.mode'),mode["id"])
+            self.assertEqual(page.evaluate('S.writing.viewMode'),mode["id"])
+            self.assertEqual(page.locator('#writing-compare-profile .writing-card').first.get_attribute('data-mode'),mode["id"])
+            self.assertEqual(page.locator('#writing-compare-profile .writing-card').nth(1).get_attribute('data-mode'),"warm-collaborative")
+            self.assertIsNone(state["selected"])
+            page.set_viewport_size({"width":390,"height":844})
+            page.locator('.panes').evaluate('(e)=>{e.scrollTop=0}')
+            page.locator('#writing-compare-profile .writing-mobile-switch').get_by_role("button",name="Direct and focused",exact=True).click()
+            self.assertEqual(page.locator('#writing-compare-profile .writing-card:visible').count(),1)
+            self.assertEqual(page.locator('#writing-compare-profile .writing-card:visible').get_attribute('data-mode'),"direct-impact")
+            self.assertEqual(page.evaluate('S.writing.mode'),mode["id"])
+            page.locator('#writing-compare-profile input[value="direct-impact"]').check()
+            page.get_by_role("button",name=re.compile("ORIGINAL.*Experience bullet")).click()
+            self.assertEqual(page.locator('#writing-compare-bullet .writing-card:visible').get_attribute('data-mode'),"direct-impact")
+            self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
+            self.assertTrue(page.locator('.panes').evaluate('(e)=>e.scrollWidth <= e.clientWidth'))
+            page.screenshot(path=str(SCR/"writing-mobile.png"),full_page=True)
+            page.get_by_role("button",name="Use this mode and rewrite my CV",exact=True).click()
+            req=handoff()["writing_request"]
+            self.assertEqual((req["mode"],req["adjustments"],req["save_as"]),("direct-impact","",""))
+            W.request(self.job,req);self.build();page.reload()
+            self.assertEqual(page.evaluate('S.writing.mode'),"direct-impact")
+            # Editing the ad makes comparison read-only, without losing the draft.
+            write(self.folder/"ad/ad.md","A changed advertisement.");self.build();page.reload()
+            self.assertEqual(page.locator('#writing-content input[type="radio"]:enabled').count(),0)
+            self.assertEqual(page.get_by_role("button",name="Use this mode and rewrite my CV",exact=True).count(),0)
+            page.get_by_role("button",name="Create my own mode",exact=True).click()
+            self.assertEqual(page.get_by_label("Name your mode",exact=True).input_value(),"Practical with flair")
+            self.assertTrue(page.get_by_label("Name your mode",exact=True).is_disabled())
             self.assertEqual(errors,[])
             browser.close()
 

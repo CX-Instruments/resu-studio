@@ -19,9 +19,10 @@
     {
       "mode": "credible-conviction",
       "why": "",
-      "profile": {"line": "profile/0", "current": "", "suggested": "", "claims": [{"text": "", "facts": []}]},
-      "bullet": {"line": "professional-experience/0/b0", "current": "", "suggested": "", "claims": [{"text": "", "facts": []}]}
+      "profile": {"line": "profile/0", "current": "", "suggested": "", "difference": "", "claims": [{"text": "", "facts": []}]},
+      "bullet": {"line": "professional-experience/0/b0", "current": "", "suggested": "", "difference": "", "claims": [{"text": "", "facts": []}]}
     }
   ],
-  "custom_modes": []
+  "custom_modes": [],
+  "preview_mode": null
 }

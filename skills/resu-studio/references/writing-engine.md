@@ -29,6 +29,16 @@ Prepare a profile summary and the same experience bullet for each offered mode, 
 
 Do not manufacture evidence to demonstrate differences. If the source does not contain a usable experience example, ask the one material question needed. Otherwise proceed with the strongest available evidence and omit unsupported pillars.
 
+### Make the choice worth making
+
+Modes are writing strategies, not synonym lists. Read each definition's emphasis and behaviour as well as its voice. Use the same source passages and evidence pool across the comparison; the profile may select different relevant facts, while the bullet retains its core action, ownership, qualifications and proof. Choose a bullet with enough real context to reveal different approaches. Do not dilute all modes into the same safe middle voice.
+
+Draft each sample from its strategy rather than paraphrasing the first mode. Credible foregrounds the method or working pattern; Direct foregrounds result or scale with greater compression; Warm brings the evidenced human context forward; Expressive uses an evidenced sequence or distinctive combination with different cadence. These are preferences, not compulsory templates for every line. None permits losing an essential qualifier, turning an aspiration into experience, or claiming an unmeasured benefit.
+
+Before `prepare`, read the versions beside one another with the names hidden. For each pair, identify a substantive change in emphasis, information order, sentence construction or rhythm. Changing "cut" to "reduced" is not enough. Revise near copies. Record a short `difference` on each profile and bullet describing what this actual sample changes; use `why` to explain its application fit. A mode's promised personality is not evidence that the sample delivers it. If a particular passage reasonably stays the same, say so in `difference`; if both samples cannot demonstrate a distinction, offer fewer choices and explain the limit instead of padding the list. The script rejects identical pairs but cannot judge near copies or prose quality.
+
+Check the differences against the source again. For example, fewer shift gaps does not establish reliable coverage, less team stress or permanently fixed problems. An expressive sequence must not silently broaden a metric, its period, or ownership. Retain the uncertainty in raw numbers. All modes still need the four shared objectives together.
+
 Save the input in this job's folder, then run:
 
 ```bash
@@ -36,7 +46,7 @@ python3 scripts/writing.py prepare --job <job id> --cv "<source CV.md>" --input 
 python3 scripts/build_studio.py --job <job id> --cv "<source CV.md>" --scorecard "<scorecard.md>" --asks-md "<asks.md>" --facts "<facts.md>"
 ```
 
-Open the Studio at its Writing tab and hand over Resu Desk. Explain the strongest supported pattern, the available sample differences and the next action briefly in chat. Do not give the user a second configuration form. The source score and writing samples belong to the same application experience.
+Open the Studio at its Writing tab and hand over Resu Desk. Explain the strongest supported pattern, the actual sample differences and the next action briefly in chat. The Writing view shows each original passage once; opening it reveals the mode versions together. The builder offers optional starting mode, emphasis, voice, rhythm, free-text direction and an explicit reusable-mode choice. Do not repeat those choices as a mandatory questionnaire in chat. The source score and writing samples belong to the same application experience.
 
 Scoring depth is separate from writing quality. Read the full ad either way; use relevant, supported responsibilities to inform writing, without presenting unassessed requirements as verified matches. Do not inflate coverage counts to reward a more appealing voice.
 
@@ -57,15 +67,19 @@ A chat instruction such as "use the warm version and rewrite it" is equally vali
 
 ## Explore and save a personal mode
 
-A `preview` request asks for adjusted examples, not a full rewrite. Use the requested mode as a starting point and interpret the user's adjustments. Create a personal definition with `personal-` id, integer `version`, `name`, `impression`, `emphasis`, `voice`, `behaviour` and `boundaries`. The shared engine always takes precedence over mode text. A literal poem or other conflicting request may be explored conversationally, but application samples must retain explicit facts, readable sentences and scanning requirements; explain the closest compatible expression.
+A `preview` request asks for adjusted examples, not a full rewrite. Use the requested mode as a starting point and interpret the user's adjustments, including any emphasis, voice, rhythm, free-text direction and things to avoid. Their own words refine the broad controls; do not treat an omitted choice as a new constraint. Create a personal definition with `personal-` id, integer `version`, `name`, `impression`, `emphasis`, `voice`, `behaviour` and `boundaries`. Include a short `signature` for the comparison card. The shared engine always takes precedence over mode text. A literal poem or other conflicting request may be explored conversationally, but application samples must retain explicit facts, readable sentences and scanning requirements; explain the closest compatible expression.
 
 To keep an application-only exploratory definition, include it in the preparation input's `custom_modes` list. When the user explicitly names a reusable preference to save, write the definition in their private folder and run `writing.py save-mode <mode.json>`. Never save CV facts or employer-specific evidence into a reusable mode. Retain approved examples only when they are generic descriptions of the preference or the user's private examples, never in the shipped plugin.
 
-Prepare refreshed samples on the current CV and rebuild the same Studio. The previous state is retained in `.writing` history. Use the person's feedback, not a questionnaire. A local instruction affects the named line; an application-wide adjustment changes this brief; a saved preference requires that separate intent. Do not silently turn "make this bullet warmer" into a permanent preference.
+Prepare refreshed samples on the current CV and rebuild the same Studio. Keep the starting mode and other useful choices in the comparison, and set the preparation input's `preview_mode` to the new personal mode id so the page opens on that result. This highlights a preview; it does not authorise the full rewrite. The user can compare it with the starting mode and then choose "Use this mode and rewrite my CV". A request that the existing modes sound too similar instead calls for a refreshed comparison under those existing definitions, not a new personal preference. Re-run the contrast and evidence checks above.
+
+The previous state is retained in `.writing` history; the browser retains the personal-mode draft through a rebuild. Use the person's feedback, not a questionnaire. `save_as` is sent only when they explicitly choose to save a reusable mode and supply its name; otherwise the exploration stays in this application. A local instruction affects the named line; an application-wide adjustment changes this brief; a saved preference requires that separate intent. Do not silently turn "make this bullet warmer" into a permanent preference.
 
 ## Generate and publish proposals
 
 Read the current brief on every generation or revision. Use its evidence and section plan, then draft only useful changes in page order. The source CV is not freely regenerated. `templates/proposals.md` defines the reviewable output. Each changed factual passage has a claim map; each change has a concrete purpose. Requirements are mandatory for a relevance change, not for every clarity or voice improvement.
+
+Carry the selected mode's emphasis, construction and rhythm from the chosen samples into the full document. During the human-engagement and coherence review, compare representative full-CV passages with the selected samples: explain how the chosen direction survived beyond the preview. Keep section purposes distinct and allow a strong source line to stay; do not force every bullet into a signature formula.
 
 Keep an unchanged line unchanged. Protect useful context and raw numbers. Additions cost space and need an explicit removal or a user-approved higher budget. A move is an `Order` proposal naming the list and original indices. For section ordering, use `Line: document/sections` and `Order` containing every existing heading slug exactly once. For a new section, follow the `Section` contract in `achievements.md`, using `^` for a new profile before the first section. An optional achievement section must earn its space and can draw from one role; never force six lines or a cross-employer claim. A new section is proposed explicitly before its contents are treated as approved.
 

@@ -322,6 +322,7 @@ def validate_samples(samples, sources, available):
     known = source_lines(sources["cv"]["path"])
     facts = evidence_ids(sources["facts"]["path"])
     seen = set()
+    wording = {}
     for sample in samples:
         if not isinstance(sample, dict):
             raise ValueError("Each sample must contain a mode, profile and bullet.")
@@ -342,6 +343,10 @@ def validate_samples(samples, sources, available):
             claims_valid(p.get("suggested", ""), p.get("claims"), facts)
         if not sample.get("why"):
             raise ValueError("Explain what each mode's samples emphasise.")
+        pair = tuple(norm(sample[k]["suggested"]).casefold() for k in ("profile", "bullet"))
+        if pair in wording:
+            raise ValueError("Modes %s and %s have identical samples. Demonstrate a meaningful difference or offer fewer distinct choices; never invent facts to create contrast." % (wording[pair], mid))
+        wording[pair] = mid
     anchors = [([s["profile"].get("lines", [s["profile"].get("line")]),
                  s["bullet"].get("lines", [s["bullet"].get("line")])]) for s in samples]
     if any(a != anchors[0] for a in anchors):
@@ -360,12 +365,17 @@ def prepare(job, cv, data):
             raise ValueError("An exploratory mode needs a personal- id.")
         available[mode["id"]] = mode
     validate_samples(samples, sources, available)
+    preview_mode = data.get("preview_mode")
+    if preview_mode is not None and preview_mode not in {s["mode"] for s in samples}:
+        raise ValueError("The preview mode must have samples in this comparison.")
     old = load(job) or {}
     if old.get("phase") in ("rewrite_requested", "revision_requested") and not stale(old):
         raise ValueError("A rewrite request is pending. Publish its suggestions before preparing a different direction.")
     state = {"schema": 1, "job": job, "sources": sources, "brief": brief,
              "ad_files": sorted(key[3:] for key in sources if key.startswith("ad:")),
              "samples": samples, "phase": "choose", "selected": None,
+             "preview_mode": preview_mode,
+             "preview_base": old.get("request", {}).get("mode") if preview_mode else None,
              "handled_requests": old.get("handled_requests", []),
              "previous": old.get("revision"), "batches": old.get("batches", [])}
     # The archived state retains every older sample and decision. Preparation never

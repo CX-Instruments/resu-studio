@@ -85,6 +85,8 @@ Read `references/writing-engine.md` after assessing the sources and on every rew
 
 After scoring, continue into an application brief and actual profile/bullet samples in the Studio's Writing tab. Give a short comparison in chat and the Studio link. The user can explore or create a mode without changing their CV. **“Use this mode and rewrite my CV” selects the direction and requests generation together.** A returned handoff or equivalent chat instruction authorises generation: do not add a second permission question.
 
+Compare the samples beside one another before handing them over. Different mode names must represent visible differences in emphasis, construction or rhythm, not synonym swaps. Follow the contrast review in `references/writing-engine.md`; retain the same evidence boundaries in every version. The Studio compares one original passage at a time and offers an optional guided personal-mode builder. Carry the chosen direction through the full rewrite, not just the preview.
+
 After generation, hand over the suggestions for acceptance, rejection, editing or another version. Returned decisions authorise their assembly. Preserve unresolved requests and unaffected decisions. Read the assembled CV as a whole before finishing. Explain what is ready and what, if anything, needs their input. The score is a coverage diagnostic, not a writing-quality grade.
 
 The optional letter and PDF design follow the person's request and application format. Do not request permission again for output they already asked for.
