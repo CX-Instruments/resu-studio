@@ -85,6 +85,7 @@
       ? "This is my request to begin; do not ask again whether to proceed."
       : action === "revise" ? "Keep the current guiding brief and preserve my other decisions."
       : "Show samples only. Keep my CV and prior decisions intact.")
+      + "\nRewrite in the chosen mode's tone and positioning, with meaningful changes to emphasis, construction and rhythm. Carry my profile's meaning, experience detail, evidenced pillars and distinctive contribution through the new wording. Keep text labelled Original faithful to the source. Any full-profile rewrite must use at least four substantive paragraphs, retaining more where needed. Short comparison examples do not set the full rewrite's length. Condensation and page savings are not the rewriting goal."
       + "\nAcknowledge the mode by name when you begin, using the mode recorded by the imported request.";
     handText.value = prompt + "\nSave this handoff in the application's folder and run writing.py request --job " + WRITING.job
       + " --input <saved handoff>. Read references/writing-engine.md and the saved writing context before continuing.\n\n```json\n"
@@ -134,7 +135,7 @@
   nav.append(compareTab, createTab);
   if (samples.length) root.append(nav);
   root.append(compare, builder);
-  compare.append(el("p", "One original, different directions. These two passages preview the approach to the full CV.", "hint"));
+  compare.append(el("p", "Compare rewrites in each mode's tone and positioning. Original shows your source wording. Examples may be shorter; the full rewrite develops your profile in at least four substantive paragraphs, carrying through your experience, strengths and distinctive contribution. You review every suggested change.", "hint"));
   const cards = [], sourcePanels = [], mobileButtons = [];
   const sourceTitles = {profile:"Profile summary", bullet:"Experience bullet"};
   function syncSelection() {
@@ -179,6 +180,7 @@
         box.append(badgeRow);
       }
       box.append(el("p", sample.definition.signature || sample.definition.voice, "writing-mode-signature"), label,
+        el("p", "Sample rewrite · tone and positioning", "hint"),
         el("p", sample[key].suggested, "writing-suggestion"));
       const explanation = el("details", undefined, "writing-explanation");
       explanation.append(el("summary", "What changes & why"), el("p", sample[key].difference || sample.why));

@@ -23,7 +23,7 @@ import paths
 import writing_memory as memory
 
 PILLARS = ("passion", "strengths", "impact", "value")
-OBJECTIVES = ("pillars", "ats", "human", "tailoring", "integrity", "coherence", "constraints")
+OBJECTIVES = ("pillars", "ats", "human", "tailoring", "integrity", "coherence", "constraints", "preservation")
 MODE_FIELDS = ("name", "impression", "emphasis", "voice", "behaviour", "boundaries")
 PHASES = {
     "choose": "Choose your writing mode",
@@ -340,12 +340,25 @@ def validate_samples(samples, sources, available):
         for key in ("profile", "bullet"):
             p = sample.get(key, {})
             ids = p.get("lines", [p.get("line")])
+            if not isinstance(ids, list) or not ids or any(not isinstance(i, str) for i in ids) or len(set(ids)) != len(ids):
+                raise ValueError("Each sample needs distinct source line IDs in source order.")
             current = " ".join(known.get(i, "") for i in ids)
             new_profile = key == "profile" and ids == ["new:profile"]
             if not new_profile and (any(i not in known for i in ids) or norm(p.get("current")) != norm(current)):
                 raise ValueError("The %s sample must quote its source lines exactly." % key)
             if new_profile and p.get("current"):
                 raise ValueError("A new profile has no current text to quote.")
+            if new_profile and any(re.search(r"(^|-)(profile|summary)(-|$)", i.split("/")[0]) for i in known):
+                raise ValueError("This CV already has a profile or summary. Quote the complete source profile instead of claiming it is missing.")
+            if key == "profile" and not new_profile:
+                section = ids[0].split("/")[0]
+                full = [i for i in known if i.startswith(section + "/")]
+                if ids != full or any(i.count("/") != 1 for i in ids):
+                    raise ValueError("Quote the complete source profile in source order using lines, not one paragraph labelled as the profile summary.")
+                # Preserve paragraph/bullet boundaries in the original displayed by
+                # every mode; the agent cannot truncate the source card for space.
+                p["current"] = "\n\n".join(known[i] for i in ids)
+            p["preview_only"] = True
             claims_valid(p.get("suggested", ""), p.get("claims"), facts)
         if not sample.get("why"):
             raise ValueError("Explain what each mode's samples emphasise.")
@@ -512,6 +525,54 @@ def review_valid(review):
             raise ValueError("Record a substantive %s review with status and notes." % key)
 
 
+def validate_profile_structure(records, state):
+    """Check the actual proposed profile, not a claimed paragraph count in review.
+
+    Untouched source text and the person's later accept/reject decisions remain
+    theirs. This gate applies to generated profile changes, never voice previews.
+    Semantic richness still requires reading the complete source and draft.
+    """
+    import assemble
+    with open(state["sources"]["cv"]["path"], encoding="utf-8-sig") as f:
+        source = f.read()
+    source_scan = assemble.scan(source)
+    sections = {s["sid"] for s in source_scan["sections"]
+                if re.search(r"\b(profile|summary)\b", s["title"], re.I)}
+    for sample in state.get("samples", []):
+        passage = sample["profile"]
+        ids = passage.get("lines", [passage.get("line")])
+        if ids != ["new:profile"]:
+            sections.add(ids[0].split("/")[0])
+    for rec in records:
+        spec = rec.get("section", {})
+        if spec and re.search(r"\b(profile|summary)\b", spec.get("title", ""), re.I):
+            sections.add(spec["slug"])
+    decisions = {"marks": {}, "adds": {}, "sections": []}
+    changed = set()
+    for rec in records:
+        kind, line = rec["kind"], rec.get("line", "")
+        if kind == "section" and rec["section"]["slug"] in sections:
+            decisions["sections"].append(rec["section"])
+            changed.add(rec["section"]["slug"])
+        elif line.split("/")[0] in sections and kind in ("edit", "remove", "add"):
+            changed.add(line.split("/")[0])
+            if kind == "add":
+                decisions["adds"].setdefault(line.split("/+")[0], []).append({"text": rec["sug"]})
+            else:
+                decisions["marks"][line] = {"a": kind, "text": rec.get("sug", "")}
+    if not changed:
+        return
+    draft, _ = assemble.assemble(source, decisions)
+    scanned = assemble.scan(draft)
+    for sid in changed:
+        units = [u for u in scanned["units"] if u["id"].startswith(sid + "/")]
+        paragraphs = [u for u in units if u["kind"] == "para" and norm(u["text"])]
+        if len(paragraphs) < 4:
+            raise ValueError("The proposed full profile must contain at least four substantive paragraphs. "
+                             "A condensed voice preview is not a replacement. Preserve breadth, pillars, "
+                             "distinctive contribution and proof; do not pad or invent evidence.")
+
+
 def publish(job, proposals, review):
     import proposal_records
     state = load(job)
@@ -545,6 +606,7 @@ def publish(job, proposals, review):
                                        state["sources"]["asks"]["path"], strict=True)
     if faults:
         raise ValueError("\n".join(faults))
+    validate_profile_structure(records, state)
     context = digest([state["sources"]["cv"]["hash"], state["selected"]])
     for record in records:
         record["uid"] = proposal_records.identity(record, context)
@@ -665,6 +727,22 @@ def page_data(job, cv=None):
     if out.get("review_seed", {}).get("source_hash") != file_hash(cv or state["sources"]["cv"]["path"]):
         out.pop("review_seed", None)
     out["history"] = memory.history(state)
+    # Older jobs may have sampled only a middle profile paragraph. Rebuilding the
+    # view must show the complete original from its saved source without changing
+    # the saved comparison, selected mode, proposals, or decisions.
+    source = state["sources"]["cv"]
+    source_path = source.get("snapshot", source["path"])
+    if os.path.isfile(source_path) and file_hash(source_path) == source["hash"]:
+        known = source_lines(source_path)
+        for sample in out.get("samples", []):
+            profile = sample["profile"]
+            ids = profile.get("lines", [profile.get("line")])
+            if ids and ids[0] in known:
+                section = ids[0].split("/")[0]
+                full = [i for i in known if i.startswith(section + "/")]
+                if all(i.count("/") == 1 for i in full):
+                    profile["current"] = "\n\n".join(known[i] for i in full)
+                    profile["lines"] = full
     facts = state["sources"]["facts"]
     evidence_path = facts.get("snapshot", facts["path"])
     out["evidence"] = evidence_excerpts(evidence_path, evidence_dependencies(state)) if os.path.isfile(evidence_path) else {}

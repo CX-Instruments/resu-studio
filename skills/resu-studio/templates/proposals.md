@@ -2,7 +2,7 @@
 job: employer-role-title
 variant: cv-<audience>
 written: YYYY-MM-DD
-budget:
+baseline_length:
   role-example: 8 bullets
   skills: 8 group lines
   pages: 3
@@ -36,7 +36,7 @@ Purpose       relevance, evidence visibility, comprehension, differentiation, vo
 Claims        JSON list of {"text":"exact clause", "facts":["fact-id"]}, covering Suggested in order
 Answers       which ask ids this serves
 Draws on      which fact ids this rests on
-Costs         on an addition, which line comes out or how the budget rises
+Costs         on an addition, explain growth and any explicit-limit tradeoff
 Decision      left blank for the person
 ```
 
@@ -97,7 +97,7 @@ The complete new line.
 
 **Why:** What it answers and why it is worth a slot.
 
-**Costs:** which existing line comes out, or "budget rises from 8 to 9, confirm"
+**Costs:** explain the resulting length; propose a tradeoff only under an explicit user/application limit
 
 **Answers:** a7
 **Draws on:** fact-id

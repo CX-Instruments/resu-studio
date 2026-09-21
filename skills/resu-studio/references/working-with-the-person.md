@@ -89,11 +89,11 @@ ever written about their working life. The page holds a small selection of it. T
 are different things and conflating them is what produces a six page CV. Every
 printed line traces to a fact; most facts do not print.
 
-**2. Every slot has a budget, declared before anything is written.** A role has a
-bullet count. The skills column has a line count. The page has a page count. An
-addition requires a removal, or an explicit decision by the person to raise the
-budget. Nothing is ever cut silently: a removal is a proposal like any other, with
-its own reason, and the person can refuse it.
+**2. Content comes before space.** Existing page and bullet counts are a baseline,
+not an automatic cap. Only an explicit user or application limit sets a hard budget.
+Augmentation may add paragraphs, bullets and pages; explain that growth without
+removing distinctive evidence to balance the count. Under a real limit, show specific
+tradeoffs. Nothing is cut silently or merely to demonstrate a writing mode.
 
 **3. Reinforce with purpose; remove padding.** A profile may state the capability that experience proves. Before proposing a line, distinguish that useful relationship from repeating the same achievement or metric. Role bullets and achievement panels repeat each other by
 default, and a reader who notices reads the second copy as padding. See

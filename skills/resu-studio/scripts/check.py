@@ -318,8 +318,8 @@ def check_proposals(path, facts_ids, ask_ids, faults, notes):
     for e in entries[1:]:
         if "Not on the CV" in e and "**Costs:**" not in e:
             pid = e.split(".", 1)[0].strip()
-            notes.append("%s %s adds a line without saying what it costs. Name the removal "
-                         "or say the budget rises." % (name, pid))
+            notes.append("%s %s adds a line without explaining the resulting length. Explain "
+                         "growth; propose a tradeoff only under an explicit user/application limit." % (name, pid))
     return text
 
 

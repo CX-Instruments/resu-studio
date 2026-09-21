@@ -14,6 +14,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 TESTS = [
+    ("test_open_studio.py", "single browser launch of the exact generated Studio"),
     ("test_writing.py", "writing modes, approvals, assembly and browser handoff"),
     ("test_pdf_reading_order.py", "default renderer and Studio PDF reading order"),
     ("test_find_python.py", "finding Python, conda installs included"),

@@ -4,7 +4,7 @@ description: This skill should be used whenever the user is applying for a job, 
 license: AGPL-3.0-or-later
 compatibility: Runs its scripts with Python 3 (standard library only) and prints PDFs through a Chromium-family browser such as Chrome, Edge or Chromium. Works in any agent that can run commands; in a chat that cannot, the scoring, proposals and letter still work and the studio and PDF do not.
 metadata:
-  version: "0.7.0"
+  version: "0.7.1"
   author: CX Instruments
   homepage: https://github.com/CX-Instruments/resu-studio/blob/main/README.md
 ---
@@ -17,7 +17,7 @@ One application journey. Continue authorised work through its internal steps; pa
 1. SOURCES     capture the ad and every CV variant, verbatim, unedited
 2. ATOMISE     facts ledger from the CVs, asks ledger from the ad
 3. SCORE       assess the source, prepare the guiding brief and writing samples
-4. REWRITE     the selected mode and brief drive reviewable changes within the budget
+4. REWRITE     the selected mode and brief drive reviewable changes, preserving substance
 5. DECIDE      the person accepts, rejects or asks for a rewrite, item by item
 6. ASSEMBLE    assemble.py bakes the decisions into the markdown, then rescore
 7. LETTER      optional companion, only when requested
@@ -86,6 +86,15 @@ Read `references/writing-engine.md` after assessing the sources and on every rew
 After scoring, continue into an application brief and actual profile/bullet samples in the Studio's Writing tab. Give a short comparison in chat and the Studio link. The user can explore or create a mode without changing their CV. **“Use this mode and rewrite my CV” selects the direction and requests generation together.** A returned handoff or equivalent chat instruction authorises generation: do not add a second permission question.
 
 Compare the samples beside one another before handing them over. Different mode names must represent visible differences in emphasis, construction or rhythm, not synonym swaps. Follow the contrast review in `references/writing-engine.md`; retain the same evidence boundaries in every version. The Studio compares one original passage at a time and offers an optional guided personal-mode builder. Carry the chosen direction through the full rewrite, not just the preview.
+
+**Rewrite to each mode's tone and positioning.** Recast the profile and experience examples with meaningful differences in emphasis, argument, sentence construction and rhythm, then carry the chosen direction through the full rewrite. The source file and text labelled **Original** remain a faithful, complete quotation. Suggested wording can change substantially: preserve the person's meaning, evidence, breadth, supported pillars and distinctive contribution (UVP), rather than freezing their phrasing. The profile must still explain who they are, what they bring and why their contribution matters. Condensed comparison examples are permitted and labelled as previews; their length never becomes the full rewrite's target. Augment means strengthen and develop the case. Never make condensation, page savings or fitting a card the purpose of rewriting. Read `references/writing-engine.md` before drafting.
+
+**Write the full profile in at least four substantive paragraphs.** Keep more when
+the person's evidence needs them. Never deliberately reduce it to two sentences or
+four token sentences merely to pass a count. Develop their professional identity and
+breadth, capabilities and methods, contribution and proof, and supported working
+approach or distinctive value in a natural order. Do not invent claims to fill space.
+Short voice previews do not set the full profile's structure or length.
 
 After generation, hand over the suggestions for acceptance, rejection, editing or another version. Returned decisions authorise their assembly. Preserve unresolved requests and unaffected decisions. Read the assembled CV as a whole before finishing. Explain what is ready and what, if anything, needs their input. The score is a coverage diagnostic, not a writing-quality grade.
 
@@ -219,12 +228,14 @@ is shared by every job.
 - **Resu Desk** is `4 Finished documents/Resu Desk.html`: every job, its stage, closing
   date, score and documents on one page. It rebuilds itself whenever a job, a studio or a
   PDF changes. Hand it over whenever it changed, in the same reply, the same as the studio.
-- **Open the Desk and the Studio in their web browser, never in an editor or file preview.**
-  A preview shows the page as a file, and its buttons cannot open a new browser tab. When
-  you can run commands, open the file for them with `start "" "<path>"` on Windows,
-  `open "<path>"` on macOS or `xdg-open "<path>"` on Linux. Otherwise tell them to
-  double-click the file in their folder. On the Desk, **Open Studio** and the PDF buttons
-  open in a new tab, so the Desk stays open.
+- **Deliver a labelled list of clickable HTML files in the same reply:** Resu Studio
+  and Resu Desk, using the exact generated paths printed by the build. Tool output or
+  a browser launch is not the handoff. Follow `references/studio.md`, "Open and hand over".
+  On the person's computer, run `scripts/open_studio.py "<exact generated Studio path>"`
+  with the discovered Python. It attempts one browser launch and guards against repeats.
+  Never open `assets/studio.html`, guess a filename, loop over HTML files, or retry via
+  shell commands. Rebuilds update the same file: give both links and say to refresh
+  the existing tab. Use `--again` only if the user explicitly asks to reopen it.
 - **Changes made on the Desk come back as a pasted block or `desk-updates.json`.** Save it
   to a file and run `python3 scripts/jobs.py apply-desk <file>`. Read every `REFUSED` line
   back to them in plain words: it means the job changed after that Desk was built, and
@@ -272,10 +283,11 @@ and use the newer one.
 ever written about their working life. The page holds a small selection of it. Every
 printed line traces to a fact; most facts do not print.
 
-**2. Every slot has a budget, declared before anything is written.** A role has a
-bullet count, the skills column a line count, the page a page count. An addition
-requires a removal, or an explicit decision by the person to raise the budget. Nothing
-is ever cut silently: a removal is a proposal like any other, with its own reason.
+**2. Content comes before space.** Record the existing length as a baseline, not a
+mandatory cap. Only the person's explicit limit or an application requirement sets a
+hard budget. Augmentation may add bullets, paragraphs and pages. Explain growth; never
+trade away distinctive evidence to keep the old count. Under a genuine limit, propose
+specific tradeoffs for review. Nothing is cut silently or solely to demonstrate a mode.
 
 **3. Reinforce with purpose; remove padding.** A profile may state the capability that experience proves. Before proposing a line, distinguish that useful relationship from repeating the same achievement or metric. See `references/proposing-changes.md` for how to split a
 partial overlap so each half keeps what is unique to it.
@@ -419,7 +431,7 @@ Name the recorded writing mode in the first progress update after importing the 
 
 On a mode switch, first check the returned `transition`: a restored saved round needs a Studio rebuild, not another generation. Preserve current manual wording and keep decisions while offering changed-mode alternatives as suggestions. Follow `writing-engine.md` for reusing unchanged proposals, compact history retrieval and updating an existing personal-mode option without losing its earlier versions.
 
-Write `proposals.md` in the job folder. Use `templates/proposals.md`: complete current/suggested text, a real line or addition target, reason, purpose, claim map and evidence. Requirement ids are necessary for relevance changes; clarity, voice and other useful changes do not need a fabricated requirement. Keep the page and bullet budget. Optional achievements must earn their space and need neither a fixed count nor multiple employers.
+Write `proposals.md` in the job folder. Use `templates/proposals.md`: complete current/suggested text, a real line or addition target, reason, purpose, claim map and evidence. Requirement ids are necessary for relevance changes; clarity, voice and other useful changes do not need a fabricated requirement. Preserve substance and respect explicit application limits; the existing page and bullet counts are a baseline, not a reason to cut. Optional achievements must earn their space and need neither a fixed count nor multiple employers.
 
 Review all shared objectives and publish with `writing.py publish` before rebuilding. The Studio reads the published record; a loose proposals file cannot replace an approved version.
 

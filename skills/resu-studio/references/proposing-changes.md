@@ -37,7 +37,7 @@ The fields, in the order `templates/proposals.md` sets them out:
 | `Currently:` | every entry. The complete existing text, or `Not on the CV.` for an addition |
 | `Suggested:` | every entry. The complete replacement text, or `Delete this bullet.` for a removal |
 | `Why:` | every entry. One or two sentences |
-| `Costs:` | an addition. Which existing line comes out, or "budget rises from 8 to 9, confirm" |
+| `Costs:` | an addition. Explain the resulting length; identify a tradeoff only under an explicit user/application limit |
 | `Answers:` | requirement ids for relevance changes; optional for other purposes |
 | `Purpose:` | relevance, evidence visibility, comprehension, differentiation, voice, economy, accuracy or structure |
 | `Claims:` | ordered JSON text/facts entries covering every word of changed factual text |
@@ -123,7 +123,8 @@ is being proposed.
 
 ## The budget check, before writing anything
 
-Declare the budget first, from the current CV:
+Record the baseline first, from the current CV. These counts describe what exists;
+they are not limits unless the person or employer explicitly set them:
 
 ```
 <the current employer>   8 bullets
@@ -133,14 +134,12 @@ skills column            8 group lines
 pages                    3
 ```
 
-**An addition requires a removal.** If you propose four new bullets for a role that
-currently has eight, either propose four removals or say plainly that the role goes
-to twelve and ask whether that is acceptable. Handing somebody four additions and
-letting them discover the bloat themselves is the failure mode this whole skill
-exists to prevent.
-
-If the person raises a budget deliberately, record the new number and move on. It is
-their CV.
+**An addition does not require a removal.** Explain any growth and why the evidence
+earns it. A request to augment already authorises proposing supported additions.
+Do not ask for another permission just because a baseline count grows. Preserve the
+profile's breadth, experience detail, pillars and distinctive value. If an explicit
+page, word or bullet limit applies, record its source and propose specific tradeoffs
+for review. Never invent a cap or remove substance merely to keep a layout compact.
 
 ## The duplication check, before writing anything
 

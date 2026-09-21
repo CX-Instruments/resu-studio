@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.1, 21 September 2026
+
+- Use a guarded, single browser launch of the exact generated Studio. Always hand
+  over labelled Resu Studio and Resu Desk links; rebuilds do not reopen windows.
+- Require the complete, faithfully quoted original profile in writing comparisons.
+  Rewrite examples and the chosen full CV in the mode's tone and positioning;
+  condensed comparison examples never set the full rewrite's length.
+- Preserve profile breadth, experience detail, evidenced pillars and distinctive
+  contribution. Full generated profiles need at least four substantive paragraphs;
+  publication checks changed profiles and requires a source-to-draft preservation review.
+- Treat existing page and bullet counts as a baseline, rather than forcing additions
+  to displace useful evidence. Preserve paragraph boundaries when assembling additions.
+
 ## 0.7.0, 21 September 2026
 
 **Choose a writing direction before the full rewrite.** The Studio opens on a Writing

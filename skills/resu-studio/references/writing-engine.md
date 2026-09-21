@@ -10,6 +10,67 @@ Read the complete CV and job pack. Capture the exact source wording before inter
 
 Positioning is reconsidered for every advertisement. A reusable mode contributes preferences; this application's evidence and priorities determine its case. A statement about future direction is a targeting signal, not sector experience.
 
+## Rewrite for the mode while carrying the person's substance
+
+The goal is an effective rewrite in each mode's tone and positioning. Rebuild the
+argument, emphasis, information order, sentences and rhythm as needed to deliver that
+direction. The examples must demonstrate real rewrites, and the full CV must carry
+through the chosen mode. Keeping the source wording is not the goal of this step.
+
+Separate the source from the suggested rewrite. The source file and anything labelled
+**Original** must quote the complete source passage faithfully, in source order. Never
+rewrite, shorten or substitute that text and still call it original. The suggested
+profile and bullets may be substantially reworded and reorganised. Preserve their
+meaning, evidential depth, candidate identity and distinctive contribution through
+the new writing. The profile must still establish who the person is, the breadth of
+their capabilities, what they contribute and why that contribution matters to this job.
+
+Condensed comparison examples are permitted when clearly labelled as previews of the
+mode's tone and positioning. Their reduced scope or length is not the full rewrite's
+target. A mode choice authorises reviewable rewritten wording. It does not make
+condensation, page savings or eliminating substance an objective. "Augment" means
+strengthen and develop the existing case using supported detail.
+
+Before a full rewrite, inventory the complete profile and affected experience:
+career span and breadth, ownership, methods, technical vocabulary, scale, conditions,
+stakeholders, outcomes, supported working habits, strengths and distinctive value.
+Read all supplied source variants; record conflicts rather than silently choosing the
+weakest wording. The brief is a guide to those sources, not a compressed substitute
+for them. Preserve the relationships that make these facts a recognisable candidate.
+
+The full generated profile has **at least four substantive paragraphs**, with more
+where needed. Develop the person's breadth and professional identity, capabilities
+and methods, contributions and proof, and supported working approach or distinctive
+value. These are dimensions to retain, not four fixed sentence templates. Do not
+deliberately write a two-sentence summary, split two sentences into four fragments,
+or invent evidence to fill a paragraph. Augmentation builds on all supplied profile
+material and relevant supported experience. If the sources cannot support a
+meaningful profile, retain the source and ask only for the missing substance.
+
+Represent each paragraph as its own source-line proposal, with additional paragraphs
+as explicit additions after a profile paragraph (`profile/2/+0`, for example, using
+the real section slug). For a new profile, use a paragraph-format `Section` with at
+least four separate lines. `publish` checks the resulting profile structure when
+profile changes are proposed; voice previews are exempt. Do not evade the requirement
+by overwriting the source, renaming its heading, or labelling full-profile text a preview.
+
+For the `preservation` review, trace that inventory to the proposed full text and
+record where every distinct contribution survives in the newly written case. This
+checks meaning and function, not similarity to the original phrasing or sentence order.
+Also check that the selected tone and positioning are actually realised: an unchanged
+profile or superficial synonym swaps do not fulfil a requested mode rewrite. Check the evidenced pillars and
+UVP against the full source, not just the sample or brief. If information is moved,
+name its destination and ensure the opening still communicates the candidate's case.
+If a substantive omission is necessary under an explicit user request or application
+limit, identify exactly what would go and why as a reviewable change. Otherwise
+restore it before publishing. A claim map proves support for what remains; it does
+not prove that nothing valuable was lost. Word counts cannot prove preservation.
+
+There is no default mandate to shorten a CV or keep its existing page/bullet count.
+Use additional paragraphs, bullets or pages when the evidence needs them. Layout
+adapts to content. Respect actual employer/user limits through explicit tradeoffs,
+never by silently stripping identity, technical detail or proof to save space.
+
 ## Prepare the direction and examples
 
 After the source assessment, run `python3 scripts/writing.py modes`. Read the available definitions. Prepare an application-specific input using `templates/writing-input.json` as its shape, replacing the empty values and placeholders with the actual IDs, evidence and samples.
@@ -21,7 +82,7 @@ The brief contains:
 - each pillar, supported with fact ids or explicitly absent;
 - the section plan: what each section contributes and which evidence earns space;
 - voice and the person's preferences;
-- application limits, the existing page and bullet budget, and unresolved questions.
+- explicit application/user limits, the existing length as a baseline, and unresolved questions.
 
 `brief.priorities` is a non-empty array of **requirement ID strings from this job's `asks.md`**, for example `"priorities": ["a1", "a2"]` when those are the actual recorded IDs. Read the IDs from that file; do not substitute requirement descriptions, objects such as `{"id":"a1","facts":["f1"]}`, or candidate fact IDs. Priorities say what matters to the employer, not what the candidate has proved. An important requirement may remain a gap. Evidence mappings use a separate source:
 
@@ -34,7 +95,7 @@ The brief contains:
 
 Use `positioning.md` for the evidence interpretation and `rewriting.md` for sentence execution. Choose evidence before polishing. A strong existing line can stay. Related clauses forming one accomplishment belong together. A profile can establish a capability that experience proves without repeating the same achievement.
 
-Prepare a profile summary and the same experience bullet for each offered mode, normally all built-ins initially. Quote each original exactly. `line` names the source line; `lines` can name several source profile paragraphs. A missing profile uses `line: "new:profile"` and empty `current`. Samples are provisional, not modifications to the source. Map the full suggested text to evidence using ordered `claims` entries, each with exact `text` and supporting `facts`. The entries, joined with spaces, must reproduce the suggestion. Then assess whether those sources actually support each clause; a valid reference alone proves nothing about meaning.
+Prepare a profile example and the same complete experience bullet for each offered mode, normally all built-ins initially. Quote each original exactly. `line` names a single-paragraph profile or one complete bullet; `lines` must name every paragraph or bullet of a multi-part source profile in source order. Never label an excerpt as the original profile. A genuinely missing profile uses `line: "new:profile"` and empty `current`. Samples are rewrites demonstrating each mode's tone and positioning. They may be condensed for comparison, but are not automatically applied to the CV and do not set the full rewrite's length. Map the full suggested text to evidence using ordered `claims` entries, each with exact `text` and supporting `facts`. The entries, joined with spaces, must reproduce the suggestion. Then assess whether those sources actually support each clause; a valid reference alone proves nothing about meaning.
 
 Do not manufacture evidence to demonstrate differences. If the source does not contain a usable experience example, ask the one material question needed. Otherwise proceed with the strongest available evidence and omit unsupported pillars.
 
@@ -42,7 +103,7 @@ Do not manufacture evidence to demonstrate differences. If the source does not c
 
 Modes are writing strategies, not synonym lists. Read each definition's emphasis and behaviour as well as its voice. Use the same source passages and evidence pool across the comparison; the profile may select different relevant facts, while the bullet retains its core action, ownership, qualifications and proof. Choose a bullet with enough real context to reveal different approaches. Do not dilute all modes into the same safe middle voice.
 
-Draft each sample from its strategy rather than paraphrasing the first mode. Credible foregrounds the method or working pattern; Direct foregrounds result or scale with greater compression; Warm brings the evidenced human context forward; Expressive uses an evidenced sequence or distinctive combination with different cadence. These are preferences, not compulsory templates for every line. None permits losing an essential qualifier, turning an aspiration into experience, or claiming an unmeasured benefit.
+Draft each sample from its strategy rather than paraphrasing the first mode. Credible foregrounds the method or working pattern; Direct foregrounds result or scale with plain sentence construction; Warm brings the evidenced human context forward; Expressive uses an evidenced sequence or distinctive combination with different cadence. These are preferences, not compulsory templates for every line. None permits losing an essential qualifier, turning an aspiration into experience, or claiming an unmeasured benefit.
 
 Before `prepare`, read the versions beside one another with the names hidden. For each pair, identify a substantive change in emphasis, information order, sentence construction or rhythm. Changing "cut" to "reduced" is not enough. Revise near copies. Record a short `difference` on each profile and bullet describing what this actual sample changes; use `why` to explain its application fit. A mode's promised personality is not evidence that the sample delivers it. If a particular passage reasonably stays the same, say so in `difference`; if both samples cannot demonstrate a distinction, offer fewer choices and explain the limit instead of padding the list. The script rejects identical pairs but cannot judge near copies or prose quality.
 
@@ -57,7 +118,7 @@ python3 scripts/build_studio.py --job <job id> --cv "<source CV.md>" --scorecard
 
 An agent-authored preparation format error is internal repair work. Correct it using the template and existing records, then continue building the Studio without asking the person to fix JSON or presenting it as a problem with their CV. Do not change the assessment or invent a mapping to make validation pass. Explain and seek input only when a missing fact, unresolved ambiguity or substantive blocker actually requires the person's involvement; if an internal failure cannot be resolved, report that limitation accurately.
 
-Open the Studio at its Writing tab and hand over Resu Desk. Explain the strongest supported pattern, the actual sample differences and the next action briefly in chat. The Writing view shows each original passage once; opening it reveals the mode versions together. The builder offers optional starting mode, emphasis, voice, rhythm, free-text direction and an explicit reusable-mode choice. Do not repeat those choices as a mandatory questionnaire in chat. The source score and writing samples belong to the same application experience.
+Follow `studio.md`, "Open and hand over", for one launch of the generated Studio and a labelled list of links to Resu Studio and Resu Desk. The Studio opens at Writing. Explain the strongest supported pattern, the actual sample differences and the next action briefly in chat. The Writing view shows each original passage once; opening it reveals the mode versions together. The builder offers optional starting mode, emphasis, voice, rhythm, free-text direction and an explicit reusable-mode choice. Do not repeat those choices as a mandatory questionnaire in chat. The source score and writing samples belong to the same application experience.
 
 Scoring depth is separate from writing quality. Read the full ad either way; use relevant, supported responsibilities to inform writing, without presenting unassessed requirements as verified matches. Do not inflate coverage counts to reward a more appealing voice.
 
@@ -99,13 +160,13 @@ The previous state is retained in `.writing` history; the browser retains the pe
 
 Read the current brief on every generation or revision. Use its evidence and section plan, then draft only useful changes in page order. The source CV is not freely regenerated. `templates/proposals.md` defines the reviewable output. Each changed factual passage has a claim map; each change has a concrete purpose. Requirements are mandatory for a relevance change, not for every clarity or voice improvement.
 
-Carry the selected mode's emphasis, construction and rhythm from the chosen samples into the full document. During the human-engagement and coherence review, compare representative full-CV passages with the selected samples: explain how the chosen direction survived beyond the preview. Keep section purposes distinct and allow a strong source line to stay; do not force every bullet into a signature formula.
+Carry the selected mode's emphasis, construction and rhythm into the full document, never the preview's reduced length or evidence selection. Draft from the complete source and preservation inventory. During the human-engagement and coherence review, compare representative full-CV passages with the selected samples: explain how the chosen direction survived beyond the preview. Keep section purposes distinct and allow a strong source line to stay; do not force every bullet into a signature formula.
 
 For a changed mode, read the previous active round and current decisions rather than starting from a blank document. Redraft only the proposals that need different wording or evidence. To retain unchanged proposals without copying their text through generation, put their UIDs in `reuse_proposals` on the draft review JSON and write only the changed/new proposals to the proposals file. `publish` combines them and validates the full resulting set; do not reuse a proposal and submit another for the same slot. An empty proposals file is allowed when all proposals are explicitly reused. Reused text still needs to fit the chosen mode and the shared objectives in the whole-document review.
 
-Keep an unchanged line unchanged. Protect useful context and raw numbers. Additions cost space and need an explicit removal or a user-approved higher budget. A move is an `Order` proposal naming the list and original indices. For section ordering, use `Line: document/sections` and `Order` containing every existing heading slug exactly once. For a new section, follow the `Section` contract in `achievements.md`, using `^` for a new profile before the first section. An optional achievement section must earn its space and can draw from one role; never force six lines or a cross-employer claim. A new section is proposed explicitly before its contents are treated as approved.
+Keep an unchanged line unchanged. Protect useful context and raw numbers. Explain additions and any growth; only explicit user/application limits require a tradeoff. Never remove substance merely to retain an existing count. A move is an `Order` proposal naming the list and original indices. For section ordering, use `Line: document/sections` and `Order` containing every existing heading slug exactly once. For a new section, follow the `Section` contract in `achievements.md`, using `^` for a new profile before the first section. An optional achievement section must earn its space and can draw from one role; never force six lines or a cross-employer claim. A new section is proposed explicitly before its contents are treated as approved.
 
-Before publication, inspect the proposed document as a whole, not just the individual sentences. Complete `templates/writing-review.json` with substantive notes under each objective: pillars, ATS content, human engagement, tailoring, integrity, coherence and constraints. At this stage ATS review covers structure and wording, not a claim that a PDF has been checked. Resolve findings before publication; the script validates completeness, not the quality of your judgement.
+Before publication, inspect the proposed document as a whole, not just the individual sentences. Complete `templates/writing-review.json` with substantive notes under each objective: pillars, ATS content, human engagement, tailoring, integrity, coherence, constraints and preservation. At this stage ATS review covers structure and wording, not a claim that a PDF has been checked. Resolve findings before publication; the script validates completeness, not the quality of your judgement.
 
 ```bash
 python3 scripts/writing.py publish --job <job id> --proposals "<proposals.md>" --input "<draft-review.json>"

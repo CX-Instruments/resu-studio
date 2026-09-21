@@ -83,8 +83,10 @@ say what it is needed for. Do not install anything without asking.
 `D:\CVs` is accepted as written. The refusal above is only for a Linux or Mac session
 that cannot see a drive letter.
 
-**Open the studio as a file.** It is a complete HTML page with nothing to install. Say
-where it is, and offer to open it in their browser if you can.
+**Hand over both HTML links.** It is a complete HTML page with nothing to install.
+Follow `studio.md`, "Open and hand over": use the exact generated Studio and Resu Desk
+paths, attempt one Studio launch through `open_studio.py` on the user's computer,
+and refresh the existing tab after rebuilds. Always include both links in the reply.
 
 ## In a chat that cannot run anything
 

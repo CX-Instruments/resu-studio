@@ -120,6 +120,138 @@ class WritingTests(unittest.TestCase):
         run("scripts/build_studio.py", "--job", self.job, "--cv", self.cv,"--out",self.html)
         return self.html
 
+    def test_full_profile_required_and_previews_never_modify_source(self):
+        original = self.data["samples"][0]["profile"]["current"]
+        paragraphs = [original, "Builds auditable procedures across four venues.",
+                      "Mentors coordinators and connects practical training with service delivery."]
+        for separator in ("\n\n", "\n- "):
+            full = separator.join(paragraphs)
+            if separator == "\n- ":
+                full = "- " + full
+            Path(self.cv).write_text(CV.replace(original, full), encoding="utf-8")
+            before = Path(self.cv).read_bytes()
+            for index in (0, 1, 2):
+                partial = copy.deepcopy(self.data)
+                for sample in partial["samples"]:
+                    sample["profile"].update(line="profile/%d" % index, current=paragraphs[index])
+                with self.assertRaisesRegex(ValueError, "complete source profile"):
+                    W.prepare(self.job, self.cv, partial)
+            complete = copy.deepcopy(self.data)
+            for sample in complete["samples"]:
+                sample["profile"].pop("line")
+                sample["profile"].update(lines=["profile/0", "profile/1", "profile/2"],
+                                          current=" ".join(paragraphs))
+            state = W.prepare(self.job, self.cv, complete)
+            for sample in state["samples"]:
+                self.assertEqual(sample["profile"]["current"], "\n\n".join(paragraphs))
+                self.assertTrue(sample["profile"]["preview_only"])
+            self.request("preview", adjustments="Show a compact voice demonstration.")
+            self.build()
+            self.assertEqual(Path(self.cv).read_bytes(), before)
+            # Even a request to generate a full rewrite only records intent.
+            W.prepare(self.job, self.cv, complete)
+            self.request()
+            self.assertEqual(Path(self.cv).read_bytes(), before)
+
+    def test_preservation_review_required_before_publication(self):
+        self.request()
+        self.review.pop("preservation")
+        with self.assertRaisesRegex(ValueError, "preservation"):
+            self.publish()
+        self.review["preservation"] = {"status":"needs_attention", "notes":"Source context was lost."}
+        with self.assertRaisesRegex(ValueError, "Resolve"):
+            self.publish()
+        self.assertIsNone(W.load(self.job).get("batch"))
+
+    def test_legacy_profile_excerpt_expands_from_saved_source_without_resetting_state(self):
+        original = self.data["samples"][0]["profile"]["current"]
+        paragraphs = [original, "Writes venue incident procedures.", "Trained 35 staff."]
+        Path(self.cv).write_text(CV.replace(original, "\n\n".join(paragraphs)), encoding="utf-8")
+        data = copy.deepcopy(self.data)
+        for sample in data["samples"]:
+            sample["profile"].update(lines=["profile/0", "profile/1", "profile/2"], current=" ".join(paragraphs))
+        legacy = W.prepare(self.job, self.cv, data)
+        for sample in legacy["samples"]:
+            sample["profile"].pop("lines")
+            sample["profile"].update(line="profile/1", current=paragraphs[1])
+        W.save(self.job, legacy)
+        saved = W.load(self.job)
+        # A later source edit must not replace the saved original shown for an old sample.
+        Path(self.cv).write_text(CV, encoding="utf-8")
+        view = W.page_data(self.job, self.cv)
+        self.assertEqual(view["phase"], "stale")
+        for sample in view["samples"]:
+            self.assertEqual(sample["profile"]["current"], "\n\n".join(paragraphs))
+        self.assertEqual(W.load(self.job), saved)
+
+    def test_full_profile_cannot_be_published_as_two_paragraphs(self):
+        original = self.data["samples"][0]["profile"]["current"]
+        paragraphs = [original, "Writes procedures for venue operations.",
+                      "Trained 35 staff in the incident procedure.",
+                      "Connects documented processes with practical team training."]
+        Path(self.cv).write_text(CV.replace(original, "\n\n".join(paragraphs)), encoding="utf-8")
+        data = copy.deepcopy(self.data)
+        for sample in data["samples"]:
+            sample["profile"].update(lines=["profile/%d" % i for i in range(4)], current=" ".join(paragraphs))
+        W.prepare(self.job, self.cv, data)
+        self.request()
+        proposals = "\n\n".join(
+            f"## P{i}. Profile\n**Line:** profile/{i}\n**Currently:** {paragraphs[i]}\n"
+            "**Suggested:** Delete this paragraph.\n**Why:** Fit the short mode preview.\n"
+            "**Purpose:** economy\n**Decision:**\n" for i in (2, 3))
+        with self.assertRaisesRegex(ValueError, "at least four substantive paragraphs"):
+            W.publish(self.job, write(self.folder / "short-profile.md", proposals), self.review)
+        self.assertIsNone(W.load(self.job).get("batch"))
+
+    def test_profile_additions_remain_separate_paragraphs_after_assembly(self):
+        additions = ["Writes procedures for venue operations.",
+                     "Trained 35 staff in the incident procedure.",
+                     "Connects documented processes with practical team training."]
+        self.request()
+        proposals = "\n\n".join(
+            f"## P{i+1}. Profile paragraph\n**Line:** profile/0/+{i}\n**Currently:** Not on the CV.\n"
+            f"**Suggested:** {text}\n**Why:** Develop the supported profile.\n**Purpose:** evidence visibility\n"
+            f"**Costs:** One additional paragraph.\n**Draws on:** f1\n"
+            f"**Claims:** {json.dumps([{'text':text, 'facts':['f1']}])}\n**Decision:**\n"
+            for i, text in enumerate(additions))
+        state = W.publish(self.job, write(self.folder / "full-profile.md", proposals), self.review)
+        self.assertEqual(len(W.batch_for(state)["records"]), 3)
+        decisions = {"adds": {"profile/0": [{"text": t} for t in additions]}}
+        assembled, _ = A.assemble(CV, decisions)
+        units = [u for u in A.scan(assembled)["units"] if u["id"].startswith("profile/")]
+        self.assertEqual(len(units), 4)
+        self.assertTrue(all(u["kind"] == "para" for u in units))
+        self.assertEqual([u["text"] for u in units][1:], additions)
+        self.assertIsNone(A.verify(CV, decisions, assembled))
+
+    def test_new_profile_needs_four_real_paragraphs_not_four_sentences(self):
+        source = CV.replace("## PROFILE\nCoordinates venue teams and improves procedures.\n\n", "")
+        self.cv = write(self.folder / "without-profile.md", source)
+        data = copy.deepcopy(self.data)
+        for sample in data["samples"]:
+            sample["profile"].update(line="new:profile", current="")
+        state = W.prepare(self.job, self.cv, data)
+        record = {"kind":"section", "line":"new-section/profile", "section": {
+            "slug":"profile", "title":"Profile", "after":"^", "format":"paragraphs",
+            "lines":[{"text":"One sentence. Another sentence. Third sentence. Fourth sentence."}]}}
+        with self.assertRaisesRegex(ValueError, "at least four"):
+            W.validate_profile_structure([record], state)
+        record["section"]["lines"] = [{"text":text} for text in (
+            "Coordinates venue teams and improves procedures.", "Writes venue incident procedures.",
+            "Trained 35 staff in incident response.", "Connects procedure writing with team training.")]
+        W.validate_profile_structure([record], state)
+        record["section"]["format"] = "bullets"
+        with self.assertRaisesRegex(ValueError, "at least four"):
+            W.validate_profile_structure([record], state)
+
+    def test_build_handoff_links_point_to_real_generated_files(self):
+        target = self.folder / "Sample & role (review)-Studio.html"
+        out = run("scripts/build_studio.py", "--job", self.job, "--cv", self.cv, "--out", target)
+        links = dict(re.findall(r"\[([^\]]+)\]\(<([^>]+)>\)", out))
+        self.assertEqual(Path(links["Resu Studio"]), target.resolve())
+        self.assertEqual(Path(links["Resu Desk"]).name, "Resu Desk.html")
+        self.assertTrue(all(Path(p).is_file() for p in links.values()))
+
     def test_authorisation_versions_and_finish(self):
         with self.assertRaisesRegex(ValueError,"authorised"):
             W.publish(self.job, "missing.md", self.review)
@@ -421,6 +553,7 @@ counts:
             self.assertEqual(req["writing_request"]["mode"],"credible-conviction")
             self.assertEqual(req["writing_request"]["mode_name"],"Credible conviction")
             self.assertTrue(handoff.startswith('Rewrite my CV using “Credible conviction”.'))
+            self.assertIn("at least four substantive paragraphs", handoff)
             self.assertEqual(page.locator('.writing-request-summary').inner_text(),'Rewrite my CV using “Credible conviction”.')
             W.request(self.job,req); published=self.publish(); self.build()
             page.reload();page.wait_for_selector('#writing-content input[type="radio"]')

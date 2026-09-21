@@ -4,6 +4,28 @@ The Writing tab is the primary application entry. Read `writing-engine.md` for s
 
 # The studio, and Phases 3, 4 and 5 in full
 
+## Open and hand over
+
+After a successful build, copy the generated **Resu Studio** and **Resu Desk** Markdown
+links from its output into the user-facing reply as a labelled list. Use the real
+absolute paths, with forward slashes and angle brackets around targets containing
+spaces. In a temporary/cloud session, attach both files using that host's download
+links instead. Also link any other finished HTML produced in this handoff, labelled
+by purpose. Do not enumerate templates, backups, or another application's files.
+
+On the user's own computer, open just the generated Studio with the discovered
+Python and `scripts/open_studio.py "<exact path from the successful build>"`.
+The helper passes a single encoded file URL directly to a browser and records one
+attempt per file. Never launch the shipped `assets/studio.html` template. Never use
+`start`, `Start-Process`, a shell command assembled from a path, browser-profile
+creation, or a fallback/retry loop. Do not launch Resu Desk automatically as well.
+
+A launch request does not prove a visible tab opened. If it fails or cannot be
+verified, report that briefly and deliver both links. Do not try again unless asked;
+`--again` is reserved for an explicit user request to reopen. A rebuild does not need
+another window: update the same file and tell the person to refresh the existing tab.
+In a cloud session, deliver downloads without trying to launch a desktop browser.
+
 SKILL.md carries the short version of these phases. This is the whole of them, with
 every reason behind each rule. Read the section for a phase when that phase starts.
 
@@ -155,7 +177,7 @@ Suggested     the full replacement text, ready to paste, or `Delete this bullet.
 Why           one or two sentences
 Answers       which ask ids this serves
 Draws on      which fact ids this rests on
-Costs         on an addition, which line comes out or how the budget rises
+Costs         on an addition, explain growth and any explicit-limit tradeoff
 Decision      left blank, for the person
 ```
 

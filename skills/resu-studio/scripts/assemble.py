@@ -370,6 +370,10 @@ def _added_lines(uid, anchor, wrapw):
             got = [anchor["lead"] + t]
         else:
             got = _wrap(anchor["lead"] if anchor else "", "", t, cont, wrapw)
+            if kind == "para":
+                # An added profile paragraph must not merge into its neighbour
+                # when the Markdown is scanned or rendered again.
+                got = [""] + got + [""]
         out.append((t, got))
     return out
 

@@ -50,7 +50,8 @@ make the person sound like the advertisement.
 
 ## Set the case before editing lines
 
-In five working lines, identify:
+Identify the following, with enough detail to retain the candidate's actual breadth.
+This brief guides the full source; it never replaces it with a short generic persona:
 
 - the target and what it values
 - two to four strongest relevant assets or repeated strengths
@@ -62,7 +63,8 @@ If a strength or motivation has no proof, ask one useful question or leave it ou
 
 ## Select, then write
 
-- Build one coherent case; do not polish every fact and keep them all.
+- Build one coherent case while preserving the source profile's breadth and distinctive
+  evidence. Prioritising does not authorise discarding substance to save space.
 - Choose the strongest relevant evidence. Differentiate through detail, not adjectives.
 - A bullet should show the person's contribution and its project, problem or context;
   add the result or value where it is known.

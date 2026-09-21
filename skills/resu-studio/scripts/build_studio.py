@@ -1086,15 +1086,20 @@ def main():
     print("  content: %s. Marks saved against a different one are checked against "
           "their own\n           wording before any of them is put back on a line."
           % fp)
+    desk_path = None
     try:
         import build_desk
-        build_desk.refresh(quiet=False)
+        desk_path = build_desk.refresh(quiet=False)
     except Exception as e:                                     # noqa: BLE001
         sys.stderr.write("resu-studio: Resu Desk was not updated (%s).\n" % e)
     print()
-    print("Hand the file over so they can open it themselves. It draws their own CV live")
-    print("with every layout, palette and typeface as a control, and prints the command for")
-    print("whatever they land on.")
+    from pathlib import Path
+    print("Include these file links in the same reply:")
+    print("- [Resu Studio](<%s>)" % Path(out).resolve().as_posix())
+    if desk_path:
+        print("- [Resu Desk](<%s>)" % Path(desk_path).resolve().as_posix())
+    print("On the user's computer, open only this generated Studio with scripts/open_studio.py.")
+    print("Rebuilds do not need a new window. Refresh the existing tab; always deliver both links.")
     return 0
 
 

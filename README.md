@@ -4,7 +4,11 @@ Build a tailored CV, resume and cover letter for every job.
 
 ![The Writing view: compare four directions for the same passage from a fictional CV](docs/images/writing.png)
 
-**New in 0.7.0: choose how your CV makes its case.** Compare writing modes using your
+**Fixed in 0.7.1:** open the generated Studio once, get links to both Studio and Desk,
+and rewrite in your chosen mode without losing the profile's substance or distinctive
+contribution. The full profile develops the case in at least four substantive paragraphs.
+
+**Introduced in 0.7.0: choose how your CV makes its case.** Compare writing modes using your
 own profile and experience, explore a personal style, and request the full rewrite
 when you are ready. Your edits and decisions stay with you when you switch modes.
 [See the writing workflow below](#choose-how-your-cv-makes-its-case).
@@ -82,6 +86,21 @@ Each advertisement gets its own positioning, even when you reuse a mode.
 Every mode must combine evidenced strengths, working habits, impact and distinctive
 contribution with readable ATS content, human engagement and relevance to the job.
 Unsupported pillars stay out. Tone never creates experience or changes a fact.
+
+Each writing mode rewrites the profile and experience examples in its own tone and
+positioning. The chosen direction carries through the full CV, with new phrasing and
+emphasis that preserve the candidate's meaning, evidence and distinctive contribution.
+Text labelled **Original** remains faithful to the complete source passage. Comparison
+examples may be condensed; their length is not a target for the full rewrite.
+The full profile uses at least four substantive paragraphs,
+retaining more where needed for breadth, methods, proof and distinctive contribution.
+Augmentation builds on the existing material. Existing page and bullet counts are a
+baseline, not a reason to remove substance; explicit application limits are handled
+through visible, reviewable tradeoffs.
+
+Each Studio handoff includes clickable links to **Resu Studio** and **Resu Desk**.
+The generated Studio is opened once on your computer; rebuilds update the same file
+for you to refresh, without repeatedly launching browser windows.
 
 Choose **Use this mode and rewrite my CV**. That choice and request travel together:
 copy the handoff into your AI chat to start generation, without another confirmation.

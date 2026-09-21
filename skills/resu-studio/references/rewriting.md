@@ -37,6 +37,16 @@ Keep a strong existing line. Improve an awkward or inaccessible line when the be
 
 ## Shorten by cutting repetition, never by cutting content
 
+Shortening is not the default task. A writing mode changes expression, not the
+amount of evidence the candidate is allowed to keep. A condensed comparison sample
+demonstrates a rewrite in the mode's tone and positioning. When asked to augment, build on the complete source
+profile and experience; never replace them with the preview. Preserve the supported
+pillars and UVP in the profile and the concrete proof in experience. Read the
+preservation inventory and review rules in `writing-engine.md` before any full rewrite.
+The full profile must have at least four substantive paragraphs, retaining more when
+needed. Two sentences are not the target. Four thin sentences do not substitute for
+a developed account of breadth, capability, contribution, proof and distinctive value.
+
 Everything else in this file tells you what to take out. This section is the floor,
 and it matters more than any of them, because a rewrite that loses information has not
 been tightened. It has been amputated, and the person cannot see what went.
@@ -87,7 +97,12 @@ matters. Cutting both halves is the mistake this section exists to stop.
 
 ## Keep their voice, not yours
 
-**A rewrite is their sentence made stronger. It is not a new sentence.**
+**A rewrite makes their case stronger in the requested tone and positioning.**
+Recast sentences, change information order and develop the argument when that serves
+the selected mode. Preserve the person's meaning, evidence and distinctive contribution
+through the new language. Their original phrasing is the source, not a constraint on
+how a requested rewrite may be expressed. Keep text labelled **Original** faithful to
+that source, separately from every suggested rewrite.
 
 - **Preserve identity, ownership and the selected voice.** Every proposed CV sentence uses implied subject and no personal pronouns. If the source uses pronouns, propose the corresponding wording changes visibly; do not silently apply them. Warmth comes from concrete work, beneficiaries and readable cadence. Chat and letters follow their own grammar.
 
@@ -96,8 +111,10 @@ matters. Cutting both halves is the mistake this section exists to stop.
   a style one.
 - **Keep their capitalisation of names.** A role title they capitalised is how it was
   called there. Lowercasing it turns a job title into a common noun.
-- **Keep the words they chose**, wherever those words are accurate. The point is to
-  make their line land, not to replace it with a line you would have written.
+- **Keep precise terms and factual meaning.** Retain technical vocabulary, proper
+  names and qualifications that carry evidence. Rework surrounding phrasing and
+  narrative emphasis to realise the selected mode; do not reduce the person's case
+  to generic language in pursuit of concision.
 
 Changing any of these is a change like any other, and it needs a reason in `Why:`. If
 there is no reason, it is not a change, it is a habit.
