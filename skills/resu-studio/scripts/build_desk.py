@@ -42,6 +42,7 @@ sys.path.insert(0, HERE)
 import paths      # noqa: E402
 import documents  # noqa: E402
 import jobs       # noqa: E402
+import writing    # noqa: E402
 
 DESK_NAME = "Resu Desk.html"
 
@@ -144,6 +145,7 @@ def desk_data(base):
             "after": scores.get("after"),
             "notes": rec.get("notes") or [],
             "docs": job_documents(rec, ledger, base),
+            "writing": writing.summary(rec["id"]),
         })
     return {
         "schema": 1,

@@ -220,3 +220,6 @@ into `cv-<variant>-archive.md` in full, and the CV as it arrived still carries i
 are separate contact entries even with no blank line between them, so one can come off
 without the others. They still count as the lines they are, so the in-and-out count is
 unchanged.
+
+
+Engine handoffs also carry application, source and published-batch identity plus each suggestion's content id. Do not remove these fields or reuse a previous batch's approvals. `section_order` lists every original heading slug in its approved order; `order` remains the within-section/role line order. New sections use the contract in `achievements.md`.

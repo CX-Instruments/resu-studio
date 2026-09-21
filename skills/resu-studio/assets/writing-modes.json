@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "default": "credible-conviction",
+  "modes": [
+    {
+      "id": "credible-conviction", "version": 2, "name": "Credible conviction",
+      "signature": "The method behind the contribution",
+      "impression": "A capable person whose relevant contribution is easy to understand and believe.",
+      "emphasis": "Lead with how this person does the relevant work: the supported method or working habit that connects their contributions. Use outcomes to substantiate that case.",
+      "voice": "Assured, specific, human and measured.",
+      "behaviour": "In the profile, connect relevant capability to a demonstrated working pattern, then anchor it in specific work. In the sample bullet, lead with the action or method and follow its causal link to the result where evidenced. Use complete, balanced sentences. Compared with Direct, the reader should first notice how the work was done rather than a compressed result. Apply this preference throughout the CV without forcing identical bullet openings.",
+      "boundaries": "No praise in place of proof, invented motivation, promoted ownership or compulsory metrics."
+    },
+    {
+      "id": "direct-impact", "version": 2, "name": "Direct and focused",
+      "signature": "The result and scale, up front",
+      "impression": "The contribution and its relevance are apparent at a glance.",
+      "emphasis": "Bring supported outcomes, scale and the most relevant capabilities forward.",
+      "voice": "Compact, confident and plain.",
+      "behaviour": "Make the profile compact: relevant identity and a small number of decisive facts, without an introductory journey. In the sample bullet, lead with the supported outcome or most informative scale fact, then compress the method into the remaining clause. Use short, plain sentence units. Compared with Credible, change the information order and density, not just the verb. Where no outcome is evidenced, foreground the actual deliverable; do not invent success.",
+      "boundaries": "Brevity cannot remove qualifying facts. Directness cannot enlarge a claim."
+    },
+    {
+      "id": "warm-collaborative", "version": 2, "name": "Warm and grounded",
+      "signature": "The people within the work",
+      "impression": "A recognisable practitioner whose work matters to colleagues and the people it serves.",
+      "emphasis": "Show supported judgement, collaboration, beneficiaries and working habits alongside outcomes.",
+      "voice": "Approachable, concrete and professionally assured.",
+      "behaviour": "In the profile, organise the relevant evidence around the people the candidate actually works with and the practical work they do together. In the sample bullet, bring that team, colleague or service interaction into the opening clause, then show the action and proof. Use natural, connected sentences with enough context to picture the work. If the evidence only supports team size, retain that scope without inventing collaboration, empathy or a benefit. Warmth comes from concrete human context, not warm adjectives.",
+      "boundaries": "Do not invent care, passion, personality or motivation. Keep employer relevance and proof visible."
+    },
+    {
+      "id": "expressive", "version": 2, "name": "Expressive and distinctive",
+      "signature": "A memorable problem-to-action story",
+      "impression": "A memorable account of a real contribution, in language the person recognises.",
+      "emphasis": "Highlight supported combinations of work, method and context that distinguish this application.",
+      "voice": "Lively, persuasive and natural.",
+      "behaviour": "Build the profile around a supported contrast or distinctive combination of work, with varied sentence lengths and concrete phrasing. Let the sample bullet unfold as a short problem-action-result sequence when that sequence is evidenced; a colon or two sentence units can give it a different cadence. If no problem is evidenced, use a distinctive method or combination instead. Allow restrained flair or playfulness that the person wants. The difference should survive removal of decorative adjectives and metaphors. Keep occupational terms and raw proof explicit.",
+      "boundaries": "No metaphors that imply new facts, slogans, self-praise or theatrical verb promotion. Application clarity and scanning requirements still apply."
+    }
+  ]
+}

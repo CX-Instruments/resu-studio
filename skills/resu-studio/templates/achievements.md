@@ -6,17 +6,7 @@ written: YYYY-MM-DD
 
 # Key achievements
 
-Six drafted lines, written at career level, for the person to pick from in the studio.
-`build_studio.py --achievements achievements.md` loads them into the Key achievements
-panel under Sections. Nothing prints until they tick it.
-
-**Each line reaches across more than one employer.** A line condensed out of a single
-role bullet says the same thing twice on one page, and if that bullet is later removed
-the achievement is left with no job behind it. Full rules: `references/achievements.md`.
-
-**Draft six and let them pick.** Six is a real choice where ten is a chore. They tick
-four to six, and ticking four is the common landing. If a sixth line only exists to
-reach six, it comes off. Picking for them is never the job.
+Optional supported candidates. Use as many entries as the evidence and page budget justify. A single role can support an achievement. For new engine work, prefer the section-proposal contract in `references/achievements.md`.
 
 ```
 id: k1

@@ -1,0 +1,9 @@
+{
+  "pillars": {"status": "needs_attention", "notes": ""},
+  "ats": {"status": "needs_attention", "notes": ""},
+  "human": {"status": "needs_attention", "notes": ""},
+  "tailoring": {"status": "needs_attention", "notes": ""},
+  "integrity": {"status": "needs_attention", "notes": ""},
+  "coherence": {"status": "needs_attention", "notes": ""},
+  "constraints": {"status": "needs_attention", "notes": ""}
+}

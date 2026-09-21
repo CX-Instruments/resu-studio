@@ -2,7 +2,12 @@
 
 Build a tailored CV, resume and cover letter for every job.
 
-![The studio: your CV drawn on A4, with every layout, palette and typeface as a control beside it](docs/images/studio.png)
+![The Writing view: compare four directions for the same passage from a fictional CV](docs/images/writing.png)
+
+**New in 0.7.0: choose how your CV makes its case.** Compare writing modes using your
+own profile and experience, explore a personal style, and request the full rewrite
+when you are ready. Your edits and decisions stay with you when you switch modes.
+[See the writing workflow below](#choose-how-your-cv-makes-its-case).
 
 It reads the advertisement and your CV, scores one against the other, and shows you
 where you stand before it changes a word. Every proposed change arrives as three
@@ -32,7 +37,9 @@ without softening.
 
 ## What comes out
 
-<img src="docs/images/print.png" alt="A finished CV page as printed to PDF, A4, with the skills panel, meters and typefaces exactly as the studio drew them" width="420" align="right">
+![The Studio's layout controls and A4 preview, using the fictional Alex Morgan CV](docs/images/studio.png)
+
+<img src="docs/images/print.png" alt="The fictional Alex Morgan CV printed on A4 in the Timeline spine layout" width="420" align="right">
 
 The PDF is printed, not redrawn. The same stylesheet, the same palette, the same
 paginator deciding the page breaks, put through a real browser. What you approved on
@@ -62,33 +69,40 @@ flagged. Change a stage, a date or add a note right on the page, then hand it ba
 AI, which writes it into your records. If a job changed in the meantime, it asks you which
 is right instead of writing over it. The Desk rebuilds itself whenever anything changes.
 
-## The seven phases
+## Choose how your CV makes its case
 
-Each one stops and waits for you, so nothing of yours is rewritten without your say. The
-one exception is reading your CV and the ad, which runs straight on into scoring, so the
-first thing you get back after saying how deep to go is the Studio with your score.
+![Create a personal writing mode with optional emphasis, voice and rhythm choices](docs/images/writing-custom.png)
 
-```mermaid
-flowchart TD
-    A["1 Sources<br/><small>the advertisement and your CV, captured verbatim</small>"]
-    B["2 Atomise<br/><small>your history into a facts ledger, the advertisement into an asks ledger</small>"]
-    C["3 Score<br/><small>one against the other, before anything is changed</small>"]
-    D["4 Propose<br/><small>current text, suggested text, reason</small>"]
-    E["5 Decide<br/><small>you accept or reject, one at a time</small>"]
-    F["6 Assemble<br/><small>the tailored CV, then rescore and show the movement</small>"]
-    G["7 Cover letter<br/><small>one page, in your voice</small>"]
-    A --> B --> C --> D --> E --> F --> G
-    C -. "the studio first appears here" .-> S(["The studio"])
-    D -. "rebuilt with the suggestions on the page" .-> S
-    F -. "rebuilt from the assembled CV, score moves" .-> S
-    G -. "rebuilt with the letter" .-> S
-```
+After reading your CV and the advertisement, the Studio shows a guiding brief and
+profile-summary and experience-bullet samples in different writing modes. Credible
+conviction is the default; direct, warm and expressive options are included. Explore
+your own direction conversationally and save a personal mode for later applications.
+Each advertisement gets its own positioning, even when you reuse a mode.
 
-The facts ledger is built once and reused. A second advertisement reads it rather
-than asking you for your CV again.
+Every mode must combine evidenced strengths, working habits, impact and distinctive
+contribution with readable ATS content, human engagement and relevance to the job.
+Unsupported pillars stay out. Tone never creates experience or changes a fact.
 
-The studio is rebuilt and handed back every time something on the page changes, so you
-never have to ask to see where things stand.
+Choose **Use this mode and rewrite my CV**. That choice and request travel together:
+copy the handoff into your AI chat to start generation, without another confirmation.
+The local HTML page collects your choices; it does not run an AI by itself. Review the
+resulting wording, keep or edit it, reject it, or ask for another version. The accepted
+changes are assembled and the complete CV is reviewed against the same brief.
+
+Resu Desk shows the selected mode and next writing step alongside each application.
+Earlier directions and decisions are retained in your private data folder. The built-in
+mode definitions travel with skill-only installs too; no service or new runtime
+dependency is required. Cover letters remain optional.
+
+Switch back to a saved round and it is restored when the source CV, guiding brief,
+mode definition and relevant evidence still match. Manual edits and explicit keeps
+remain, with alternatives offered for review. Refining a personal mode updates its
+existing option while preserving earlier versions and wording.
+
+The default CV layout is a single reading flow. The actual finished PDF still needs
+its full text extraction checked, including role/date associations and every section.
+Coverage counts describe the evidence and terminology; they do not grade the prose or
+predict a hiring outcome. A partial match is never counted as a full one.
 
 ## What it will not do
 
@@ -210,5 +224,5 @@ The full text is in [LICENSE](LICENSE).
 
 ---
 
-The screenshots on this page were made from a fictional CV that ships nowhere near
-your files. Nothing personal to anyone appears in this repository.
+The screenshots use the fictional Alex Morgan CV in `docs/review/sample-cv.md` and
+fictional employers. They were rebuilt from version 0.7.0 with isolated sample data.

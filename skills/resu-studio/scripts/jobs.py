@@ -288,14 +288,10 @@ _COUNT_KEYS = ("asks_total", "must", "you_have", "a_reader_would_find", "unscore
 
 
 def scorecard_counts(path):
-    """The counts from a scorecard's frontmatter, as a dict of ints, or None.
-
-    Only the frontmatter is read. The counts there are what the scorecard says it
-    found; tallying the table here as well would be a second opinion that can
-    disagree with the first.
-    """
+    """Derive counts from scored rows; retain frontmatter-only legacy records."""
     try:
-        text = io.open(path, encoding="utf-8").read()
+        with io.open(path, encoding="utf-8") as f:
+            text = f.read()
     except (IOError, OSError):
         return None
     m = re.match(r"^---\s*\n(.*?)\n---", text, re.S)
@@ -316,6 +312,13 @@ def scorecard_counts(path):
                 continue
             if line and not line[0].isspace():
                 in_counts = False
+    import render_report
+    try:
+        rows = render_report.asks_table(text[m.end():])
+    except render_report.Malformed as exc:
+        raise ValueError("The scorecard rows cannot be counted: %s" % exc)
+    if rows:
+        out = render_report.counts_from_rows(rows)
     if not out:
         return None
     if depth:

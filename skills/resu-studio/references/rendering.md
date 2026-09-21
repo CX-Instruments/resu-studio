@@ -4,7 +4,7 @@ Two renderers, both optional, both last. Neither can change what a document says
 
 ```bash
 python3 scripts/render_cv.py cv-<variant>.md --decisions cv-decisions.json \
-    --layout sidebar-dark --palette forest
+    --layout spine --palette forest
 python3 scripts/render_cv.py cv-<variant>.md --decisions cv-decisions.json \
     --gallery --outdir skins-samples
 python3 scripts/render_cv.py --list
@@ -363,7 +363,7 @@ as proposals with reasons, where the person can accept or refuse each cut.
 Palettes: ink, forest, navy, slate, oxblood, teal, plum, sand, copper, mono.
 Typesets: serif, sans, mixed, mixedalt, tight.
 
-`--layout sidebar-dark --palette forest --typeset mixed` is the default skin.
+`--layout spine --palette forest --typeset mixed` is the default skin. Validate the actual finished PDF; no layout guarantees every ATS.
 
 **`--gallery` renders the person's own CV in every layout and palette on one page**,
 scaled down, so the choice is made by looking rather than by reading names. Pick one,
@@ -623,7 +623,7 @@ that file to a real browser and asks the browser to print it.
 
 ```bash
 python3 scripts/render_cv.py cv.md --letter cover-letter.md --decisions cv-decisions.json \
-    --layout sidebar-dark --palette forest \
+    --layout spine --palette forest \
     --job <job id> --pdf
 python3 scripts/render_cv.py cv.md --decisions cv-decisions.json \
     --pdf --pdf-dir "<the folder they asked for>"

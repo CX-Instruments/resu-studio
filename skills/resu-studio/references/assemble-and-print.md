@@ -1,5 +1,7 @@
 # Phases 6 and 7 in full: assemble, rescore, design, print and the letter
 
+**Completion rule:** inspect the complete extracted text of the delivered PDF, including every section and role/date association. A sampled opening is not a pass. Preserve a user-requested visual alternative separately when it fails extraction; do not describe it as the ATS-ready application version.
+
 SKILL.md carries the short version of these phases. This is the whole of them, with
 every reason behind each rule. Read Phase 6 here before running `assemble.py`, the
 design and PDF sections before any render, and Phase 7 before writing the letter.
@@ -154,7 +156,7 @@ again from the source rather than to patch either file by hand.
 J="$(python3 scripts/paths.py --job <job id>)"
 python3 scripts/render_cv.py "$J/cv-<variant>.md" --decisions "$J/cv-decisions.json" --gallery
 python3 scripts/render_cv.py "$J/cv-<variant>.md" --decisions "$J/cv-decisions.json" \
-    --layout sidebar-dark --palette forest \
+    --layout spine --palette forest \
     --job <job id> \
     --skills list --skills-by "Technical=bars;Tools=chips" \
     --skills-order "Tools;Technical" --skills-place "Tools=main" \
@@ -195,7 +197,7 @@ typefaces. The text stays text, which is what an applicant tracking system reads
 J="$(python3 scripts/paths.py --job <job id>)"
 python3 scripts/render_cv.py "$J/cv-<variant>.md" --letter "$J/cover-letter-<variant>.md" \
     --decisions "$J/cv-decisions.json" \
-    --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
+    --layout spine --palette forest --head-font lora --body-font source-sans \
     --job <job id> --pdf
 ```
 
@@ -231,7 +233,7 @@ right-hand sidebar the name arrives about two thirds of the way down, past line 
 check that reads only the head reports a missing name that is in the file.
 
 **All eight sidebar layouts interleave the two columns once extracted, and that includes
-the default, `sidebar-dark`.** The measured read-back of a real CV puts the KEY SKILLS
+the former default, `sidebar-dark`.** The measured read-back of a real CV puts the KEY SKILLS
 heading between the two paragraphs of the profile and the KEY ACHIEVEMENTS heading inside
 the skills block. On the four right-hand ones the file also opens with the profile and the
 name arrives after most of the main column. `references/ats.md` carries the measured table
@@ -295,20 +297,7 @@ because nothing here disappears quietly. A bar, a dot or a ring appears only whe
 everything else prints as text, so no number reaches the page that its owner did not
 write. `--order` moves sections and sends them to the sidebar, and never drops one.
 
-**A CV can grow a section.** The studio holds six: profile, key skills, experience,
-education, training and key achievements. Three of those can be added to a CV that
-does not have them, and they are key achievements, professional memberships, and
-volunteering and community. Until the assembly a ticked section lives in the decisions
-file and prints on that version only. The assembly writes it into `cv-<variant>.md` as a
-real section, which is the point of assembling. Key achievements is the
-one you draft: six candidate lines out of their record worked against this
-advertisement, each naming the ask it answers and the roles it rests on, and they tick
-four to six of them. **Write them at career level.** Each line reaches across more than
-one employer, so it says
-something no role bullet says and nothing has to come off the page for it. A line that
-restates a single bullet gets rewritten wider; the bullet is never deleted, because
-that would leave the achievement with no job behind it.
-`references/achievements.md`.
+A CV retains its existing sections and can gain an explicitly proposed section. Follow `writing-engine.md` and `achievements.md`: no mandatory achievement count, no forced cross-employer claim, and no addition without its space cost. Assembly writes accepted sections into the markdown.
 
 **Every line on the page can be pointed at.** Flag it, ask for a rewrite, put it in
 their own words, take it off this version, or add one after it. Two queues on the edge
@@ -350,7 +339,7 @@ Phase 6 example carried over, and it changes to whatever they actually chose.
 J="$(python3 scripts/paths.py --job <job id>)"
 python3 scripts/render_cv.py "$J/cv-<variant>.md" --letter "$J/cover-letter-<variant>.md" \
     --decisions "$J/cv-decisions.json" \
-    --layout sidebar-dark --palette forest --head-font lora --body-font source-sans \
+    --layout spine --palette forest --head-font lora --body-font source-sans \
     --job <job id> --pdf
 ```
 

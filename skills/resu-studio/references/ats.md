@@ -1,5 +1,7 @@
 # What the screener gets
 
+**Completion rule:** inspect the complete extracted text of the delivered PDF, including every section and role/date association. A sampled opening is not a pass. Preserve a user-requested visual alternative separately when it fails extraction; do not describe it as the ATS-ready application version.
+
 Most applications are read twice: once by software that turns the PDF back into text
 and tries to work out which part is experience and which is education, and once by a
 person who spends well under a minute deciding whether to read it properly. The two
@@ -143,7 +145,7 @@ person is often the better document, and plenty of applications go straight to a
 a small employer, a direct approach, a referral. The failure is only a failure at the
 parser, so it is the destination that decides.
 
-**The default layout is `sidebar-dark`, and it interleaves.** So on a default render the
+**The default layout is now `spine`, a single reading flow.** On a sidebar render the
 check fails, and the person hears about it and picks. The layouts to offer are `spine`,
 `rail`, `cards` and `bands`, which came through with every section in one piece on this
 CV, and `spine` and `rail` also kept every date beside its own role. Then run the check

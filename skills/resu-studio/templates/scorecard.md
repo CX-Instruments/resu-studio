@@ -26,9 +26,10 @@ frontmatter reader takes a key of word characters. The word in the table stays
 
 The five necessity counts add up to `asks_total`. `you_have` and
 `a_reader_would_find` are the two gauges and they count states rather than necessities,
-so they are outside that sum. `render_report.py` prints these counts where they are
-there and tallies the table only where they are not, so a count that disagrees with the
-table is a report that disagrees with itself.
+so they are outside that sum. Derive them from the scored rows: `page`, `buried`
+and `off` count as supported; only `page` counts as visible in the employer's words.
+Partial (`near`) and unscored are not full matches. The report, Studio and Desk use
+the same row-based counts.
 
 `depth:` is `essentials` or `all`, copied out of `answers.md` from the question put in
 Phase 1. `build_studio.py` reads it straight from this frontmatter, so the studio can

@@ -517,6 +517,19 @@ def main():
     if os.path.isfile(pp):
         check_proposals(pp, facts_ids, ask_ids, faults, notes)
 
+    if job:
+        import writing
+        import proposal_records
+        state = writing.load(job)
+        if state:
+            changed = writing.stale(state)
+            if changed:
+                faults.append("Writing inputs changed: %s. Refresh the brief and samples." % ", ".join(changed))
+            batch = writing.batch_for(state)
+            if batch and not changed:
+                faults.extend(proposal_records.validate(batch["records"], batch["source"]["path"],
+                    state["sources"]["facts"]["path"], state["sources"]["asks"]["path"], strict=True))
+
     cvs = _cv_files(root, variant)
     for fn in cvs:
         check_cv(os.path.join(root, fn), faults, notes)

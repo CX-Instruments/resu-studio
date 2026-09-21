@@ -234,7 +234,8 @@ step("13. A closed job does not block applying again, and documents stay apart",
              ("new id ends -2", lambda c, o: "bluegum-energy-bi-developer-2026-09-2" in o),
              ("documents folder is Bluegum Energy - BI Developer (2)", lambda c, o: "Bluegum Energy - BI Developer (2)" in o)])
 
-json.dump(steps, open(os.path.join(SCR, "step2-results.json"), "w"), indent=1, ensure_ascii=False)
+with open(os.path.join(SCR, "step2-results.json"), "w", encoding="utf-8") as report:
+    json.dump(steps, report, indent=1, ensure_ascii=False)
 total = sum(len(s["checks"]) for s in steps)
 passed = sum(ok for s in steps for _, ok in s["checks"])
 print("%d of %d checks passed" % (passed, total))

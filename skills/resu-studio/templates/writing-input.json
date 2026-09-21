@@ -1,0 +1,29 @@
+{
+  "brief": {
+    "target": "",
+    "priorities": ["<requirement-id-from-this-jobs-asks.md>"],
+    "central_case": "",
+    "pillars": {
+      "passion": {"status": "absent", "statement": "", "facts": []},
+      "strengths": {"status": "absent", "statement": "", "facts": []},
+      "impact": {"status": "absent", "statement": "", "facts": []},
+      "value": {"status": "absent", "statement": "", "facts": []}
+    },
+    "voice": "",
+    "boundaries": [],
+    "section_plan": [{"section": "", "purpose": "", "facts": []}],
+    "constraints": {"page_limit": null, "bullet_budgets": {}, "application_format": ""},
+    "open_questions": []
+  },
+  "samples": [
+    {
+      "mode": "credible-conviction",
+      "why": "",
+      "profile": {"line": "profile/0", "current": "", "suggested": "", "difference": "", "claims": [{"text": "", "facts": []}]},
+      "bullet": {"line": "professional-experience/0/b0", "current": "", "suggested": "", "difference": "", "claims": [{"text": "", "facts": []}]}
+    }
+  ],
+  "custom_modes": [],
+  "preview_mode": null,
+  "keep_custom_modes": false
+}

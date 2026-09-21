@@ -384,7 +384,10 @@ def _extra_section(spec, shout, heading, wrapw):
             continue
         if key:
             text = R.d_text(key, text)
-        out += _wrap("", "- ", text, "  ", wrapw)
+        if spec.get("format") == "paragraphs":
+            out += [""] + _wrap("", "", text, "", wrapw)
+        else:
+            out += _wrap("", "- ", text, "  ", wrapw)
     return out if len(out) > 1 else []
 
 
@@ -395,6 +398,7 @@ def assemble(md, d, source_name="", decisions_name="", variant="", when=None):
     R.DECIDE["adds"] = (d or {}).get("adds") or {}
     R.DECIDE["sections"] = (d or {}).get("sections") or []
     R.DECIDE["order"] = (d or {}).get("order") or {}
+    R.DECIDE["section_order"] = (d or {}).get("section_order") or []
     try:
         return _assemble(md, d, source_name, decisions_name, variant, when)
     finally:
@@ -412,6 +416,14 @@ def _assemble(md, d, source_name, decisions_name, variant, when):
     if crlf:
         md = md.replace("\r\n", "\n")
     eff = R.effect(d)
+    section_order = eff.get("section_order", [])
+    if section_order:
+        parts = re.split(r"(?m)(?=^## )", md)
+        preamble, bodies = parts[0], parts[1:]
+        by_slug = {R.slug(body.split("\n", 1)[0][3:].strip()): body for body in bodies}
+        if len(by_slug) != len(bodies) or sorted(section_order) != sorted(by_slug):
+            raise ValueError("The section order must name each source heading exactly once.")
+        md = preamble + "".join(by_slug[s].rstrip("\n") + "\n\n" for s in section_order)
     S = scan(md)
     lines, units, sections = S["lines"], S["units"], S["sections"]
     by_id = {}
@@ -474,7 +486,7 @@ def _assemble(md, d, source_name, decisions_name, variant, when):
     pending_after, pending_end = {}, []
     for spec in eff["sections"]:
         after = (spec.get("after") or "").strip().lower()
-        if after and any(s["sid"] == after for s in sections):
+        if after == "^" or (after and any(s["sid"] == after for s in sections)):
             pending_after.setdefault(after, []).insert(0, spec)
         else:
             pending_end.append(spec)
@@ -518,6 +530,8 @@ def _assemble(md, d, source_name, decisions_name, variant, when):
             if t.startswith("## ") and last_sid is not None:
                 flush(last_sid)
             if t.startswith("## "):
+                if last_sid is None:
+                    flush("^")
                 last_sid = R.slug(t[3:].strip()) or "section"
             if not t and just_dropped and out and not out[-1].strip():
                 i += 1
@@ -585,7 +599,7 @@ def _assemble(md, d, source_name, decisions_name, variant, when):
 
     prior = R.read_note(md)
     baked = list((prior or {}).get("baked") or [])
-    if eff["marks"] or eff["adds"] or eff["order"] or eff["sections"]:
+    if any(eff.values()):
         entry = {
             "file": decisions_name or "cv-decisions.json",
             "saved": (d.get("saved") or "") if isinstance(d, dict) else "",
@@ -630,6 +644,7 @@ def outline(md, d):
         R.DECIDE["adds"] = (d or {}).get("adds") or {}
         R.DECIDE["sections"] = (d or {}).get("sections") or []
         R.DECIDE["order"] = (d or {}).get("order") or {}
+        R.DECIDE["section_order"] = (d or {}).get("section_order") or []
         doc = R.parse(md)
         R.add_sections(doc)
         out = []
@@ -860,7 +875,7 @@ def audit(md, d, cv_name="the CV", decisions_name="cv-decisions.json",
     """
     out = []
     eff = R.effect(d)
-    if not (eff["marks"] or eff["adds"] or eff["order"] or eff["sections"]):
+    if not any(eff.values()):
         return out
     note = R.read_note(md)
     baked_ids = {"edited": set(), "removed": set(), "added": set(), "ordered": set(),
@@ -991,6 +1006,20 @@ def main():
     if wrong:
         sys.stderr.write("REFUSING TO WRITE. In %s, %s\n" % (a.decisions, wrong))
         return 1
+
+    if d.get("writing"):
+        if os.path.normcase(os.path.abspath(a.out)) == os.path.normcase(os.path.abspath(a.cv)):
+            sys.stderr.write("REFUSING TO WRITE. Each writing round needs a distinct output filename so its reviewed source stays intact.\n")
+            return 1
+        import writing
+        try:
+            state = writing.load(d["writing"]["job"])
+            faults = writing.decision_faults(d, state, a.cv) if state else ["This application's writing record is missing."]
+        except (ValueError, OSError, KeyError) as exc:
+            faults = [str(exc)]
+        if faults:
+            sys.stderr.write("REFUSING TO WRITE. " + "\n".join(faults) + "\n")
+            return 1
 
     # Writing over the source would destroy the only copy of what arrived, and the
     # archive points at it by name. A file that has already been assembled is a

@@ -1,5 +1,7 @@
 # Atomising the sources
 
+Preserve source relationships: every extracted fact retains its role, source wording and relevant action/problem/method/result context. Record related fact ids when a sentence is split. A fragment cannot acquire the causality or ownership of a neighbouring fragment. Keep “X or Y” as one alternative requirement, and record conditions with the requirement they qualify; split only independently required capabilities.
+
 Two ledgers. The facts ledger describes the person and is reused forever. The asks
 ledger describes one advertisement and is thrown away with it.
 

@@ -20,6 +20,7 @@ SKILL = os.path.join(PROJECT, ".agents", "skills", "resu-studio")
 DATA = os.path.join(PROJECT, "Resu - CV Builder")
 ENV = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_PLUGIN_DATA", "PLUGIN_DATA", "RESU_STUDIO_CONFIG")}
 ENV.update(HOME=HOME, USERPROFILE=HOME)
+ENV["RESU_PYTHON"] = sys.executable.replace("\\", "/")
 browser = os.environ.get("CV_BROWSER") or next(iter(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome")), "")
 if browser:
     ENV["CV_BROWSER"] = browser
@@ -55,7 +56,7 @@ def run_block(n, block, expect=(0,), prepare=None, checks=()):
     if prepare:
         prepare()
     script = fill(block)
-    p = subprocess.run(["bash", "-e", "-c", script], cwd=SKILL, env=ENV, capture_output=True, text=True)
+    p = subprocess.run([shutil.which("bash") or "bash", "-e", "-c", script], cwd=SKILL, env=ENV, capture_output=True, text=True)
     out = (p.stdout + p.stderr).replace(PROJECT, "D:/Career").replace(HOME, "~").rstrip()
     if os.sep == "\\":
         out = out.replace("\\", "/")
