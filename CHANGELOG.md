@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.2, 21 September 2026
+
+- Keep default application data in exactly `Resu - CV Builder` beneath the current
+  task workspace. Ignore global folder records, install pointers and host data-folder
+  variables; different destinations and imports require an explicit user instruction.
+- Keep application evidence and answers in the active job folder. Do not automatically
+  reuse shared history or old outputs, resume a matching job, or invent a fresh root.
+- Give each application a random persistent browser identity. A recreated job cannot
+  inherit old decisions even when its folder, role, employer and visible ID match.
+  Rebuilds of the same application preserve its own decisions.
+- Keep the hidden preview measurable while Writing or Score is open, and resize it
+  when pagination finishes. All CV pages render on initial load without a skin change.
+- Clarify the ordered application flow and update the documented commands to use
+  application-local sources. Retain the mode-specific rewriting and full-profile rules.
+
 ## 0.7.1, 21 September 2026
 
 - Use a guarded, single browser launch of the exact generated Studio. Always hand

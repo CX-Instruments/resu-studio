@@ -191,7 +191,7 @@ the rules.
 `answers.md` lives in the person's own folder, so pass it by absolute path:
 
 ```bash
-python3 scripts/paths.py --answers
+python3 scripts/paths.py --job <job id> --answers
 ```
 
 ## The person decides on the page, not in the chat

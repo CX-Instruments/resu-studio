@@ -19,7 +19,7 @@ the deliverable and the master, and this is the command that makes that true.
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
-python3 scripts/assemble.py "$(python3 scripts/paths.py --about)/<their CV>.md" \
+python3 scripts/assemble.py "$(python3 scripts/paths.py --job <job id>)/<their CV>.md" \
     --decisions "$J/cv-decisions.json" \
     --out "$J/cv-<variant>.md"
 ```
@@ -76,7 +76,7 @@ move.
 J="$(python3 scripts/paths.py --job <job id>)"
 python3 scripts/build_studio.py --cv "$J/cv-<variant>.md" \
     --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
-    --facts "$(python3 scripts/paths.py --facts)" \
+    --facts "$(python3 scripts/paths.py --job <job id> --facts)" \
     --proposals "$J/proposals.md" --achievements "$J/achievements.md" \
     --job <job id> \
     --letter "$J/cover-letter-<variant>.md"
@@ -121,9 +121,8 @@ placement as a control, works on a phone, marks where A4 actually cuts, and prin
 command line for whatever they land on.
 
 It writes into the job's own documents folder, beside its finished PDFs. **Always pass
-`--job <job id>`.** The job's role and employer, read from its record, name the file, key the studio's own browser storage so one application
-cannot show another's marks, and tell two applications apart when a document would
-otherwise be written over.
+`--job <job id>`.** The job's role and employer, read from its record, name the file and tell two applications apart when a document would
+otherwise be written over. Browser decisions use a separate random application identity; a fresh job cannot inherit another run's marks.
 
 **The studio is built, never edited.** Editing the template by hand is what made a
 second advertisement destroy the first, because there was only ever one copy. Building

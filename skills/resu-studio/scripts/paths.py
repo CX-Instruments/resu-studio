@@ -1,61 +1,13 @@
-"""Where this person's own files live, and how that is decided.
+"""Private application data belongs to the current task workspace.
 
-A CV, a facts ledger, every job ad and every finished document is private. None of it
-belongs inside the plugin, where an update deletes it, and none of it belongs anywhere
-the person did not choose. The skill used to settle this on its own: one folder per
-computer, `~/.resu-studio`, shared by every install. That kept files safe from updates,
-and it also meant an install made inside one project quietly found an application
-somebody had started from a different project, and said so as if it were expected.
+Default: <workspace>/Resu - CV Builder. The workspace is RESU_WORKSPACE when
+explicitly carried from the task's starting directory, otherwise the process cwd.
+Plugin installation paths, global location records and host data variables never
+select application data. Status does not search for or import older work.
 
-So the folder is now chosen by the person, once per install, and remembered:
-
-    1. <skill>/data-location.txt   one line, a folder, written inside this install.
-    2. this install's choice       recorded in <config>/locations.json by
-                                   `paths.py --choose`. <config> is ~/.resu-studio,
-                                   or $RESU_STUDIO_CONFIG. The key is the project the
-                                   skill is installed in, or `~` for an install that
-                                   serves the whole computer.
-    3. CLAUDE_PLUGIN_DATA or PLUGIN_DATA
-                                   the host's own folder for data that outlives an
-                                   update. The host chose it, so nobody is asked.
-    4. nothing                     not chosen. Every script that needs the folder
-                                   stops with exit 6 and one sentence: ask the person,
-                                   using `paths.py --status`, then `paths.py --choose`.
-                                   Nothing is created, and no other folder is used in
-                                   the meantime, however much work it holds.
-
-An older folder, `~/.resu-studio`, the folder an old `~/.resu-studio/location` pointer
-named, or the old `data/` inside the plugin, is never used on its own any more. It is
-listed by `--status` as work that already exists, and `--choose ... --bring <folder>`
-copies it in when the person says so.
-
-Inside the chosen folder:
-
-    Resu - CV Builder/
-      README.txt, .gitignore     says what this is; ignores everything in it for git
-      1 About me/                the CV as it arrived, the CV as markdown, links.md
-      2 My record/               facts.md, answers.md: reused by every job
-      3 Jobs/<job id>/           one folder per advertisement, see scripts/jobs.py
-      4 Finished documents/      Resu Desk, and a folder of documents per job
-      .resu/                     documents.json and the notes the scripts keep
-
-The `.gitignore` holds one line, `*`, which tells git to ignore every file in the folder,
-the `.gitignore` included. A person who keeps their CV folder inside a repository cannot
-commit it by accident, and nobody's own `.gitignore` is edited to get that.
-
-A folder is checked before it is believed. When the scripts run on Linux or a Mac, a
-Windows path such as `D:\\CVs`, or anything holding a backslash, is refused with what to
-write instead. On Windows itself a drive letter is the right way to write it.
-
-Nothing here deletes or moves anything.
-
-    python3 scripts/paths.py --status [--json]    chosen or not, and what already exists
-    python3 scripts/paths.py --choose project|home|<folder> [--bring <folder>]
-    python3 scripts/paths.py                      where everything goes
-    python3 scripts/paths.py --facts              just the path, for a command line
-    python3 scripts/paths.py --job <id> [--job-dir|--job-ad|--job-documents|--job-file]
-
-Exit codes: 0 done, 2 wrong command line, 3 no such job, 5 could not write, 6 not chosen.
+An explicitly requested alternative is recorded only in this workspace's private
+.resu/location.json, with the user's instruction. Importing any older folder also
+requires that instruction. No operation here deletes or moves existing work.
 """
 
 import io
@@ -73,9 +25,6 @@ ON_WINDOWS = os.name == "nt"
 #: How to name Python in a message a person or an agent will copy. Windows installs
 #: it as `python` or `py`; `python3` is usually missing there.
 PY = "python" if ON_WINDOWS else "python3"
-
-#: The host's own data folder, in the order they are trusted.
-DATA_ENV = ("CLAUDE_PLUGIN_DATA", "PLUGIN_DATA")
 
 NOT_CHOSEN = 6
 
@@ -103,19 +52,8 @@ OLD_SOURCE = "cv-source"
 OLD_JOBS = "jobs"
 OLD_DOCUMENTS = "_Your Documents Are Here"
 
-#: The pointer inside this install. An update replaces it with the install, which is
-#: the point: it belongs to this install and nothing else.
+# Legacy pointer name retained for compatibility tests; never consulted.
 _POINTER = os.path.join(SKILL, "data-location.txt")
-
-#: The old per-computer folder and its pointer. Read only to offer them as existing work.
-HOME_DIR = os.path.join(os.path.expanduser("~"), ".resu-studio")
-STABLE_POINTER = os.path.join(HOME_DIR, "location")
-
-#: Where everybody's files lived before they lived outside the plugin.
-INSIDE = os.path.join(SKILL, "data")
-
-#: The folders an agent installs skills into, inside a project.
-_INSTALL_DIRS = (".agents", ".claude", ".codex", ".cursor", ".gemini", ".github")
 
 README_TEXT = u"""Resu - CV Builder
 =================
@@ -124,7 +62,7 @@ This folder holds your CV, your working history, the job ads you applied for and
 documents Resu Studio made for you. It is private and belongs to you.
 
   1 About me             your CV as you gave it, and any links you shared
-  2 My record            everything learned about your working life, reused for every job
+  2 My record            optional saved history; reused only when you ask
   3 Jobs                 one folder for each job ad
   4 Finished documents   Resu Desk and your finished CVs, letters and Studios
 
@@ -147,76 +85,6 @@ if ON_WINDOWS:
     utf8_output()
 
 
-def _host_data():
-    """(variable name, value) for the first host data folder that is set, or (None, None)."""
-    for name in DATA_ENV:
-        value = os.environ.get(name)
-        if value:
-            return name, value
-    return None, None
-
-
-_RESOLVED = None
-
-
-def _usable(path):
-    """True when we can actually write there. Asked by permission, not by probing.
-
-    An earlier version wrote a test file and deleted it, which reported "not
-    writable" on any filesystem that allows writing but not deleting, and left a
-    stray file behind every time it was wrong.
-    """
-    try:
-        os.makedirs(path, exist_ok=True)
-        return os.access(path, os.W_OK)
-    except OSError:
-        return False
-
-
-def _mount_roots():
-    """Every `*/mnt/*` style folder on this session that actually exists.
-
-    A Windows folder reaches a Linux session through a mount, so when somebody
-    names `D:\\resu-plugin` the folder itself is usually right here under a
-    different name, and saying so is more use than saying no.
-    """
-    import glob
-    home = os.path.expanduser("~")
-    roots = []
-    for pattern in (os.path.join(home, "mnt"), "/mnt", "/home/*/mnt",
-                    "/Users/*/mnt", "/sessions/*/mnt", "/workspace/*/mnt"):
-        for hit in glob.glob(pattern):
-            if os.path.isdir(hit) and hit not in roots:
-                roots.append(hit)
-    return roots
-
-
-def _mounted_equivalent(raw):
-    """A session path holding the same folder name, or None. Best effort only."""
-    leaf = raw.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].strip()
-    if not leaf or ":" in leaf:
-        return None
-    for root in _mount_roots():
-        for depth in (0, 1):
-            try:
-                if depth == 0:
-                    here = [root]
-                else:
-                    here = [os.path.join(root, n) for n in os.listdir(root)
-                            if os.path.isdir(os.path.join(root, n))]
-            except OSError:
-                continue
-            for folder in here:
-                try:
-                    for name in os.listdir(folder):
-                        if name.lower() == leaf.lower() \
-                                and os.path.isdir(os.path.join(folder, name)):
-                            return os.path.join(folder, name)
-                except OSError:
-                    continue
-    return None
-
-
 def check_pointer_text(raw, where="", require_parent=True):
     """(path, complaint). Exactly one of the two is set.
 
@@ -233,15 +101,12 @@ def check_pointer_text(raw, where="", require_parent=True):
         return None, "the pointer%s is empty." % label
 
     if not ON_WINDOWS and (re.match(r"^[A-Za-z]:[\\/]", raw) or "\\" in raw):
-        hint = _mounted_equivalent(raw)
         msg = ("the pointer%s names %s, which is a Windows path. This session "
                "cannot see drive letters or backslashes, and using it as written "
                "would make one folder whose name contains the backslashes and put "
                "every document in it. Write the path as this session sees it: it "
                "starts with a / and has no backslashes, usually something like "
                "/home/<you>/mnt/<folder>." % (label, raw))
-        if hint:
-            msg += " This session can see %s, which looks like the same folder." % hint
         return None, msg
 
     path = os.path.expanduser(raw)
@@ -263,20 +128,6 @@ def check_pointer_text(raw, where="", require_parent=True):
     return path, None
 
 
-def _first_line(path):
-    """The first meaningful line of a pointer file, or None. `#` is a comment."""
-    try:
-        with io.open(path, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    return line
-    except (IOError, OSError, UnicodeDecodeError):
-        pass
-    return None
-
-
-
 def _some(names, limit=6):
     """A few names, said plainly, with a count for the rest."""
     names = list(names)
@@ -288,113 +139,90 @@ def _some(names, limit=6):
 
 # ------------------------------------------------------------------ which install is this
 
-def config_dir():
-    """Where the record of each install's choice is kept. Outside every install."""
-    return os.environ.get("RESU_STUDIO_CONFIG") or HOME_DIR
-
-
-def locations_file():
-    return os.path.join(config_dir(), "locations.json")
-
-
 def _same(a, b):
-    return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+    return os.path.normcase(os.path.realpath(a)) == os.path.normcase(os.path.realpath(b))
+
+
+def _within(path, parent):
+    try:
+        return os.path.commonpath([os.path.realpath(path), os.path.realpath(parent)]) == os.path.realpath(parent)
+    except ValueError:
+        return False
+
+
+def workspace_dir():
+    """The task workspace, never inferred from the plugin installation location."""
+    raw = os.environ.get("RESU_WORKSPACE") or os.getcwd()
+    if not os.path.isabs(raw) or not os.path.isdir(raw):
+        raise ValueError("Run from the existing task workspace, or set RESU_WORKSPACE to its absolute path.")
+    root = os.path.realpath(raw)
+    if _within(root, SKILL):
+        raise ValueError("The plugin directory is not the task workspace. Run from the user's current folder or carry its path in RESU_WORKSPACE before changing directory.")
+    return root
 
 
 def install():
-    """(key, kind, project root or None) for the install this script belongs to.
-
-    A skill installed into a project sits at `<project>/.agents/skills/resu-studio`, or
-    under `.claude`, `.codex` and the rest. When that project is the home folder itself,
-    it is an install for the whole computer, and so is anything else: a Claude plugin
-    cache, a global skills folder, a checkout of the repository.
-    """
-    parts = os.path.abspath(SKILL).split(os.sep)
-    for i in range(len(parts) - 2, 0, -1):
-        if parts[i] in _INSTALL_DIRS and i + 1 < len(parts) and parts[i + 1] == "skills":
-            root = os.sep.join(parts[:i]) or os.sep
-            if ON_WINDOWS and len(parts[0]) == 2 and i == 1:
-                root = parts[0] + os.sep
-            if _same(root, os.path.expanduser("~")):
-                break
-            return os.path.normcase(os.path.abspath(root)), "project", root
-    return "~", "computer", None
-
-
-def _read_locations():
-    try:
-        with io.open(locations_file(), encoding="utf-8") as fh:
-            data = json.load(fh)
-            return data if isinstance(data, dict) else {}
-    except (IOError, OSError, ValueError):
-        return {}
-
-
-def recorded_choice():
-    """The folder recorded for this install, or None."""
-    key, _kind, _root = install()
-    entry = _read_locations().get(key)
-    if isinstance(entry, dict):
-        return entry.get("folder")
-    return None
+    """Compatibility tuple: choices now belong to the task workspace."""
+    root = workspace_dir()
+    return os.path.normcase(root), "project", root
 
 
 def suggested_folder(where):
-    """The folder offered for `project` or `home`, or None when it does not apply."""
-    _key, kind, root = install()
     if where == "project":
-        return os.path.join(root, TOP) if kind == "project" else None
+        return os.path.join(workspace_dir(), TOP)
     if where == "home":
         return os.path.join(os.path.expanduser("~"), TOP)
     return None
 
 
-# ------------------------------------------------------------------ resolving
+def config_dir():
+    """Workspace-local metadata; do not read the former global registry."""
+    return os.path.join(suggested_folder("project"), SYSTEM)
+
+
+def locations_file():
+    return os.path.join(config_dir(), "location.json")
+
+
+def recorded_choice():
+    """Only an explicit, workspace-scoped instruction can redirect the default."""
+    default = suggested_folder("project")
+    if not _within(default, workspace_dir()) or not _within(config_dir(), default):
+        raise ValueError("The default data folder resolves outside this workspace. Do not follow it or invent another folder; the user must explicitly choose the destination.")
+    try:
+        with io.open(locations_file(), encoding="utf-8") as fh:
+            entry = json.load(fh)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError) as exc:
+        raise ValueError("The workspace location record cannot be read; no alternative folder was used: %s" % exc)
+    if (not isinstance(entry, dict) or entry.get("schema") != 1
+            or not all(isinstance(entry.get(k), str) and entry[k].strip()
+                       for k in ("workspace", "folder", "user_instruction"))
+            or not _same(entry["workspace"], workspace_dir())):
+        raise ValueError("The workspace location record lacks an explicit user instruction for this workspace. Do not use it or silently fall back.")
+    return entry.get("folder")
+
 
 def resolve(force=False):
-    """(folder or None, where_it_came_from, how). `how` is pointer, chosen, env or none."""
-    global _RESOLVED
-    if _RESOLVED is None or force:
-        _RESOLVED = _resolve_once()
-    return _RESOLVED
-
-
-def _resolve_once():
-    raw = _first_line(_POINTER)
-    if raw:
-        path, complaint = check_pointer_text(raw, "data-location.txt (inside the skill)")
-        if complaint:
-            sys.stderr.write("resu-studio: %s\n" % complaint)
-        elif _usable(path):
-            return path, "data-location.txt inside this install", "pointer"
-
-    chosen = recorded_choice()
-    if chosen:
-        path, complaint = check_pointer_text(chosen, locations_file(), require_parent=False)
-        if complaint:
-            sys.stderr.write("resu-studio: %s\n" % complaint)
-        elif _usable(path):
-            return path, "chosen for this install", "chosen"
-        else:
-            sys.stderr.write("resu-studio: the folder chosen for this install, %s, cannot "
-                             "be written to.\n" % chosen)
-
-    env_name, env = _host_data()
-    if env:
-        path, complaint = check_pointer_text(env, env_name, require_parent=False)
-        if complaint:
-            sys.stderr.write("resu-studio: %s\n" % complaint)
-        elif _usable(path):
-            return path, env_name, "env"
-
-    return None, "not chosen yet", "none"
+    """Resolve on every call so one process cannot retain another workspace's folder."""
+    try:
+        chosen = recorded_choice()
+        if chosen:
+            path, complaint = check_pointer_text(chosen, locations_file(), require_parent=False)
+            if complaint:
+                raise ValueError(complaint)
+            return path, "explicit user choice for this workspace", "chosen"
+        return suggested_folder("project"), "current workspace default", "workspace"
+    except ValueError as exc:
+        sys.stderr.write("resu-studio: %s\n" % exc)
+        return None, str(exc), "none"
 
 
 def not_chosen_message():
-    return ("resu-studio: nobody has chosen where this install keeps the person's files "
-            "yet, so nothing was read or written. Run %s scripts/paths.py --status, tell "
-            "the person what it found, ask where their files should live, then run "
-            "%s scripts/paths.py --choose with their answer." % (PY, PY))
+    return ("resu-studio: the task workspace or its explicit location record could not be resolved. "
+            "Run from the user's current folder or set RESU_WORKSPACE to that same folder. "
+            "Do not search elsewhere, invent a folder name, or use older work.")
 
 
 _PRIVATE_DONE = set()
@@ -423,8 +251,11 @@ def data_dir():
     if path is None:
         sys.stderr.write(not_chosen_message() + "\n")
         raise SystemExit(NOT_CHOSEN)
-    os.makedirs(path, exist_ok=True)
-    ensure_private(path)
+    try:
+        ensure_layout(path)
+    except ValueError as exc:
+        sys.stderr.write("resu-studio: %s\n" % exc)
+        raise SystemExit(NOT_CHOSEN)
     return path
 
 
@@ -448,14 +279,14 @@ def record_dir():
     return sub(RECORD)
 
 
-def facts_file():
-    """The reusable history. One per person, read by every advertisement."""
-    return os.path.join(record_dir(), "facts.md")
+def facts_file(job=None):
+    """Application evidence; the shared record is never an automatic input."""
+    return os.path.join(job_dir(job) if job else record_dir(), "facts.md")
 
 
-def answers_file():
-    """What was asked and answered, kept beside the history."""
-    return os.path.join(record_dir(), "answers.md")
+def answers_file(job=None):
+    """Answers within the authorised application scope."""
+    return os.path.join(job_dir(job) if job else record_dir(), "answers.md")
 
 
 def documents_ledger():
@@ -517,56 +348,32 @@ def work_in(folder):
 
 
 def existing_work(exclude=None):
-    """Every other folder on this computer holding Resu Studio work, as summaries."""
-    seen, out = [], []
-
-    def add(folder, label):
-        if not folder:
-            return
-        folder = os.path.abspath(os.path.expanduser(folder))
-        if any(_same(folder, s) for s in seen) or (exclude and _same(folder, exclude)):
-            return
-        seen.append(folder)
-        w = work_in(folder)
-        if w:
-            w["found_as"] = label
-            out.append(w)
-
-    add(HOME_DIR, "the folder every install used to share")
-    raw = _first_line(STABLE_POINTER)
-    if raw:
-        add(raw, "named by the old ~/.resu-studio/location pointer")
-    add(INSIDE, "inside this install, where an update deletes it")
-    add(suggested_folder("home"), "in your home folder")
-    if suggested_folder("project"):
-        add(suggested_folder("project"), "in this project")
-    for key, entry in _read_locations().items():
-        if isinstance(entry, dict):
-            add(entry.get("folder"), "chosen by another install (%s)" % key)
-    _name, env = _host_data()
-    add(env, "the host's data folder")
-    return out
+    """Automatic discovery is disabled. Only --bring reads a user-named source."""
+    return []
 
 
 # ------------------------------------------------------------------ choosing
 
 def ensure_layout(path):
+    for name in (ABOUT, RECORD, JOBS, DOCUMENTS, SYSTEM, "README.txt", ".gitignore"):
+        if not _within(os.path.join(path, name), path):
+            raise ValueError("The data folder contains a path outside its root: %s. Do not follow it or invent another destination." % name)
     for name in (ABOUT, RECORD, JOBS, DOCUMENTS, SYSTEM):
         os.makedirs(os.path.join(path, name), exist_ok=True)
     _PRIVATE_DONE.discard(path)
     ensure_private(path)
 
 
-def choose(target, bring_from=None):
-    """Record where this install keeps files, make the folder, and bring work in if asked.
+def choose(target, bring_from=None, user_instruction=None):
+    """Record an explicit workspace choice, initialise it, and import only if asked.
 
     Returns a report dict. Raises ValueError with a sentence fit to show.
     """
     key, kind, root = install()
+    instruction = (user_instruction or "").strip()
+    if (target != "project" or bring_from) and not instruction:
+        raise ValueError("An alternative folder or import requires --user-instruction quoting the user's explicit request. Otherwise use the current workspace default.")
     if target == "project":
-        if kind != "project":
-            raise ValueError("this install is not inside a project, so there is no project "
-                             "folder to choose. Choose home, or give a whole folder path.")
         folder = suggested_folder("project")
     elif target == "home":
         folder = suggested_folder("home")
@@ -585,28 +392,32 @@ def choose(target, bring_from=None):
                              "nothing to copy.")
         bring_from = src
 
+    if not _within(suggested_folder("project"), root):
+        raise ValueError("The default folder points outside the workspace; resolve that path with the user before writing.")
+    was = recorded_choice() if target != "project" else None
     try:
         os.makedirs(folder, exist_ok=True)
         ensure_layout(folder)
     except OSError as e:
         raise ValueError("%s could not be created (%s)." % (folder, e))
 
-    locs = _read_locations()
-    was = (locs.get(key) or {}).get("folder") if isinstance(locs.get(key), dict) else None
-    import time
-    locs[key] = {"folder": folder, "kind": kind, "skill": SKILL,
-                 "chosen": time.strftime("%Y-%m-%d %H:%M")}
+    # Keep redirection metadata inside the canonical workspace folder even when the
+    # explicitly chosen data destination is elsewhere. Never touch global settings.
     try:
-        os.makedirs(config_dir(), exist_ok=True)
-        tmp = locations_file() + ".tmp"
-        with io.open(tmp, "w", encoding="utf-8", newline="\n") as fh:
-            fh.write(json.dumps(locs, indent=2, ensure_ascii=False) + "\n")
-        os.replace(tmp, locations_file())
-    except OSError as e:
-        raise ValueError("the choice could not be recorded in %s (%s)." % (locations_file(), e))
+        if target == "project":
+            if os.path.isfile(locations_file()):
+                os.remove(locations_file())
+        else:
+            ensure_layout(suggested_folder("project"))
+            entry = {"schema": 1, "workspace": root, "folder": folder,
+                     "user_instruction": instruction}
+            tmp = locations_file() + ".tmp"
+            with io.open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(json.dumps(entry, indent=2, ensure_ascii=False) + "\n")
+            os.replace(tmp, locations_file())
+    except OSError as exc:
+        raise ValueError("The explicit choice could not be recorded in this workspace (%s)." % exc)
 
-    global _RESOLVED
-    _RESOLVED = None
     report = {"folder": folder, "key": key, "kind": kind, "was": was, "brought": None}
     if bring_from:
         report["brought"] = bring(bring_from, folder)
@@ -745,16 +556,19 @@ def bring(src, dest):
 
 def status():
     path, src, how = resolve()
-    key, kind, root = install()
+    try:
+        key, kind, root = install()
+    except ValueError:
+        key, kind, root = "", "unknown", ""
     return {
         "chosen": path is not None,
         "folder": path,
         "decided_by": src,
         "how": how,
         "install": {"key": key, "kind": kind, "project": root, "skill": SKILL},
-        "suggested": {"project": suggested_folder("project"), "home": suggested_folder("home")},
+        "suggested": {"project": os.path.join(root, TOP)},
         "existing_work": existing_work(exclude=path),
-        "locations_file": locations_file(),
+        "locations_file": locations_file() if root else None,
     }
 
 
@@ -774,39 +588,20 @@ def _say_work(w):
 
 
 def print_status(st):
-    inst = st["install"]
-    print("This install")
-    print("  %s" % inst["skill"])
-    print("  %s" % ("inside the project %s" % inst["project"] if inst["kind"] == "project"
-                    else "serves the whole computer"))
-    print()
-    if st["chosen"]:
-        print("The person's files: %s" % st["folder"])
-        print("  decided by: %s" % st["decided_by"])
-    else:
-        print("The person's files: NOT CHOSEN YET. Ask the person before doing anything else.")
-        print()
-        print("Folders to offer")
-        if st["suggested"]["project"]:
-            print("  project : %s" % st["suggested"]["project"])
-        print("  home    : %s" % st["suggested"]["home"])
-        print("  or any folder they name")
-    if st["existing_work"]:
-        print()
-        print("Resu Studio work that already exists on this computer. Say where it is and "
-              "ask\nwhether to bring it in (--bring), before using any of it:")
-        for w in st["existing_work"]:
-            print("  %s" % w["folder"])
-            print("    %s: %s" % (w["found_as"], _say_work(w)))
+    print("Task workspace: %s" % st["install"]["project"])
     if not st["chosen"]:
-        print()
-        print("Then: %s scripts/paths.py --choose project|home|<folder> [--bring <folder>]" % PY)
+        print(not_chosen_message())
+        return
+    print("The person's files: %s" % st["folder"])
+    print("  decided by: %s" % st["decided_by"])
+    print("  layout: %s; %s; %s; %s" % (ABOUT, RECORD, JOBS, DOCUMENTS))
+    print("Older folders are not searched or imported. Existing outputs are not source material without an explicit user request.")
 
 
 # ------------------------------------------------------------------ one job each
 
 #: `JOBS`, defined at the top, holds one working folder per advertisement. What belongs
-#: to the person, `1 About me` and `2 My record`, is read by every job.
+#: to the person is reused only when explicitly requested.
 
 #: A job id is a folder name, so it is held to letters, digits and hyphens. Anything
 #: else, a slash or a `..` above all, would let a typo name a folder outside `jobs/`.
@@ -870,7 +665,11 @@ def job_dir(job_id):
     writes its record, so a folder that exists always has a `job.json` saying what
     it is for.
     """
-    return os.path.join(data_dir(), JOBS, find_job(job_id))
+    root = data_dir()
+    folder = os.path.join(root, JOBS, find_job(job_id))
+    if not _within(folder, root):
+        raise NoSuchJob("The job folder resolves outside the data root; no substitute was used.")
+    return folder
 
 
 def job_file(job_id):
@@ -900,7 +699,10 @@ def job_documents_dir(job_id):
             name = json.load(fh).get("documents_folder") or jid
     except (IOError, OSError, ValueError):
         pass
-    path = os.path.join(documents_dir(), name)
+    root = documents_dir()
+    path = os.path.join(root, name)
+    if not _within(path, root):
+        raise NoSuchJob("The job's document folder resolves outside the data root; no substitute was used.")
     os.makedirs(path, exist_ok=True)
     return path
 
@@ -920,6 +722,8 @@ _ONE_PATH = {
 
 #: The same, for one job. Each needs `--job <id>` alongside it.
 _JOB_PATH = {
+    "--facts": facts_file,
+    "--answers": answers_file,
     "--job-dir": job_dir,
     "--job-ad": job_ad_dir,
     "--job-documents": job_documents_dir,
@@ -929,9 +733,9 @@ _JOB_PATH = {
 
 def _usage():
     return ("usage: paths.py --status [--json]\n"
-            "       paths.py --choose project|home|<folder> [--bring <folder>]\n"
+            "       paths.py --choose project|home|<folder> [--bring <folder>] [--user-instruction <request>]\n"
             "       paths.py [--data|--facts|--answers|--documents|--about|--record|--jobs]\n"
-            "       paths.py --job <id> [--job-dir|--job-ad|--job-documents|--job-file]\n"
+            "       paths.py --job <id> [--job-dir|--job-ad|--job-documents|--job-file|--facts|--answers]\n"
             "  no arguments : where everything goes\n"
             "  a flag       : that one path, on its own line, and nothing else\n")
 
@@ -963,6 +767,12 @@ def main(argv=None):
         if not target:
             sys.stderr.write("paths.py: --choose needs project, home, or a whole folder path.\n")
             return 2
+        user_instruction = None
+        if "--user-instruction" in rest:
+            user_instruction, rest = _value(rest, "--user-instruction")
+            if not user_instruction:
+                sys.stderr.write("paths.py: --user-instruction needs the user's exact instruction.\n")
+                return 2
         bring_from = None
         if "--bring" in rest:
             bring_from, rest = _value(rest, "--bring")
@@ -973,7 +783,7 @@ def main(argv=None):
             sys.stderr.write("paths.py: not understood with --choose: %s\n" % " ".join(rest))
             return 2
         try:
-            r = choose(target, bring_from)
+            r = choose(target, bring_from, user_instruction)
         except ValueError as e:
             sys.stderr.write("paths.py: %s\n" % e)
             return 5
@@ -1042,7 +852,7 @@ def main(argv=None):
     print("  %d job%s so far" % (len(known_jobs()), "" if len(known_jobs()) == 1 else "s"))
     print()
     print("  For a command line, one path and nothing else:")
-    print("    %s scripts/paths.py --facts" % PY)
+    print("    %s scripts/paths.py --job <id> --facts" % PY)
     return 0
 
 

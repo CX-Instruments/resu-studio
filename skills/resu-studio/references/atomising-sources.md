@@ -2,8 +2,7 @@
 
 Preserve source relationships: every extracted fact retains its role, source wording and relevant action/problem/method/result context. Record related fact ids when a sentence is split. A fragment cannot acquire the causality or ownership of a neighbouring fragment. Keep “X or Y” as one alternative requirement, and record conditions with the requirement they qualify; split only independently required capabilities.
 
-Two ledgers. The facts ledger describes the person and is reused forever. The asks
-ledger describes one advertisement and is thrown away with it.
+Two ledgers, both scoped to this application. The facts ledger comes from its authorised sources; the asks ledger describes its advertisement. Do not automatically reuse shared history or previous outputs. Explicitly requested reuse must retain provenance in the job-local facts ledger.
 
 ---
 
@@ -19,15 +18,15 @@ happens to be in, and that directory is thrown away at the end of the session.
 substitution so the file lands where the next session will find it:
 
 ```bash
-python3 scripts/paths.py --facts
+python3 scripts/paths.py --job <job id> --facts
 python3 scripts/build_studio.py --cv "cv-<variant>.md" --job <job id> \
-    --facts "$(python3 scripts/paths.py --facts)"
+    --facts "$(python3 scripts/paths.py --job <job id> --facts)"
 ```
 
 `paths.py` has one flag per path, each printing one bare line and nothing else:
 `--facts`, `--answers`, `--about`, `--jobs`, `--documents`, and `--job <job id>` for one
 job's folder. Run it with no argument to see the folder it resolved and why. `facts.md` is
-the person's, in `2 My record`; `asks.md` belongs to one advertisement and lives in that
+scoped to the current application; `asks.md` describes its advertisement and lives in that
 job's folder, `"$(python3 scripts/paths.py --job <job id>)/asks.md"`.
 
 ## What counts as one fact

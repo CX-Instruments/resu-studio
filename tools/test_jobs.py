@@ -8,10 +8,9 @@ the results. Writes step2-results.json beside the temp folder for screenshots.
 import hashlib, json, os, shutil, subprocess, sys, tempfile, time
 
 SKILL = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "skills", "resu-studio")
-SCR = os.path.join(tempfile.gettempdir(), "resu-test-jobs")
-os.makedirs(SCR, exist_ok=True)
-DATA = os.path.join(SCR, "fake-home", ".resu-studio")
-ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA, RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
+SCR = tempfile.mkdtemp(prefix="resu-test-jobs-")
+DATA = os.path.join(SCR, "Resu - CV Builder")
+ENV = dict(os.environ, RESU_WORKSPACE=SCR, CLAUDE_PLUGIN_DATA=os.path.join(SCR, "ignored-host-data"), RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
 steps = []
 
 
@@ -77,7 +76,6 @@ def w(rel, text):
 
 
 # ---------------------------------------------------------------- a fake person, old layout
-shutil.rmtree(os.path.join(SCR, "fake-home"), ignore_errors=True)
 w("2 My record/facts.md", "# Facts\n\nfact-1: Built monthly reporting pack for 40 clinics.\n")
 w("2 My record/answers.md", "---\ndepth: essentials\n---\n# Answers\n")
 w("1 About me/Sam Rivera CV.md", "# Sam Rivera\n\nsam.rivera@example.com\n")

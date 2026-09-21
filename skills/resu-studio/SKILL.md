@@ -4,7 +4,7 @@ description: This skill should be used whenever the user is applying for a job, 
 license: AGPL-3.0-or-later
 compatibility: Runs its scripts with Python 3 (standard library only) and prints PDFs through a Chromium-family browser such as Chrome, Edge or Chromium. Works in any agent that can run commands; in a chat that cannot, the scoring, proposals and letter still work and the studio and PDF do not.
 metadata:
-  version: "0.7.1"
+  version: "0.7.2"
   author: CX Instruments
   homepage: https://github.com/CX-Instruments/resu-studio/blob/main/README.md
 ---
@@ -51,9 +51,7 @@ Something like:
 > will print, scored against what this employer asks for. I suggest changes there, and you
 > accept or reject each one yourself. Nothing on your CV changes until you say so.
 
-**Once per conversation, and never as a menu.** Do not list the seven phases at them
-unless they ask what it does. Do not make them read a tool log to find out what they
-are talking to.
+**At the start, give a short, ordered explanation of the journey:** supplied sources, assessment, writing-mode comparison, selected rewrite, their decisions, then the assembled CV and requested outputs. Say where the files will live and what comes next. Follow these steps; do not invent an alternative workflow, extra deliverables or folder names. Continue authorised internal work without asking whether to proceed; pause only for an unanswered choice or missing input.
 
 ## Say it in their words, never the skill's
 
@@ -65,7 +63,7 @@ is, and where they will see it:
 
 | In this file | Say to them |
 |---|---|
-| facts ledger, `facts.md` | "your working history, pulled out of your CV line by line so every job can use it" |
+| facts ledger, `facts.md` | "your working history, pulled out of your CV line by line for this application" |
 | asks ledger, `asks.md` | "everything this ad asks for, as a checklist" |
 | scoring, the scorecard | "checking your CV against that checklist" |
 | the studio, `-Studio.html` | "the Studio, a page that opens in your browser" |
@@ -142,15 +140,13 @@ skill runs in different places, and the rules change with each:
 
 Wherever it is:
 
-- **Their folder is chosen by them, once per install, and never guessed.** See "Before
-  anything else: where their files live" below. It is outside the skill, so an update
-  cannot delete it, and it keeps everything out of git.
-- **Run every command from this skill's own folder**, the one holding this file.
+- **Default to exactly `<current workspace>/Resu - CV Builder`.** Use another location only on an explicit user instruction for this workspace. Installation paths, old settings and host data folders never choose the workspace.
+- **Capture the task's actual starting folder before changing directories.** Set `RESU_WORKSPACE` to that folder (PowerShell: `$env:RESU_WORKSPACE = (Get-Location).Path`; bash: `export RESU_WORKSPACE="$PWD"`). Then run the examples from the skill folder. Alternatively stay in the task workspace and call scripts by absolute path. Never substitute the plugin/cache folder, a CV's parent folder or a remembered older workspace.
 - **Commands are written for bash with `python3`.** Before the first script, find the
   Python to use, as below, and put the path it prints in place of `python3` in every
   command. The reference shows the PowerShell form.
 - **Every command that names a file uses `paths.py` to name it**, as
-  `"$(python3 scripts/paths.py --facts)"` or `"$(python3 scripts/paths.py --job <job id>)"`,
+  `"$(python3 scripts/paths.py --job <job id> --facts)"` or `"$(python3 scripts/paths.py --job <job id>)"`,
   never a bare `facts.md`.
 - **Never send them a command to run.** Commands are for you to execute.
 
@@ -179,39 +175,43 @@ session's own `python3` is fine and this step can be skipped.
 
 ## Before anything else: where their files live
 
-**Their CV, their history, every job ad and every document is private, and where it lives
-is their decision.** The first time a script is about to run in a conversation, run:
+**Use exactly `Resu - CV Builder` inside the current task workspace.** Run:
 
 ```bash
 python3 scripts/paths.py --status
 ```
 
-- **Chosen already:** carry on. It names the folder.
-- **NOT CHOSEN YET:** every other script refuses to run (exit 6) until this is settled. Tell
-  them, in plain words, where it suggests (inside this project, or their home folder) and
-  what it found: any older Resu Studio work on the computer is listed with where it is and
-  what it holds. Then ask where their files should live, and whether to bring any older work
-  in. **Never choose for them, and never use older work they have not agreed to.** Then:
+Status is read-only. It reports this workspace's default or an explicitly requested,
+workspace-local override; it does not search other folders. If the default has not been
+created, initialise it without asking for a folder choice:
 
 ```bash
-python3 scripts/paths.py --choose project            # or home, or a whole folder path
-python3 scripts/paths.py --choose project --bring "<the older folder they agreed to>"
+python3 scripts/paths.py --choose project
 ```
 
-The folder it makes, `Resu - CV Builder`, holds `1 About me` (the CV and anything else
-about them), `2 My record` (`facts.md`, `answers.md`), `3 Jobs` (one folder per job ad) and
-`4 Finished documents` (Resu Desk and each job's documents). It carries a `README.txt` and a
-`.gitignore` that keeps all of it out of git. Say the folder's name to them once, and that
-nothing in it is sent anywhere.
+Keep a valid explicit override when one is already recorded. A different location or
+an import requires the user's explicit request; see `references/where-files-go.md`.
+A broken location record or unavailable workspace is a blocker to explain, never a
+reason to use a home folder, another repository or a guessed substitute.
 
-A host that sets its own data folder (`CLAUDE_PLUGIN_DATA`) has chosen already, and
-`--status` says so. Full detail: `references/where-files-go.md`.
+The fixed layout is `1 About me` (supplied originals), `2 My record` (optional saved
+history and preferences), `3 Jobs` (application sources, evidence, answers and working
+files), and `4 Finished documents` (Resu Desk and each application's documents).
+`.resu` contains internal metadata. Keep all generated work inside this root, with
+application helpers and temporary files inside the active job folder. Do not create
+sibling roots with suffixes such as Fresh, New or a year. Do not put scripts or outputs
+beside the root in the user's workspace. Tell them the resolved folder once.
+
+**"Start fresh" or "do not use old outputs" restricts the inputs; it does not change
+the destination.** Use only the sources supplied or explicitly designated for this
+application. Do not read old outputs, shared ledgers or another application's files
+as evidence, even when they are nearby. Preserve existing files. Never delete or move
+old work as a way to start fresh.
 
 ## Working on more than one job
 
 **Every job ad is its own job, with its own folder under `3 Jobs`.** A new ad never
-replaces an earlier one. What belongs to the person, the CV, `facts.md` and `answers.md`,
-is shared by every job.
+replaces an earlier one. Each application has its own `facts.md` and `answers.md`, built from its authorised sources. Reuse saved history only when the user explicitly requests it; copy the authorised evidence into this application and record its provenance.
 
 - **Name the job in the chat at the start of every phase**, by role and employer, so
   nobody mixes two applications up. Never read or write one job's files while working on
@@ -240,10 +240,7 @@ is shared by every job.
   to a file and run `python3 scripts/jobs.py apply-desk <file>`. Read every `REFUSED` line
   back to them in plain words: it means the job changed after that Desk was built, and
   their Desk change was not written over the newer value. Ask which is right.
-- **Older work from before jobs had folders.** When `jobs.py list` says loose working files
-  are waiting, run `python3 scripts/jobs.py adopt --dry-run`, tell them which application it
-  thinks they belong to, and only after they agree run `jobs.py adopt` (with `--role` and
-  `--employer` when it could not tell).
+- **Older work:** inspect, import or adopt it only when explicitly requested. Never turn a fresh application into a migration task.
 
 ## Never ask the same question twice
 
@@ -251,8 +248,8 @@ Asking a person something they already told you is the fastest way to lose their
 and it happens because the answer was used and then dropped. Every answer gets written
 down, in a file, the moment it arrives.
 
-**The file is `answers.md`, in the folder `python3 scripts/paths.py --answers` names**,
-so it survives this session and every later job ad. Create it on the first question. Its
+**The file is `answers.md`, in the folder `python3 scripts/paths.py --job <job id> --answers` names**,
+so it survives later sessions of this application. Create it on the first question. Its
 shape is `templates/answers.md`. One block per question, appended in the order asked:
 
 ```
@@ -298,10 +295,12 @@ partial overlap so each half keeps what is unique to it.
 
 Read `references/sources.md` first. It is the whole of this phase.
 
-**Before copying anything in, run `python3 scripts/jobs.py list`.** If a job for this
-advertisement is already there, work in it and say so. If other jobs are there, say so in
-one line: they are kept exactly as they are, and this ad gets a job of its own. Nothing is
-replaced.
+**Use the user's supplied or explicitly designated sources only.** Resume an existing
+application only when requested. For a new application, create its job below. If the
+same role already exists, do not silently resume it. An explicit fresh-start request
+authorises `jobs.py new --again`, which creates another job inside the standard `3 Jobs`
+folder. Otherwise ask whether to resume or start a separate application. Do not search
+other workspaces or open old application contents to decide.
 
 **Then start the job**, with the role and employer as the advertisement writes them:
 
@@ -315,9 +314,9 @@ It prints the job id. Use it in every command for this application from here on.
 **Copy the advertisement and any job pack into the job**, untouched, into the folder
 `python3 scripts/paths.py --job <job id> --job-ad` names, with the text of each extracted into
 a `.txt` beside it. **Copy the CV into the folder `python3 scripts/paths.py --about` names**,
-the same way, unless it is already there from an earlier job; a LinkedIn URL or any other
+the same way, using only the files authorised for this application; a LinkedIn URL or any other
 link they share goes in `links.md` in that folder. **Then write the CV out as markdown in the
-`templates/cv.md` shape, into the same folder.** Nothing later can
+`templates/cv.md` shape, into the active job folder.** Preserve originals; use the job folder for a copy if a supplied filename collides with an existing file. Nothing later can
 read a PDF or a Word file, and `build_studio.py` refuses markdown with no `# Name`
 heading. Convert faithfully: no line reworded, dropped or tidied.
 
@@ -325,7 +324,7 @@ heading. Convert faithfully: no line reworded, dropped or tidied.
 description, a duty statement, a person specification), ask for it. If a URL will not
 fetch, say so and ask for the text.
 
-**Then stop and ask how deep to go, before you read anything else.** Scoring is by far
+**Use the scope the user already specified. If it is missing, ask how deep to go before scoring.** Scoring is by far
 the longest job, and how long depends on how much gets scored. That is their decision,
 made before the work starts. Ask about the split by what it means, never by a label the
 advertisement did not use:
@@ -350,19 +349,17 @@ to this ad, so the next ad asks again. **Never choose for them, and
 never quietly do the bigger job.**
 
 **Done when:** the job exists, the advertisement is in its `ad` folder, the CV is in
-`1 About me` as markdown with a `# Name` heading, the application format is known (what
+the job folder as markdown with a `# Name` heading, the application format is known (what
 documents, what word limits, what page limit), and the depth is recorded.
 
 ## Phase 2: Atomise
 
-Two ledgers, `facts.md` and `asks.md`, from the templates in `templates/`, written in the
-person's folder and named through `paths.py`: `"$(python3 scripts/paths.py --job <job id>)/asks.md"`
-in the job's folder, and `"$(python3 scripts/paths.py --facts)"` in `2 My record`. A file written to a bare relative name can
-be thrown away with the session.
-
-The facts ledger is the reusable asset. **On a second advertisement, read it. Do not
-rebuild it.** The new advertisement needs a new asks ledger and nothing else. Ask for the
-CV again only when there is no facts ledger, or when they say something has changed.
+Two ledgers, `facts.md` and `asks.md`, from the templates in `templates/`, both in the
+active job folder. Resolve facts with `python3 scripts/paths.py --job <job id> --facts`.
+Build them from this application's authorised CVs, answers and advertisement. Never
+fall back to `2 My record/facts.md` or another job's ledger. For an explicitly resumed
+older application, copy only its authorised evidence into the job's own ledger before
+continuing. The writing engine and checker require application-local facts.
 
 The asks ledger is per advertisement. Split compound asks: a duty naming seven subjects
 in one sentence is seven asks, or the person reads as failing all of it when they answer
@@ -408,9 +405,9 @@ gap between them is the value of the exercise.
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
-python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their CV>.md" \
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --job <job id>)/<their CV>.md" \
     --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
-    --facts "$(python3 scripts/paths.py --facts)" \
+    --facts "$(python3 scripts/paths.py --job <job id> --facts)" \
     --job <job id>
 ```
 
@@ -437,9 +434,9 @@ Review all shared objectives and publish with `writing.py publish` before rebuil
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
-python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their CV>.md" \
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --job <job id>)/<their CV>.md" \
     --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
-    --facts "$(python3 scripts/paths.py --facts)" \
+    --facts "$(python3 scripts/paths.py --job <job id> --facts)" \
     --proposals "$J/proposals.md" --achievements "$J/achievements.md" \
     --job <job id>
 python3 scripts/check.py --job <job id>
@@ -494,7 +491,7 @@ against its proposal before the file changes shape. Then assemble:
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
-python3 scripts/assemble.py "$(python3 scripts/paths.py --about)/<their CV>.md" \
+python3 scripts/assemble.py "$(python3 scripts/paths.py --job <job id>)/<their CV>.md" \
     --decisions "$J/cv-decisions.json" \
     --out "$J/cv-<variant>.md"
 ```
@@ -512,7 +509,7 @@ the new one against the assembled CV, and rebuild the studio from the assembled 
 J="$(python3 scripts/paths.py --job <job id>)"
 python3 scripts/build_studio.py --cv "$J/cv-<variant>.md" \
     --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
-    --facts "$(python3 scripts/paths.py --facts)" \
+    --facts "$(python3 scripts/paths.py --job <job id> --facts)" \
     --proposals "$J/proposals.md" --achievements "$J/achievements.md" \
     --job <job id>
 python3 scripts/check.py --job <job id>

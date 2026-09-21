@@ -14,8 +14,8 @@ import glob, json, os, re, shutil, subprocess, sys, tempfile
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILL = os.path.join(REPO, "skills", "resu-studio")
 SCR = os.path.join(tempfile.gettempdir(), "resu-test-build")
-DATA = os.path.join(SCR, ".resu-studio")
-ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA, RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
+DATA = os.path.join(SCR, "Resu - CV Builder")
+ENV = dict(os.environ, RESU_WORKSPACE=SCR, CLAUDE_PLUGIN_DATA=os.path.join(SCR, "ignored-host-data"), RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
 DOCS = os.path.join(DATA, "4 Finished documents")
 steps = []
 
@@ -97,7 +97,6 @@ counts:
 """
 
 shutil.rmtree(SCR, ignore_errors=True)
-w("2 My record/facts.md", "# Facts\n\n```\nid: fact-roster\ntext: Rostered 35 casual staff in Deputy\n```\n")
 w("answers.md", "---\ndepth: essentials\n---\n# Answers\n")
 shutil.copy(os.path.join(REPO, "docs", "review", "sample-cv.md"), os.path.join(DATA, "sample.md"))
 os.makedirs(os.path.join(DATA, "1 About me"), exist_ok=True)
@@ -108,6 +107,7 @@ run("scripts/jobs.py", "new", "--role", "Operations Coordinator", "--employer", 
     "--closes", "2026-10-03")
 run("scripts/jobs.py", "new", "--role", "Venue Manager", "--employer", "Riverbend Events", "--closes", "2026-09-30")
 A, B = "northside-community-care-operations-coordinator-2026-09", "riverbend-events-venue-manager-2026-09"
+w("3 Jobs/%s/facts.md" % B, "# Facts\n\n```\nid: fact-roster\ntext: Rostered 35 casual staff in Deputy\n```\n")
 w("3 Jobs/%s/scorecard.md" % A, SCORE % (3, 2, "\n".join([
     "| Rostering a casual workforce | must | page | Built and maintained weekly rosters for 35 casual staff | |",
     "| Supplier and contract management | must | page | Managed relationships with 14 suppliers | |",
@@ -119,7 +119,7 @@ w("3 Jobs/%s/scorecard.md" % B, SCORE % (3, 3, "\n".join([
 
 step("1. Two jobs for one fake person",
      "Alex Morgan (the fictional CV in docs/review) is applying to two employers. Each job has its own folder "
-     "and scorecard. The CV and facts are shared.",
+     "and scorecard. Each application has its own authorised evidence.",
      ["scripts/jobs.py", "list"],
      checks=[("both jobs listed", lambda c, o: A in o and B in o)])
 
@@ -131,7 +131,7 @@ step("2. Build the studio for the Northside job",
              ("written into the job's own documents folder",
               lambda c, o: "Northside Community Care - Operations Coordinator/Operations Coordinator - Northside Community Care - Studio.html" in o),
              ("asks loaded from this job's scorecard", lambda c, o: "asks   : 3" in o),
-             ("store key is the same rule as before, role and employer",
+             ("store key identifies the application",
               lambda c, o: "cvwb:operations-coordinator-northside-community-care" in o)])
 
 step("3. Build the studio for the Riverbend job",
@@ -145,19 +145,18 @@ SA = os.path.join(DOCS, "Northside Community Care - Operations Coordinator",
                   "Operations Coordinator - Northside Community Care - Studio.html")
 SB = os.path.join(DOCS, "Riverbend Events - Venue Manager", "Venue Manager - Riverbend Events - Studio.html")
 
-step("4. Legacy builds remain readable, with explicit migration into an isolated job",
-     "Built with --role and --employer and no --job, as every existing command in SKILL.md does today. "
-     "It goes to the top of the documents folder, and its store key matches the job build, so marks a person "
-     "already made are still there.",
+step("4. Builds without --job also use an isolated browser store",
+     "Compatibility build with --role and --employer and no --job. "
+     "Its browser store is separate from the job build, so marks a person "
+     "made elsewhere cannot leak into it.",
      ["scripts/build_studio.py", "--cv", CV, "--role", "Operations Coordinator",
       "--employer", "Northside Community Care", "--out", os.path.join(SCR, "old-way-studio.html")],
      checks=[("exit code 0", lambda c, o: c == 0),
-             ("legacy key stays available without sharing the new job's approvals",
+             ("compatibility build does not share the job's approvals",
               lambda c, o: store_key(os.path.join(SCR, "old-way-studio.html"))
-              == "cvwb:operations-coordinator-northside-community-care" and
+              .startswith("cvwb:operations-coordinator-northside-community-care:") and
               store_key(SA).startswith("cvwb:operations-coordinator-northside-community-care:") and
-              'const LEGACY_STORE = "cvwb:operations-coordinator-northside-community-care"' in
-              open(SA, encoding="utf-8").read())])
+              store_key(SA) != store_key(os.path.join(SCR, "old-way-studio.html")))])
 
 browser = os.environ.get("CV_BROWSER") or next(iter(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome")), "")
 if browser:
@@ -184,10 +183,10 @@ step("7. The documents list shows the job beside each application", "",
      checks=[("Northside job named", lambda c, o: "[job %s]" % A in o),
              ("Riverbend job named", lambda c, o: "[job %s]" % B in o)])
 
-step("8. check.py on one job finds the shared facts ledger",
-     "The job folder has no facts.md of its own, which is normal now. check.py reads the person's one.",
+step("8. check.py uses application-local facts",
+     "Each job owns the evidence authorised for that application.",
      ["scripts/check.py", "--job", "riverbend"],
-     checks=[("reads facts.md from the person's folder", lambda c, o: "facts from ~/.resu-studio/2 My record/facts.md" in o),
+     checks=[("does not fall back to shared facts", lambda c, o: "facts from" not in o),
              ("counts the fact", lambda c, o: "facts: 1" in o),
              ("does not say Phase 2 has not run for facts", lambda c, o: "No facts.md" not in o)])
 

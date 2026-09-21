@@ -257,7 +257,7 @@ button,input,select{font:inherit;color:inherit}
 .app[data-view="score"]{grid-template-columns:1fr}
 .app[data-view="score"] .stage{position:fixed;inset:0;overflow:visible;
   pointer-events:none;background:none;z-index:30}
-.app[data-view="score"] .stage .scroll{display:none}
+.app[data-view="score"] .stage .scroll{visibility:hidden;pointer-events:none}
 .app[data-view="score"] .rails{position:fixed;left:0;top:auto;bottom:22px;
   pointer-events:auto}
 .app[data-view="score"] .drawer{position:fixed;pointer-events:auto;
@@ -267,7 +267,9 @@ button,input,select{font:inherit;color:inherit}
 .app[data-view="writing"]{grid-template-columns:1fr}
 .app[data-view="writing"] .stage{position:fixed;inset:0;overflow:visible;
   pointer-events:none;background:none;z-index:30}
-.app[data-view="writing"] .stage .scroll{display:none}
+/* Keep the iframe measurable while Writing hides the preview. display:none
+   makes every pagination measurement zero and clips the CV to its first sheet. */
+.app[data-view="writing"] .stage .scroll{visibility:hidden;pointer-events:none}
 .app[data-view="writing"] .rails{position:fixed;left:0;top:auto;bottom:22px;
   pointer-events:auto}
 .app[data-view="writing"] .drawer{position:fixed;pointer-events:auto;
@@ -927,7 +929,6 @@ const DRAFTS = {};
    of this studio is that they see a change before it happens. */
 const WRITING = {"phase":"unprepared"};
 const SOURCE_HASH = "";
-const LEGACY_STORE = "";
 const PROPOSED = {};
 const GAPS={tight:"5px",normal:"9px",airy:"15px"};
 
@@ -961,7 +962,7 @@ let S = {
 };
 
 /* Where this application's decisions live in this browser. One key per application,
-   written here by scripts/build_studio.py from the role and the employer, so marking a
+   written here by scripts/build_studio.py from a persistent random application identity, so marking a
    line in one application cannot show up in another. Every read and write in this file
    goes through this const, including the copy kept under PREV_STORE, so there is one
    place that decides the namespace. */
@@ -3582,6 +3583,11 @@ function draw(){
   paper.srcdoc=buildDoc();
   clearTimeout(t); t=setTimeout(fit,90);
 }
+// Pagination finishes after fonts are ready, which can be later than iframe load.
+// Fit to the actual completed document, including on the very first load.
+window.addEventListener("message",ev=>{
+  if(ev.source===paper.contentWindow && ev.data && Number.isFinite(ev.data.cvPages)) fit();
+});
 paper.addEventListener("load",()=>{
   fit(); setTimeout(fit,140); setTimeout(fit,420);
   const d=paper.contentDocument;

@@ -27,6 +27,7 @@ import json
 import os
 import re
 import sys
+import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -857,8 +858,7 @@ def main():
 
     # A job knows its own role and employer, so they are read from its record rather
     # than typed again, and typed differently, on every rebuild. Given explicitly they
-    # still win. The browser store is keyed on role and employer exactly as before, so
-    # a studio rebuilt for a job keeps every mark made in the studio built without one.
+    # still win. Browser state is scoped to the persistent application instance.
     job = None
     if a.job:
         try:
@@ -1034,18 +1034,30 @@ def main():
         s = s.replace('"Cover letter.md"', json.dumps(os.path.basename(a.letter)))
         s = s.replace('\\"Cover letter.md\\"', '\\"%s\\"' % os.path.basename(a.letter))
 
-    # One browser store per application. Without this, marking a line in one
-    # application shows up in another, which is the ghost every tool of this shape
-    # grows when nobody keys the storage. The page holds the key in one const and
-    # every read and write goes through it, including the copy the page keeps of the
-    # state as it stood before a rebuilt CV was migrated, so that copy is inside this
-    # application's own namespace too and the line printed below stays true.
-    key = slug(". ".join(x for x in (a.role, a.employer) if x) or doc["name"])
-    legacy_key = "cvwb:%s" % key
+    # Names and paths can recur after a fresh start; they cannot identify a run.
+    # Keep the random identity on disk so rebuilds retain decisions but recreating
+    # the application never reads decisions left behind in browser localStorage.
+    out = a.out or os.path.join(paths.job_documents_dir(job["id"]) if job
+                                else paths.documents_dir(), studio_filename(a, doc))
+    label = slug(". ".join(x for x in (a.role, a.employer) if x) or doc["name"])
+    root_key = hashlib.sha256(os.path.normcase(os.path.realpath(paths.data_dir())).encode("utf-8")).hexdigest()[:12]
     if job:
-        root_key = hashlib.sha256(os.path.normcase(os.path.abspath(paths.data_dir())).encode("utf-8")).hexdigest()[:12]
-        key += ":%s:%s" % (root_key, job["id"])
-    s = swap_const(s, "LEGACY_STORE", legacy_key)
+        instance = jobs.application_instance(job["id"])
+    else:
+        # Compatibility builds without --job are scoped to this output in this
+        # workspace, never to a role/employer alone. Removing its HTML starts fresh.
+        output_key = hashlib.sha256(os.path.normcase(os.path.abspath(out)).encode("utf-8")).hexdigest()
+        identity_file = os.path.join(paths.system_dir(), "studio-instances", output_key + ".json")
+        instance = None
+        if os.path.isfile(out) and os.path.isfile(identity_file):
+            with io.open(identity_file, encoding="utf-8") as fh:
+                instance = json.load(fh).get("instance")
+        if not isinstance(instance, str) or not re.fullmatch(r"[0-9a-f]{32}", instance):
+            instance = uuid.uuid4().hex
+            os.makedirs(os.path.dirname(identity_file), exist_ok=True)
+            with io.open(identity_file, "w", encoding="utf-8") as fh:
+                json.dump({"instance": instance}, fh)
+    key = "%s:%s:%s" % (label, root_key, instance)
     s = swap_const(s, "STORE", "cvwb:%s" % key)
 
     # What the saved marks are checked against. See `fingerprint`.

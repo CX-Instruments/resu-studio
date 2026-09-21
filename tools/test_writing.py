@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import shutil
 import sys
 import tempfile
 import unittest
@@ -17,7 +18,7 @@ REPO = Path(__file__).resolve().parents[1]
 SKILL = REPO / "skills/resu-studio"
 SCR = Path(tempfile.mkdtemp(prefix="resu-writing-"))
 os.environ["RESU_STUDIO_CONFIG"] = str(SCR / "config")
-os.environ["CLAUDE_PLUGIN_DATA"] = str(SCR / "data")
+os.environ["RESU_WORKSPACE"] = str(SCR)
 sys.path.insert(0, str(SKILL / "scripts"))
 import paths
 import jobs
@@ -66,7 +67,7 @@ class WritingTests(unittest.TestCase):
         self.job = jobs.create("Coordinator", "Sample", again=True)["id"]
         self.folder = Path(paths.job_dir(self.job))
         self.cv = write(self.folder / "source.md", CV)
-        write(paths.facts_file(), "```\nid: f1\ntext: Wrote an incident procedure and trained 35 staff.\n```\n")
+        write(paths.facts_file(self.job), "```\nid: f1\ntext: Wrote an incident procedure and trained 35 staff.\n```\n")
         write(self.folder / "asks.md", "```\nid: a1\ntext: Improve procedures and train the team.\nnecessity: must\n```\n")
         write(self.folder / "ad/ad.md", "Improve procedures and train the team.")
         self.review = {k:{"status":"pass","notes":"Reviewed synthetic evidence and the finished meaning."} for k in W.OBJECTIVES}
@@ -119,6 +120,93 @@ class WritingTests(unittest.TestCase):
         self.html = self.folder / "studio.html"
         run("scripts/build_studio.py", "--job", self.job, "--cv", self.cv,"--out",self.html)
         return self.html
+
+    def test_new_application_never_uses_shared_evidence(self):
+        other = jobs.create("Coordinator", "Isolated", again=True)["id"]
+        write(paths.facts_file(), "Old shared evidence must not be read")
+        write(Path(paths.job_dir(other)) / "asks.md", "Current application requirements")
+        with self.assertRaisesRegex(ValueError, "facts file is missing"):
+            W.source_record(self.cv, other)
+        import check
+        self.assertEqual(check._facts_for(paths.job_dir(other)), paths.facts_file(other))
+        self.assertFalse(Path(paths.facts_file(other)).exists())
+
+    def test_initial_preview_paginates_while_writing_tab_is_open(self):
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            self.skipTest("Playwright is needed for the browser check")
+        long_cv = CV
+        for i in range(8):
+            long_cv += "\n## SAMPLE PROJECT %d\n\n" % i
+            long_cv += ("Documented the sample venue booking process, supplier contacts and incident records.\n\n" * 7)
+        long_cv += "Final synthetic source paragraph retained.\n"
+        write(self.cv, long_cv)
+        W.prepare(self.job, self.cv, self.data); self.build()
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(**({"executable_path":os.environ["CV_BROWSER"]} if os.environ.get("CV_BROWSER") else {}))
+            page = browser.new_page(); errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            for layout in (None, "sidebar-tint", "sidebar-top", "compact"):
+                if layout:
+                    page.evaluate("layout => { S.layout=layout; S.headFont='rubik'; S.bodyFont='quicksand'; S.size='large'; save(); }", layout)
+                    page.reload()
+                else:
+                    page.goto(self.html.as_uri())
+                page.wait_for_function("document.querySelector('#paper').contentDocument.documentElement.hasAttribute('data-pages')")
+                self.assertEqual(page.locator('.app').get_attribute('data-view'), 'writing')
+                pages = page.evaluate("Number(paper.contentDocument.documentElement.dataset.pages)")
+                self.assertGreater(pages, 1, layout)
+                initial_document = page.evaluate("paper.contentDocument.documentElement.outerHTML")
+                page.get_by_role("tab",name="Design",exact=True).click()
+                page.wait_for_function("parseFloat(paper.style.height) >= paper.contentDocument.getElementById('doc').getBoundingClientRect().bottom")
+                self.assertEqual(page.evaluate("Number(paper.contentDocument.documentElement.dataset.pages)"), pages)
+                self.assertEqual(page.evaluate("paper.contentDocument.documentElement.outerHTML"), initial_document)
+                self.assertIn("Final synthetic source paragraph retained.", page.frame_locator('#paper').locator('#doc').inner_text())
+                self.assertEqual(page.evaluate("handoffCount()"), 0)
+            self.assertEqual(errors, [])
+            browser.close()
+
+    def test_browser_fresh_workspace_has_zero_inherited_decisions(self):
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            self.skipTest("Playwright is needed for the browser check")
+        with TemporaryDirectory(prefix="resu-fresh-") as workspace, patch.dict(os.environ, {"RESU_WORKSPACE": workspace}):
+            self.setUp(); self.build()
+            original_job, original_html = self.job, self.html
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(**({"executable_path":os.environ["CV_BROWSER"]} if os.environ.get("CV_BROWSER") else {}))
+                page = browser.new_page(); errors = []
+                page.on("pageerror", lambda e: errors.append(str(e)))
+                page.goto(self.html.as_uri()); page.wait_for_selector('#writing-content')
+                self.assertEqual(page.evaluate("handoffCount()"), 0)
+                store = page.evaluate("STORE")
+                page.evaluate("for(let i=0;i<30;i++) S.checked['old-'+i]=true; save(); draw();")
+                self.assertEqual(page.evaluate("handoffCount()"), 30)
+                self.build(); page.reload(); page.wait_for_selector('#writing-content')
+                self.assertEqual(page.evaluate("STORE"), store)
+                self.assertEqual(page.evaluate("handoffCount()"), 30)
+                # Reproduce deleting the application's data while the browser retains
+                # localStorage, then recreating the same role/id/path in the same month.
+                data = Path(paths.data_dir()).resolve()
+                self.assertEqual(data.parent, Path(workspace).resolve())
+                self.assertEqual(data.name, paths.TOP)
+                shutil.rmtree(data)
+                self.setUp(); self.build()
+                self.assertEqual(self.job, original_job)
+                self.assertEqual(self.html, original_html)
+                page.reload(); page.wait_for_selector('#writing-content')
+                self.assertNotEqual(page.evaluate("STORE"), store)
+                self.assertEqual(page.evaluate("handoffCount()"), 0)
+                self.assertEqual(page.evaluate("Object.keys(PROPOSED).length"), 0)
+                self.assertEqual(page.evaluate("WRITING.phase"), "choose")
+                self.assertTrue(page.get_by_role("button",name="Use this mode and rewrite my CV",exact=True).is_visible())
+                self.assertIsNotNone(page.evaluate("key => localStorage.getItem(key)", store))
+                self.assertEqual(errors, [])
+                browser.close()
 
     def test_full_profile_required_and_previews_never_modify_source(self):
         original = self.data["samples"][0]["profile"]["current"]
@@ -327,7 +415,7 @@ class WritingTests(unittest.TestCase):
         self.assertEqual(len(history),2)
         retrieved=json.loads(run("scripts/writing.py","context","--job",self.job,"--batch",second["batch"]))
         self.assertEqual(retrieved["mode"]["id"],"warm-collaborative")
-        facts=Path(paths.facts_file());facts.write_text(facts.read_text(encoding="utf-8")+"\n```\nid: other\ntext: Unrelated evidence.\n```\n",encoding="utf-8")
+        facts=Path(paths.facts_file(self.job));facts.write_text(facts.read_text(encoding="utf-8")+"\n```\nid: other\ntext: Unrelated evidence.\n```\n",encoding="utf-8")
         self.assertTrue(self.switch("credible-conviction")["transition"]["reused"])
         facts.write_text(facts.read_text(encoding="utf-8").replace("trained 35","trained 30"),encoding="utf-8")
         with self.assertRaisesRegex(ValueError,"changed"):
@@ -396,7 +484,7 @@ class WritingTests(unittest.TestCase):
         self.assertEqual(W.load(self.job)["revision"],state["revision"])
 
     def test_stale_ad_claim_map_and_custom_modes(self):
-        facts=Path(paths.facts_file())
+        facts=Path(paths.facts_file(self.job))
         facts.write_text(facts.read_text(encoding="utf-8")+"\n```\nid: unrelated\ntext: Another fact.\n```\n",encoding="utf-8")
         self.assertEqual(W.stale(W.load(self.job)),[])
         original=facts.read_text(encoding="utf-8")
@@ -431,7 +519,7 @@ class WritingTests(unittest.TestCase):
 **Purpose:** structure
 **Order:** [1, 0]
 ''')
-        self.assertEqual(P.validate(records,self.cv,paths.facts_file(),str(self.folder/"asks.md"),True),[])
+        self.assertEqual(P.validate(records,self.cv,paths.facts_file(self.job),str(self.folder/"asks.md"),True),[])
 
     def test_distinct_samples_and_preview_selection(self):
         same=copy.deepcopy(self.data)
@@ -496,7 +584,7 @@ counts:
 **Draws on:** f1
 **Claims:** [{"text":"Wrote an incident procedure and trained 35 staff.","facts":["f1"]}]
 **Section:** '''+json.dumps(spec)
-        self.assertEqual(P.validate(P.parse(proposal),self.cv,paths.facts_file(),str(self.folder/"asks.md"),True),[])
+        self.assertEqual(P.validate(P.parse(proposal),self.cv,paths.facts_file(self.job),str(self.folder/"asks.md"),True),[])
         self.request()
         state=W.publish(self.job,write(self.folder/"proposals.md",proposal),self.review)
         self.assertEqual(W.batch_for(state)["records"][0]["kind"],"section")

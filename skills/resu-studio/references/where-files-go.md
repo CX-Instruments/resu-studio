@@ -42,8 +42,7 @@ disk.** Write the path as this session sees it. A Windows path like
 here with a plain message rather than quietly building a folder whose name contains the
 backslashes. A person on Windows has their folders mounted somewhere under a session
 path that starts with `/` and has no drive letter, usually something like
-`/home/<you>/mnt/<folder>`. `paths.py` looks for a mounted folder with the same name and
-says which one it found, so read the message rather than guessing at a path.
+`/home/<you>/mnt/<folder>`. Use only the actual current task workspace or an explicitly named destination. Do not search mounts for a folder with a similar name. If the supplied path is unavailable, explain the blocker and ask for the accessible path.
 
 ## On the person's own computer
 
@@ -97,82 +96,73 @@ pretend a file was written.
 
 ## The person's folder
 
-**The person chooses their folder, once per install, and it is never guessed.** A skill
-can be installed in more than one place on one computer: inside a project, the way
-`npx skills add` puts it in `<project>/.agents/skills/`, or for the whole computer. Each
-install asks separately, because a person who installed it inside one project does not
-expect it to open an application they started somewhere else.
+**Default: `<current task workspace>/Resu - CV Builder`.** The task workspace is the
+folder where the user started this task, regardless of where the plugin is installed.
+Never select it from an old install setting, global registry, host data environment
+variable, nearby CV location or previous conversation. `--status` reports the location
+without scanning for older work. `--choose project` initialises the default. Neither
+needs a new folder-choice question.
 
-**First, `python3 scripts/paths.py --status`.** It says whether this install has a folder,
-which folders to offer, and every folder on the computer that already holds Resu Studio
-work, with counts of what is in each. It never prints anybody's CV.
-
-- **Chosen:** carry on.
-- **NOT CHOSEN YET:** every script that needs the folder stops, with exit code 6 and one
-  sentence, until it is chosen. Nothing is created and no other folder is used meanwhile.
-  Say to the person, in plain words, what `--status` found and offered, and ask:
-  - where their files should live: inside this project (`<project>/Resu - CV Builder`),
-    in their home folder (`~/Resu - CV Builder`), or a folder they name;
-  - for any older work it listed, whether to bring it in. Say where it is and what it holds.
-
-  Then run their answer, and say the folder's name back to them:
-
-```bash
-python3 scripts/paths.py --choose project
-python3 scripts/paths.py --choose home --bring "<the older folder they agreed to>"
-python3 scripts/paths.py --choose "<a whole folder path>"
-```
-
-`--choose` records the choice in `~/.resu-studio/locations.json`, outside every install, so
-an update cannot lose it. `--bring` copies an older folder in, in either layout: nothing
-there is moved or deleted, nothing already in the new folder is written over, the documents
-list is pointed at the copies, and anything that is not Resu Studio's is left behind and
-named. Loose working files from before jobs had folders wait in `.resu/from-before-jobs/`
-for `jobs.py adopt`.
-
-**What is in the folder:**
+The fixed layout is:
 
 ```
 Resu - CV Builder/
-  README.txt             says the folder is private
-  .gitignore             one line, *, so git ignores everything in the folder
-  1 About me/            the CV as it arrived, the CV as markdown, links.md
-  2 My record/           facts.md, answers.md
-  3 Jobs/<job id>/       job.json, ad/, asks.md, scorecard.md, proposals.md, ...
-  4 Finished documents/  Resu Desk.html, and one folder of documents per job
-  .resu/                 documents.json and the scripts' own notes
+  README.txt             explains the private folder
+  .gitignore             ignores its contents
+  1 About me/            supplied originals and links
+  2 My record/           optional saved history and personal modes
+  3 Jobs/<job id>/       source CV, facts.md, answers.md, ad/, asks.md, working files
+  4 Finished documents/  Resu Desk.html and each job's documents
+  .resu/                 internal metadata
 ```
 
-**Private by default.** The `.gitignore` inside the folder keeps all of it out of any git
-repository the folder sits in, without anybody's own `.gitignore` being edited. Never
-remove it, never copy anything out of this folder into the project around it, and never
-commit a CV, a ledger or a document anywhere.
+**Different locations and imports require explicit user instructions.** Only when the
+user actually asks, pass their instruction verbatim with the destination they named:
 
-**Two things choose without asking, and `--status` says so.** A `data-location.txt` beside
-`SKILL.md`, one line holding a folder, written for this install. And a host's own data
-folder, `CLAUDE_PLUGIN_DATA` in Claude or `PLUGIN_DATA` where the Agent Plugins standard sets
-one. The old `~/.resu-studio/location` pointer and a plain `~/.resu-studio` are no longer used
-on their own: `--status` lists them as older work to bring in.
+```bash
+python3 scripts/paths.py --choose "<absolute destination>" --user-instruction "<their explicit request>"
+python3 scripts/paths.py --choose project --bring "<explicitly requested older folder>" --user-instruction "<their explicit import request>"
+```
 
-**`--pdf-dir` moves rendered output and nothing else.** It does not relocate `facts.md`,
-`answers.md` or the CV as it arrived.
+Never manufacture that instruction from "start fresh", "don't use old outputs", an
+old setting or your own plan. An alternative destination is recorded only in this
+workspace's `Resu - CV Builder/.resu/location.json`. That choice does not affect any
+other workspace. `--choose project` resets this local override; it leaves old data in
+place. Import copies without overwriting or deleting the source. Do not run it merely
+because an older folder exists.
+
+**Fresh work keeps the standard destination.** Do not create sibling roots with New,
+Fresh, year or other suffixes. New applications use `jobs.py new`; an explicit separate
+fresh application for an existing role uses `--again`. Resume only when requested.
+Read only this application's supplied or explicitly designated evidence. Existing
+outputs and `2 My record` are not automatic inputs. If an older application is explicitly
+resumed, copy its authorised facts/answers into its job folder before using it.
+
+Keep generated scripts, temporary files and intermediate outputs inside the active job
+folder. Keep finished files inside `4 Finished documents`. An output override such as
+`--pdf-dir` does not authorise a destination outside this root: that requires the user's
+explicit instruction too. Never delete old work to make room for a fresh run.
+
+The folder's `.gitignore` keeps private data out of the surrounding repository. Do not
+remove it or commit personal sources, ledgers or outputs. If the default or its internal
+folders redirect outside the root, or the workspace cannot be resolved, explain the
+blocker instead of searching elsewhere or inventing another destination.
 
 ## Commands
 
 **Never send them a command to run.** The studio prints one for the design they land
 on, and that is for you to execute, not for them.
 
-**Run every command from this skill's own folder**, the one holding `SKILL.md`. Every
-command names `scripts/...` relative to it.
+**Before changing directories, capture the real task workspace:** PowerShell `$env:RESU_WORKSPACE = (Get-Location).Path`, or bash `export RESU_WORKSPACE="$PWD"`. Keep that value throughout the task. Then the relative `scripts/...` examples can run from the skill folder. Alternatively stay in the workspace and use absolute script paths. Never set the workspace to the plugin/cache folder.
 
 **Every command that names a file uses `paths.py` to name it.** A bare relative
 `facts.md` resolves against the working directory, which in a cloud session is thrown
-away at the end of the session, so the file the next advertisement needs is gone. Write
+away at the end of the session, so the application file is misplaced. Write
 it as command substitution, every time:
 
 ```bash
-python3 scripts/paths.py --facts                  # one bare path, nothing else
-python3 scripts/paths.py --answers
+python3 scripts/paths.py --job <job id> --facts                  # one bare path, nothing else
+python3 scripts/paths.py --job <job id> --answers
 python3 scripts/paths.py --about                  # 1 About me
 python3 scripts/paths.py --jobs                   # 3 Jobs
 python3 scripts/paths.py --documents              # 4 Finished documents
@@ -188,7 +178,7 @@ with `&`:
 ```powershell
 $PY = powershell -NoProfile -ExecutionPolicy Bypass -File scripts\find_python.ps1
 $J = & $PY scripts/paths.py --job <job id>
-& $PY scripts/build_studio.py --cv "$(& $PY scripts/paths.py --about)/<their CV>.md" `
+& $PY scripts/build_studio.py --cv "$(& $PY scripts/paths.py --job <job id>)/<their CV>.md" `
     --scorecard "$J/scorecard.md" --job <job id>
 ```
 

@@ -28,7 +28,7 @@ def words(text):
 class PdfReadingOrderTests(unittest.TestCase):
     def setUp(self):
         self.folder = Path(tempfile.mkdtemp(prefix="resu-pdf-order-"))
-        self.env = dict(os.environ, CLAUDE_PLUGIN_DATA=str(self.folder / "data"),
+        self.env = dict(os.environ, RESU_WORKSPACE=str(self.folder),
                         RESU_STUDIO_CONFIG=str(self.folder / "config"))
         self.source = (REPO / "docs/review/sample-cv.md").read_text(encoding="utf-8")
         self.cv = self.folder / "sample.md"

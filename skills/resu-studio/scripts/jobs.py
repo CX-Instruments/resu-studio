@@ -13,8 +13,8 @@ another. So each advertisement now gets its own folder under `jobs/`, and a
         asks.md, scorecard.md, proposals.md, achievements.md, cv-decisions.json,
         cv-<variant>.md, cover-letter-<variant>.md
 
-What belongs to the person and not to one application, `facts.md`, `answers.md` and
-`1 About me/` and `2 My record/`, stays in their folder and is read by every job.
+`facts.md` and `answers.md` belong to the application. Shared saved records are
+only reused when explicitly requested.
 
 Finished documents for a job go in their own folder too, inside
 `4 Finished documents/`, named `<Employer> - <Role>`.
@@ -48,6 +48,7 @@ import argparse
 import datetime
 import io
 import json
+import uuid
 import os
 import re
 import sys
@@ -136,6 +137,16 @@ def save(rec):
     return target
 
 
+def application_instance(job_id):
+    """Stable across rebuilds, fresh after deletion/recreation of the job folder."""
+    rec = load(job_id)
+    instance = rec.get("application_instance")
+    if not isinstance(instance, str) or not re.fullmatch(r"[0-9a-f]{32}", instance):
+        rec["application_instance"] = instance = uuid.uuid4().hex
+        save(rec)
+    return instance
+
+
 def all_jobs():
     """Every job record that can be read, open ones first, then by closing date."""
     out = []
@@ -210,8 +221,8 @@ def create(role, employer, link="", reference="", location="", closes="", depth=
         dups = open_duplicates(role, employer)
         if dups:
             raise ValueError(
-                "there is already an open job for %s%s: %s. Work in that one, or pass "
-                "--again if this really is a second application for the same job."
+                "there is already an open job for %s%s: %s. Resume it only if requested, or pass "
+                "--again for an explicitly requested fresh application for the same job."
                 % (role, (" at " + employer) if employer else "",
                    ", ".join(d["id"] for d in dups)))
     jid = new_id(role, employer)
@@ -221,6 +232,7 @@ def create(role, employer, link="", reference="", location="", closes="", depth=
     rec = {
         "schema": SCHEMA,
         "id": jid,
+        "application_instance": uuid.uuid4().hex,
         "role": role,
         "employer": employer,
         "documents_folder": documents_folder_for(role, employer, jid),

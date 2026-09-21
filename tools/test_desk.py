@@ -17,11 +17,11 @@ from urllib.parse import unquote
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILL = os.path.join(REPO, "skills", "resu-studio")
 SCR = os.path.join(tempfile.gettempdir(), "resu-test-desk")
-DATA = os.path.join(SCR, ".resu-studio")
+DATA = os.path.join(SCR, "Resu - CV Builder")
 DOCS = os.path.join(DATA, "4 Finished documents")
 DESK = os.path.join(DOCS, "Resu Desk.html")
 SHOTS = os.path.join(SCR, "shots")
-ENV = dict(os.environ, CLAUDE_PLUGIN_DATA=DATA, RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
+ENV = dict(os.environ, RESU_WORKSPACE=SCR, CLAUDE_PLUGIN_DATA=os.path.join(SCR, "ignored-host-data"), RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
 steps = []
 
 
@@ -324,7 +324,8 @@ step("12. A Desk that cannot be written does not fail the studio",
              ("no temporary file left behind", lambda c, o: not os.path.exists(DESK + ".tmp"))])
 os.rmdir(DESK)
 
-EMPTY = dict(os.environ, CLAUDE_PLUGIN_DATA=os.path.join(SCR, "empty"), RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
+os.makedirs(os.path.join(SCR, "empty"), exist_ok=True)
+EMPTY = dict(os.environ, RESU_WORKSPACE=os.path.join(SCR, "empty"), RESU_STUDIO_CONFIG=os.path.join(SCR, "config"))
 step("13. A person with no jobs yet", "", ["scripts/build_desk.py"], env=EMPTY,
      checks=[("exit code 0", lambda c, o: c == 0),
              ("0 jobs on it", lambda c, o: "0 jobs on it" in o)])

@@ -5,15 +5,14 @@ reason behind each rule. Read it at the start of Phase 1, before copying anythin
 
 ## First: where their files live, and which job this is
 
-**Before anything else, `python3 scripts/paths.py --status`.** If it says NOT CHOSEN YET,
-nothing else will run until the person has chosen where their files live. SKILL.md, "Before
-anything else: where their files live", has what to say and the two commands.
+**First resolve the current task workspace**, following `where-files-go.md`. The default
+is exactly `Resu - CV Builder` there. Status does not scan old locations; initialise
+the default without an extra folder-choice question.
 
-**Then `python3 scripts/jobs.py list`.** Each advertisement is a job with a folder of its
-own, so a new advertisement never replaces an earlier one. If a job for this advertisement
-is already there, work in it and say so. If there are others, say so in one line and that
-they are kept exactly as they are. There is no warning about losing anything, because
-nothing is lost.
+**Use only supplied or explicitly designated sources.** Resume an existing application
+only when requested. Do not inspect old outputs, another job's evidence or saved shared
+history to prepare a fresh application. A fresh-start instruction changes source scope,
+not the standard destination. Do not invent a sibling folder or workflow. Previous-session claims or model memory are not source evidence: verify against this application's authorised files or the user's current statements.
 
 **Then start the job**, with the role and the employer written the way the advertisement
 writes them, and its link and closing date when you have them:
@@ -24,28 +23,27 @@ python3 scripts/jobs.py new --role "<the job title>" --employer "<the employer>"
 ```
 
 It refuses a second open job for the same role at the same employer and names the one that
-exists; work in that one. It prints the job id, and every command for this application
+exists. Resume it only if requested. An explicit fresh-start request authorises `--again` on `jobs.py new`, creating a separate job inside the same standard root. Otherwise ask which of those two actions they want. It prints the job id, and every command for this application
 passes it as `--job <job id>` from here on. The start of the id is enough while only one
 job starts that way.
 
-**Why this is safe.** `facts.md` and `answers.md` live in `2 My record` and are never
-rewritten by a new advertisement, so read them and do not rebuild them. Every job's working
-files live in its own folder under `3 Jobs`, and every job's documents in its own folder
-under `4 Finished documents`. The job's role and employer name its files and key its
-studio's browser storage, so two applications cannot share a filename or a set of marks.
+**Each application owns its evidence.** `facts.md` and `answers.md` live in its job
+folder, alongside `asks.md`. Build them from authorised inputs. Shared saved records
+are optional sources only when explicitly requested. For an explicitly resumed older
+application, copy its authorised ledger into the job folder before continuing. Every
+job's finished documents stay in its own folder under `4 Finished documents`.
 
 **Never pass one job's id while working on another.** That is the one thing that would put
 one employer's answers in another employer's folder.
 
 **Copy the advertisement, and the job pack if there is one, into the job's `ad` folder**,
 untouched: `python3 scripts/paths.py --job <job id> --job-ad` names it. **Copy every CV
-variant into `1 About me`**, which `python3 scripts/paths.py --about` names, unless it is
-already there from an earlier job. A LinkedIn URL or any other link the person shares goes
+variant into `1 About me`**, which `python3 scripts/paths.py --about` names, using only files authorised for this application. Preserve existing originals; if a supplied filename collides, keep its new copy inside the active job folder. A LinkedIn URL or any other link the person shares goes
 into `links.md` in the same folder, one per line. Extract the text of each file into a
 `.txt` beside it, so a later session can re-read without the original.
 
 **Then write the CV out as markdown in the `templates/cv.md` shape, into
-`1 About me`.** Nothing later in this skill can read a PDF or a Word file. Phase 3
+the active job folder.** Nothing later in this skill can read a PDF or a Word file. Phase 3
 builds the studio from a markdown CV, and `build_studio.py` refuses markdown with no
 `# Name` heading, so a CV that arrived as anything else has to be converted here or
 Phase 3 has nothing to open. Convert it faithfully: their headings, their wording,
@@ -62,7 +60,7 @@ produces a confident answer to the wrong question. If a URL will not fetch, say 
 and ask for the text rather than reconstructing the ad from its title.
 
 **Done when:** the job exists, the advertisement is in its `ad` folder in the person's own
-words, the CV is saved in `1 About me` as markdown in the `templates/cv.md` shape with a `# Name` heading at the
+words, the CV is saved in the job folder as markdown in the `templates/cv.md` shape with a `# Name` heading at the
 top of it, and the application format is known: what documents, what word limits, what
 page limit.
 
@@ -78,7 +76,7 @@ required and preferred, must and nice to have, or nothing at all and you work it
 from how the thing is written. Ask about the split by what it means, never by a label
 the advertisement did not use.
 
-Ask it plainly, in these terms, and wait for an answer:
+If the user has already specified the scope, record it and continue. Otherwise ask it plainly, in these terms, and wait for an answer:
 
 > Before I go through this, how far do you want me to take it?
 >

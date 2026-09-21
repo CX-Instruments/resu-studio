@@ -47,8 +47,7 @@ trust in the whole exercise, and it happens because the answer was used and then
 dropped. Every answer gets written down, in a file, the moment it arrives.
 
 **The file is `answers.md`, in the same folder as `facts.md`**, the resolved data
-folder that `python3 scripts/paths.py --answers` names, so it survives this session
-and every later job ad. Create it on the first question. Its shape is
+folder that `python3 scripts/paths.py --job <job id> --answers` names, so it survives later sessions of this application. Never read another application's answers without explicit authorisation. Create it on the first question. Its shape is
 `templates/answers.md`.
 
 One block per question, appended in the order asked:

@@ -136,7 +136,7 @@ def save_mode(mode):
 
 def source_record(cv, job):
     out = {}
-    files = [("cv", cv), ("facts", paths.facts_file()),
+    files = [("cv", cv), ("facts", paths.facts_file(job)),
              ("asks", os.path.join(paths.job_dir(job), "asks.md"))]
     ad = os.path.join(paths.job_dir(job), "ad")
     for folder, dirs, names in os.walk(ad):

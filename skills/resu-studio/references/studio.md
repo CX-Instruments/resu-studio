@@ -127,21 +127,20 @@ Everything up to here has been the skill's working papers.
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
-python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their CV>.md" \
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --job <job id>)/<their CV>.md" \
     --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
-    --facts "$(python3 scripts/paths.py --facts)" \
+    --facts "$(python3 scripts/paths.py --job <job id> --facts)" \
     --job <job id>
 ```
 
 The `--cv` is the markdown written in Phase 1: their CV as it arrived, converted into
 the `templates/cv.md` shape and changed in no other way.
 
-**`--job` is required.** The job's role and employer, read from its `job.json`, name the
-file, put it in the job's own documents folder, and are the key the studio's browser
-storage uses, so two employers hiring the same job title do not share one set of marks.
-The key is built the same way it always was, so marks made before jobs had folders are
-still there when the same application is rebuilt with `--job`. Building a studio also
-rebuilds Resu Desk, and the build prints the Desk's path: hand both over.
+**`--job` is required.** The job's role and employer name its files and document
+folder. Its random application identity and data root scope the browser decisions.
+Rebuilds of that application retain them; a fresh job never restores marks merely
+because its role, employer or path matches an earlier run. Building a Studio also
+rebuilds Resu Desk; deliver both generated links.
 
 The Score tab is the scorecard. It reads the three files you have just written: the
 advertisement's own wording from `asks.md`, the state of each ask from `scorecard.md`,
@@ -216,9 +215,9 @@ Optional achievements follow `references/achievements.md`. Publish new engine se
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
-python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --about)/<their CV>.md" \
+python3 scripts/build_studio.py --cv "$(python3 scripts/paths.py --job <job id>)/<their CV>.md" \
     --scorecard "$J/scorecard.md" --asks-md "$J/asks.md" \
-    --facts "$(python3 scripts/paths.py --facts)" \
+    --facts "$(python3 scripts/paths.py --job <job id> --facts)" \
     --proposals "$J/proposals.md" --achievements "$J/achievements.md" \
     --job <job id>
 ```

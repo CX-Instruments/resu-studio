@@ -281,10 +281,6 @@
   if (WRITING.selected) actionBar.append(button("Send my revision requests", () => handoff("revise", "", WRITING.selected.id), "cta ghost"));
   root.append(actionBar, notice, handBox);
   if (WRITING.final_review) Object.values(WRITING.final_review).forEach(item => {if (item.status !== "pass") root.append(el("p", item.notes));});
-  if (LEGACY_STORE && LEGACY_STORE !== STORE && !RAW_STATE) {
-    let legacy = null; try {legacy = localStorage.getItem(LEGACY_STORE);} catch (e) {}
-    if (legacy) root.append(button("Restore earlier local review", () => {localStorage.setItem(STORE, legacy); location.reload();}, "cta ghost"));
-  }
   syncPassages(); syncSelection(); setWorkspace(false);
   document.getElementById("t-writing").click();
 })();

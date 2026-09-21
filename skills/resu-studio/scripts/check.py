@@ -415,27 +415,8 @@ def _cv_files(root, variant):
 
 
 def _facts_for(root):
-    """facts.md for this folder: in it, or, for a job folder, in the person's folder.
-
-    Since each job has its own folder, the ledgers that belong to one advertisement
-    sit in `jobs/<id>/` and the facts ledger, which belongs to the person, sits two
-    levels up. A job folder with no facts.md beside it is the normal case, not a
-    Phase 2 that has not run.
-    """
-    here = os.path.join(root, "facts.md")
-    if os.path.isfile(here):
-        return here
-    parent = os.path.dirname(root)
-    person = os.path.dirname(parent)
-    tries = []
-    if os.path.basename(parent) in ("3 Jobs", "jobs"):
-        tries += [os.path.join(person, "2 My record", "facts.md"),   # 3 Jobs/<id>
-                  os.path.join(person, "facts.md")]                  # jobs/<id>, older
-    tries.append(os.path.join(root, "2 My record", "facts.md"))     # the person's folder
-    for up in tries:
-        if os.path.isfile(up):
-            return up
-    return here
+    """Only evidence prepared for this application; never discover older ledgers."""
+    return os.path.join(root, "facts.md")
 
 
 def main():

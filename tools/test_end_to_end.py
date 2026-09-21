@@ -20,7 +20,7 @@ SKILL = os.path.join(PROJECT, ".agents", "skills", "resu-studio")
 DATA = os.path.join(PROJECT, "Resu - CV Builder")
 DOCS = os.path.join(DATA, "4 Finished documents")
 ENV = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_PLUGIN_DATA", "PLUGIN_DATA", "RESU_STUDIO_CONFIG")}
-ENV.update(HOME=HOME, USERPROFILE=HOME)
+ENV.update(HOME=HOME, USERPROFILE=HOME, RESU_WORKSPACE=PROJECT)
 browser = os.environ.get("CV_BROWSER") or next(iter(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome")), "")
 if browser:
     ENV["CV_BROWSER"] = browser
@@ -66,14 +66,13 @@ w(os.path.join(PROJECT, "notes.md"), "Project notes.\n")
 subprocess.run(["git", "init", "-q"], cwd=PROJECT, env=ENV)
 
 step("1. Fresh install, nothing chosen", ["scripts/paths.py", "--status"],
-     [("says NOT CHOSEN", lambda c, o: "NOT CHOSEN YET" in o)])
+     [("uses workspace default", lambda c, o: "current workspace default" in o)])
 step("2. Choose the project folder", ["scripts/paths.py", "--choose", "project"],
      [("exit 0", lambda c, o: c == 0), ("made the folder", lambda c, o: os.path.isdir(os.path.join(DATA, "3 Jobs")))])
 
 code, about = run("scripts/paths.py", "--about")
 CV = os.path.join(DATA, "1 About me", "Alex Morgan CV.md")
 shutil.copy(os.path.join(REPO, "docs", "review", "sample-cv.md"), CV)
-w(os.path.join(DATA, "2 My record", "facts.md"), "# Facts\n\n```\nid: fact-roster\ntext: Rostered 35 casual staff\n```\n")
 steps.append({"title": "3. CV and facts go where paths.py says", "why": "", "cmd": "python3 scripts/paths.py --about",
               "code": code, "out": about, "checks": [["--about names 1 About me in the project", about.endswith("D:/Career/Resu - CV Builder/1 About me")]]})
 
@@ -83,6 +82,7 @@ step("5. Start job two", ["scripts/jobs.py", "new", "--role", "Venue Manager", "
      [("exit 0", lambda c, o: c == 0)])
 A = [n for n in os.listdir(os.path.join(DATA, "3 Jobs")) if n.startswith("northside")][0]
 B = [n for n in os.listdir(os.path.join(DATA, "3 Jobs")) if n.startswith("riverbend")][0]
+w(os.path.join(DATA, "3 Jobs", A, "facts.md"), "# Facts\n\n```\nid: fact-roster\ntext: Rostered 35 casual staff\n```\n")
 code, jdir = run("scripts/paths.py", "--job", "northside")
 SC = ("---\ndepth: essentials\ncounts:\n  asks_total: 2\n  must: 2\n  you_have: 2\n  a_reader_would_find: %d\n  unscored: 0\n---\n\n"
       "| Ask | Necessity | State | Evidence | Note |\n|---|---|---|---|---|\n"
@@ -102,7 +102,7 @@ step("9. PDF for job one", ["scripts/render_cv.py", CV, "--job", "northside", "-
      [("exit 0", lambda c, o: c == 0),
       ("PDF in job one's folder", lambda c, o: glob.glob(os.path.join(DOCS, "Northside Community Care - Operations Coordinator", "*CV.pdf")))])
 step("10. check.py on job one", ["scripts/check.py", "--job", "northside"],
-     [("reads facts from 2 My record", lambda c, o: "facts from D:/Career/Resu - CV Builder/2 My record/facts.md" in o),
+     [("does not fall back to shared facts", lambda c, o: "facts from" not in o),
       ("counts the fact", lambda c, o: "facts: 1" in o)])
 step("11. documents.py names both jobs", ["scripts/documents.py"],
      [("job one", lambda c, o: "[job %s]" % A in o), ("job two", lambda c, o: "[job %s]" % B in o)])
@@ -131,7 +131,7 @@ steps.append({"title": "14. Nothing private anywhere else", "why": "",
               "out": "git status, not counting the skill's own files:\n%s\n\nfiles in the home folder: %s"
                      % ("\n".join(l for l in gs.splitlines() if ".agents/" not in l), ", ".join(home_files)),
               "checks": [["git sees nothing in Resu - CV Builder", "Resu - CV Builder" not in gs],
-                         ["apart from the browser's cache, the home folder holds only this install's choice", home_files == [os.path.join(".resu-studio", "locations.json")]],
+                         ["no application settings or data written in the home folder", home_files == []],
                          ["no personal detail was written inside the skill folder", not leaks]]})
 
 json.dump({"steps": steps}, open(os.path.join(SCR, "results.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)

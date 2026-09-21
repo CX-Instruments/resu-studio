@@ -19,7 +19,7 @@ PROJECT = os.path.join(SCR, "Career")
 SKILL = os.path.join(PROJECT, ".agents", "skills", "resu-studio")
 DATA = os.path.join(PROJECT, "Resu - CV Builder")
 ENV = {k: v for k, v in os.environ.items() if k not in ("CLAUDE_PLUGIN_DATA", "PLUGIN_DATA", "RESU_STUDIO_CONFIG")}
-ENV.update(HOME=HOME, USERPROFILE=HOME)
+ENV.update(HOME=HOME, USERPROFILE=HOME, RESU_WORKSPACE=PROJECT)
 ENV["RESU_PYTHON"] = sys.executable.replace("\\", "/")
 browser = os.environ.get("CV_BROWSER") or next(iter(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome")), "")
 if browser:
@@ -83,11 +83,12 @@ def w(path, text):
 
 def phase1_inputs():
     shutil.copy(os.path.join(REPO, "docs", "review", "sample-cv.md"), os.path.join(DATA, "1 About me", "Alex Morgan CV.md"))
-    w(os.path.join(DATA, "2 My record", "facts.md"), "# Facts\n\n```\nid: fact-roster\ntext: Built and maintained weekly rosters for 35 casual staff\n```\n")
 
 
 def phase3_inputs():
     j = job_dir()
+    shutil.copy(os.path.join(DATA, "1 About me", "Alex Morgan CV.md"), os.path.join(j, "Alex Morgan CV.md"))
+    w(os.path.join(j, "facts.md"), "# Facts\n\n```\nid: fact-roster\ntext: Built and maintained weekly rosters for 35 casual staff\n```\n")
     w(os.path.join(j, "asks.md"), "# Asks\n\n```\nid: ask-roster\ntext: Rostering a casual workforce\nnecessity: must\n```\n")
     w(os.path.join(j, "scorecard.md"), "---\ndepth: essentials\ncounts:\n  asks_total: 1\n  must: 1\n  you_have: 1\n  a_reader_would_find: 1\n  unscored: 0\n---\n\n"
       "| Ask | Necessity | State | Evidence | Note |\n|---|---|---|---|---|\n| Rostering a casual workforce | must | page | Built and maintained weekly rosters | |\n")
@@ -118,7 +119,7 @@ def phase7_inputs():
 
 plan = {
     -1: dict(checks=[("the finder printed a real python", lambda o: os.path.isfile(o.strip().splitlines()[-1]))]),
-    0: dict(checks=[("says NOT CHOSEN", lambda o: "NOT CHOSEN YET" in o)]),
+    0: dict(checks=[("uses workspace default", lambda o: "current workspace default" in o)]),
     1: dict(checks=[("made Resu - CV Builder in the project", lambda o: os.path.isdir(os.path.join(DATA, "3 Jobs")))]),
     2: dict(prepare=phase1_inputs, checks=[("started the job", lambda o: "started northside-community-care-operations-coordinator" in o)]),
     3: dict(prepare=phase3_inputs, checks=[("studio in the job's documents folder", lambda o: "4 Finished documents/Northside Community Care - Operations Coordinator/" in o)]),

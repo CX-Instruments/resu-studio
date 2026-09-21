@@ -1,6 +1,6 @@
 {
   "name": "resu-studio",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Your real experience, matched to the job you want. Resu Studio scores your CV or resume against the job ad, suggests changes you approve one by one, and writes a cover letter from what you have actually done. It never invents experience.",
   "keywords": [
     "cv",

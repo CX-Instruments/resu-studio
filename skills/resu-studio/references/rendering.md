@@ -64,13 +64,13 @@ itself and works with no network. Rebuild it from the current CV when the wordin
 changes, and hand over the rebuilt file.
 
 `--job` names the application: its role and employer name the file, choose the job's
-documents folder, and key this application's own browser storage, so a line marked in one
+documents folder. A separate random application identity scopes browser decisions, so a line marked in one
 application does not turn up in another. (`--role` and `--employer` still work without a
 job, for a studio built outside the job layout.)
 
 ```bash
 python3 scripts/build_studio.py --cv "cv-<variant>.md" --job <job id> \
-    --facts "$(python3 scripts/paths.py --facts)"
+    --facts "$(python3 scripts/paths.py --job <job id> --facts)"
 ```
 
 **Pass a ledger with command substitution.** A bare relative path resolves against

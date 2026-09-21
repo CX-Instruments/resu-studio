@@ -19,7 +19,7 @@ separation is the fix. Ledgers hold what is true. The markdown holds what prints
 
 ```bash
 J="$(python3 scripts/paths.py --job <job id>)"
-python3 scripts/assemble.py "$(python3 scripts/paths.py --about)/<their CV>.md" \
+python3 scripts/assemble.py "$(python3 scripts/paths.py --job <job id>)/<their CV>.md" \
     --decisions "$J/cv-decisions.json" \
     --out "$J/cv-<variant>.md"
 ```

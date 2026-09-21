@@ -65,7 +65,7 @@ keeps its documents in a folder of its own, so two applications cannot overwrite
 
 Apply for as many jobs as you like at once. Each job ad gets its own folder, its own
 Studio and its own documents, and nothing from one ever turns up in another. Your CV and
-your history are shared, so the second ad does not ask for your CV again.
+your history can be reused when you explicitly request it. Otherwise each application uses only its supplied sources.
 
 **Resu Desk** is one page listing every application: the stage it is at, when it closes,
 how the score moved, and a link to each Studio and PDF. Closing dates in the next week are
@@ -159,25 +159,23 @@ because that is the longest part of the job and the decision is yours.
 
 ## Where your files go
 
-Your CV, your history, your job ads and your finished documents are private, and where
-they live is your choice. The first time Resu Studio runs, it asks. It suggests a folder
-called `Resu - CV Builder`, either inside the project you installed it into or in your
-home folder, and you can name any other. If it finds work from an earlier version
-anywhere on your computer, it tells you where and asks whether to bring it in. It never
-uses it without asking.
+Resu Studio uses exactly `Resu - CV Builder` inside the folder where you start the
+task. It uses another location or imports older work only when you explicitly ask.
+It does not search previous workspaces or use old outputs as fresh source material.
+Starting fresh keeps this same destination and the standard application steps.
 
 ```
 Resu - CV Builder/
   1 About me/            your CV as you gave it, and any links you shared
-  2 My record/           everything learned about your working life, reused for every job
-  3 Jobs/                one folder for each job ad
+  2 My record/           optional saved history and writing preferences
+  3 Jobs/                one folder per application, including its evidence and answers
   4 Finished documents/  Resu Desk, and a folder of finished documents for each job
 ```
 
 The folder holds its own `.gitignore`, so if it sits inside a git repository, git ignores
 all of it and nothing private can be committed by accident. A `README.txt` in the folder
 says the same in plain words. The folder is outside the plugin, so an update cannot delete
-it, and the choice is remembered for each place the plugin is installed.
+it. An explicitly requested alternative is remembered only for the current workspace.
 
 ## What you need to install
 
@@ -209,7 +207,7 @@ Skills that ship scripts deserve a look before they run on your computer. These 
 all in [`skills/resu-studio/scripts`](skills/resu-studio/scripts), use only Python's
 standard library, and do three things beyond reading and writing files:
 
-- **They write only to your own folder**, `.resu-studio` in your home folder or the
+- **They write only to your own folder**, `Resu - CV Builder` inside your current workspace, or the
   one you chose. Nothing is sent anywhere.
 - **`to_pdf.py` and `render_cv.py` start your browser** in headless mode, with no
   window, to print the finished page to PDF and to measure page breaks. Starting a

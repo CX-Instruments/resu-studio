@@ -199,6 +199,20 @@ Only mark the writing ready when the substantive review and delivered output are
 
 The optional cover letter or statement uses the same evidence and application positioning, with its own format, pronouns and purpose. Never write an unrequested companion document merely to complete a phase count.
 
+## Fresh applications and retained decisions
+
+A fresh application starts with no proposed-change decisions or pending review handoff.
+Mode samples are examples, not accepted changes. Do not load previous outputs or another
+session's handoff to populate them. Each new job has a random `application_instance` in
+`job.json`; the browser store uses it and the resolved data root. Ordinary rebuilds keep
+that identity. Deleting and recreating the application creates a new identity even if
+its role, employer, path and visible job ID repeat. Never copy an old identity into a
+fresh job or restore a browser store by matching the role and employer.
+
+Older jobs receive an identity when first rebuilt. Old browser-only decisions are not
+automatically imported; the previous browser storage is left untouched. Explicitly
+resumed decisions already recorded in that job's writing state remain available.
+
 ## Ownership and limitations
 
 `writing.json` is this application's current direction; `.writing/<revision>.json` retains prior rounds. Source snapshots live in `.writing/sources` beside that history. Custom reusable modes live under `2 My record/writing-modes`. Built-ins ship under `assets/writing-modes.json`. Source fingerprints identify the precise evidence and CV used. Existing jobs without a writing record remain readable; prepare fresh samples before attributing their wording to a new mode.
