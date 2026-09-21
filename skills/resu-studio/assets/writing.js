@@ -15,6 +15,15 @@
     b.addEventListener("click", fn); return b;
   }
   const samples = WRITING.samples || [], phase = WRITING.phase;
+  const isCustom = sample => sample.mode.startsWith("personal-");
+  // Personal definitions have a stable identity even when a host omits the
+  // optional preview hint, or the user subsequently selects another mode.
+  const ordered = samples.slice().sort((a, b) => {
+    const rank = s => isCustom(s) ? (s.mode === WRITING.preview_mode ? 0 : 1)
+      : s.mode === WRITING.preview_mode ? 2 : s.mode === WRITING.preview_base ? 3 : 4;
+    return rank(a) - rank(b);
+  });
+  const hasCustom = samples.some(isCustom);
   const pending = ["rewrite_requested", "revision_requested", "preview_requested"].includes(phase);
   const locked = pending || phase === "stale" || !samples.length;
   const w = S.writing = S.writing || {};
@@ -133,16 +142,13 @@
     toggle.setAttribute("aria-controls", body.id);
     const mobile = el("div", undefined, "writing-mobile-switch");
     mobile.setAttribute("aria-label", "View a " + sourceTitles[key].toLowerCase() + " mode");
-    samples.forEach(sample => {
+    ordered.forEach(sample => {
       const b = button(sample.definition.name, () => {w.viewMode = sample.mode; save(); syncSelection();}, "writing-chip");
+      if (isCustom(sample)) b.append(el("span", "Your custom mode", "writing-custom-badge"));
       mobileButtons.push({b, mode:sample.mode}); mobile.append(b);
     }); body.append(mobile);
     const grid = el("div", undefined, "writing-samples");
     grid.style.setProperty("--mode-count", Math.min(samples.length, 4));
-    const ordered = samples.slice().sort((a, b) => {
-      const rank = s => s.mode === WRITING.preview_mode ? 0 : s.mode === WRITING.preview_base ? 1 : 2;
-      return rank(a) - rank(b);
-    });
     ordered.forEach(sample => {
       const box = el("article", undefined, "writing-card"); box.dataset.mode = sample.mode;
       box.style.setProperty("--mode-color", ["#337b88", "#ae682b", "#687844", "#8a67ad"][samples.indexOf(sample) % 4]);
@@ -150,6 +156,11 @@
       radio.type = "radio"; radio.name = "writing-mode-" + key; radio.value = sample.mode; radio.disabled = locked;
       radio.addEventListener("change", () => {w.mode = sample.mode; w.viewMode = sample.mode; save(); syncSelection();});
       label.append(radio, el("span", sample.definition.name));
+      if (hasCustom) {
+        const badgeRow = el("div", undefined, "writing-badge-row");
+        if (isCustom(sample)) badgeRow.append(el("span", "Your custom mode", "writing-custom-badge"));
+        box.append(badgeRow);
+      }
       box.append(el("p", sample.definition.signature || sample.definition.voice, "writing-mode-signature"), label,
         el("p", sample[key].suggested, "writing-suggestion"));
       const explanation = el("details", undefined, "writing-explanation");

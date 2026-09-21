@@ -376,7 +376,22 @@ counts:
             self.assertEqual(page.evaluate('S.writing.viewMode'),mode["id"])
             self.assertEqual(page.locator('#writing-compare-profile .writing-card').first.get_attribute('data-mode'),mode["id"])
             self.assertEqual(page.locator('#writing-compare-profile .writing-card').nth(1).get_attribute('data-mode'),"warm-collaborative")
+            for passage in ("profile","bullet"):
+                panel=page.locator('#writing-compare-'+passage)
+                self.assertEqual(panel.locator('.writing-card .writing-custom-badge').count(),1)
+                self.assertEqual(panel.locator('.writing-card').first.locator('.writing-custom-badge').inner_text(),"Your custom mode")
+                self.assertIn("Practical with flair",panel.locator('.writing-mobile-switch button').first.inner_text())
+                self.assertEqual(panel.locator('.writing-mobile-switch button').first.locator('.writing-custom-badge').inner_text(),"Your custom mode")
             self.assertIsNone(state["selected"])
+            # A chat-created mode may arrive without the optional preview hint.
+            # Its personal identity still puts it first and labels it clearly.
+            refreshed.pop("preview_mode")
+            W.prepare(self.job,self.cv,refreshed);self.build();page.reload()
+            for passage in ("profile","bullet"):
+                panel=page.locator('#writing-compare-'+passage)
+                self.assertEqual(panel.locator('.writing-card').first.get_attribute('data-mode'),mode["id"])
+                self.assertEqual(panel.locator('.writing-card').first.locator('.writing-custom-badge').inner_text(),"Your custom mode")
+                self.assertIn("Practical with flair",panel.locator('.writing-mobile-switch button').first.inner_text())
             page.set_viewport_size({"width":390,"height":844})
             page.locator('.panes').evaluate('(e)=>{e.scrollTop=0}')
             page.locator('#writing-compare-profile .writing-mobile-switch').get_by_role("button",name="Direct and focused",exact=True).click()
