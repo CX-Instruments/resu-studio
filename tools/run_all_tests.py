@@ -15,6 +15,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 TESTS = [
     ("test_writing.py", "writing modes, approvals, assembly and browser handoff"),
+    ("test_pdf_reading_order.py", "default renderer and Studio PDF reading order"),
     ("test_find_python.py", "finding Python, conda installs included"),
     ("test_jobs.py", "jobs, and bringing old work in (steps 1 and 2)"),
     ("test_jobs_build.py", "Studio, PDF and check.py per job (step 3)"),
@@ -36,6 +37,11 @@ except ImportError:
     NEEDS.append("Playwright is not installed, so test_desk.py cannot open the Desk in a browser. "
                  "Install it with: %s -m pip install playwright, then: %s -m playwright install chromium"
                  % (sys.executable, sys.executable))
+try:
+    import pypdf  # noqa: F401
+except ImportError:
+    NEEDS.append("pypdf is not installed, so the PDF reading-order suite cannot check extracted text. "
+                 "Install it with: %s -m pip install pypdf" % sys.executable)
 for n in NEEDS:
     print("note: " + n)
 if NEEDS:

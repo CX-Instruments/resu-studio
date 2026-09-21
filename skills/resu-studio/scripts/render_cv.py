@@ -1670,7 +1670,8 @@ L_SPINE = """
 .headwrap{margin-left:-24mm;border-bottom:3px solid var(--accent);
           padding-bottom:8px;margin-bottom:6px}
 .name{font-size:calc(26pt * var(--scale));letter-spacing:-.5px}
-h2.sec{margin-left:-24mm;border:0;color:var(--accent);margin-top:16px}
+/* Match the positioned text's paint order so PDF extraction follows the CV. */
+h2.sec{position:relative;margin-left:-24mm;border:0;color:var(--accent);margin-top:16px}
 .role{position:relative;border-left:2px solid var(--rule);padding-left:8mm;
       margin-left:0}
 .role:before{content:"";position:absolute;left:-5px;top:5px;width:8px;height:8px;

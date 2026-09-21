@@ -2,7 +2,12 @@
 
 Build a tailored CV, resume and cover letter for every job.
 
-![The studio: your CV drawn on A4, with every layout, palette and typeface as a control beside it](docs/images/studio.png)
+![The Writing view: compare four directions for the same passage from a fictional CV](docs/images/writing.png)
+
+**New in 0.7.0: choose how your CV makes its case.** Compare writing modes using your
+own profile and experience, explore a personal style, and request the full rewrite
+when you are ready. Your edits and decisions stay with you when you switch modes.
+[See the writing workflow below](#choose-how-your-cv-makes-its-case).
 
 It reads the advertisement and your CV, scores one against the other, and shows you
 where you stand before it changes a word. Every proposed change arrives as three
@@ -32,7 +37,9 @@ without softening.
 
 ## What comes out
 
-<img src="docs/images/print.png" alt="A finished CV page as printed to PDF, A4, with the skills panel, meters and typefaces exactly as the studio drew them" width="420" align="right">
+![The Studio's layout controls and A4 preview, using the fictional Alex Morgan CV](docs/images/studio.png)
+
+<img src="docs/images/print.png" alt="The fictional Alex Morgan CV printed on A4 in the Timeline spine layout" width="420" align="right">
 
 The PDF is printed, not redrawn. The same stylesheet, the same palette, the same
 paginator deciding the page breaks, put through a real browser. What you approved on
@@ -64,6 +71,8 @@ is right instead of writing over it. The Desk rebuilds itself whenever anything 
 
 ## Choose how your CV makes its case
 
+![Create a personal writing mode with optional emphasis, voice and rhythm choices](docs/images/writing-custom.png)
+
 After reading your CV and the advertisement, the Studio shows a guiding brief and
 profile-summary and experience-bullet samples in different writing modes. Credible
 conviction is the default; direct, warm and expressive options are included. Explore
@@ -84,6 +93,11 @@ Resu Desk shows the selected mode and next writing step alongside each applicati
 Earlier directions and decisions are retained in your private data folder. The built-in
 mode definitions travel with skill-only installs too; no service or new runtime
 dependency is required. Cover letters remain optional.
+
+Switch back to a saved round and it is restored when the source CV, guiding brief,
+mode definition and relevant evidence still match. Manual edits and explicit keeps
+remain, with alternatives offered for review. Refining a personal mode updates its
+existing option while preserving earlier versions and wording.
 
 The default CV layout is a single reading flow. The actual finished PDF still needs
 its full text extraction checked, including role/date associations and every section.
@@ -210,5 +224,5 @@ The full text is in [LICENSE](LICENSE).
 
 ---
 
-The screenshots on this page were made from a fictional CV that ships nowhere near
-your files. Nothing personal to anyone appears in this repository.
+The screenshots use the fictional Alex Morgan CV in `docs/review/sample-cv.md` and
+fictional employers. They were rebuilt from version 0.7.0 with isolated sample data.

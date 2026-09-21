@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.7.0, 21 September 2026
+
+**Choose a writing direction before the full rewrite.** The Studio opens on a Writing
+tab with a guiding brief and profile and experience-bullet samples based on the person's
+own evidence. Compare credible conviction, direct and focused, warm and grounded, and
+expressive and distinctive modes, or explore a personal direction. Every mode shares
+the same requirements for factual support, ATS readability, human engagement and
+tailoring to the particular advertisement.
+
+**One choice starts the rewrite.** "Use this mode and rewrite my CV" creates a request
+to send to the AI chat, including the selected mode and current review decisions. The
+agent proceeds when it receives that request. The local page does not run an AI itself.
+Choosing a mode authorises suggestions; each wording change still needs review.
+
+**Personal modes and earlier work are retained.** Refine a custom option in place, or
+explicitly save it for another application. Switching back to a matching saved round
+restores it without generating it again. Manual edits and keep decisions survive mode
+changes, and unchanged suggestions can be reused. Changed sources or evidence require
+fresh review; different wording never inherits an earlier approval.
+
+**The whole application stays connected.** Desk shows the selected mode and next writing
+step. Versioned briefs, source snapshots, requests and suggestions link each decision to
+the exact wording reviewed. Assembly and final review preserve approved content, section
+ordering and additional sections such as projects and languages.
+
+**Updated guidance and release examples.** Writing quality is reviewed separately from
+requirement coverage. The README demonstrates the Writing view and current Studio with
+fictional sample data. Testing instructions use generic local paths.
+
+**Default PDF reading order checked.** Section headings in the timeline layout now
+extract beside their content, instead of collecting before the candidate's name.
+Regression tests check the full extracted text from the renderer and Studio print view,
+including a multi-page document. The Windows test report also writes Unicode as UTF-8.
+
 ## 0.6.0, 17 September 2026
 
 Resu Studio now works on more than one job at a time, shows every application on one page,

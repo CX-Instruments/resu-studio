@@ -5,9 +5,9 @@ Eligibility line, if the person decides to carry one
 
 ## PROFILE
 
-Three short paragraphs at most. Third person with no pronouns is the default for a
-profile written from nothing. A CV that already has one keeps whatever person it is
-written in, including the first.
+Three short paragraphs at most. Proposed CV wording uses no personal pronouns,
+including when rewriting an existing first-person profile. Preserve the person's
+identity and evidence; present the wording change for their review.
 
 ## KEY SKILLS
 
