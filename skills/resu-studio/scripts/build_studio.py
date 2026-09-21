@@ -944,9 +944,9 @@ def main():
     s = swap_const(s, "SOURCE_HASH", writing.file_hash(a.cv))
     proposed, skipped, unmatched = proposals_block(a.proposals, cv_ids(CV, L))
     active = writing_data.get("active_batch")
-    if active:
+    if active or writing_data.get("sources"):
         proposed = {}
-        if writing_data.get("display_is_source") and writing_data["phase"] != "stale":
+        if active and writing_data.get("display_is_source") and writing_data["phase"] != "stale":
             for rec in active["records"]:
                 proposed.setdefault(rec["line"], []).append(rec)
         skipped, unmatched = [], []

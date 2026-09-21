@@ -20,6 +20,7 @@ import uuid
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import paths
+import writing_memory as memory
 
 PILLARS = ("passion", "strengths", "impact", "value")
 OBJECTIVES = ("pillars", "ats", "human", "tailoring", "integrity", "coherence", "constraints")
@@ -249,8 +250,13 @@ def evidence_excerpts(path, wanted):
     return result
 
 
-def require_refs(refs, known, label):
+def require_refs(refs, known, label, source="facts.md"):
     if not isinstance(refs, list) or not refs or any(not isinstance(x, str) or x not in known for x in refs):
+        if source == "asks.md":
+            if not known:
+                raise ValueError("brief.priorities needs requirement IDs, but none were found in this job's asks.md. Record the assessed job requirements there before preparing the writing brief.")
+            example = json.dumps(sorted(known)[:2])
+            raise ValueError("brief.priorities must be a non-empty JSON array of existing requirement IDs from this job's asks.md, for example %s. Use IDs only, not requirement descriptions, objects or CV fact IDs. Supporting CV evidence belongs in pillar/section facts and sample claims, not in priorities." % example)
         raise ValueError("%s needs existing evidence ids, with none missing or invented." % label)
 
 
@@ -267,7 +273,7 @@ def validate_brief(brief, sources):
             raise ValueError("The brief's %s must be text." % key)
     if not isinstance(brief["constraints"], dict):
         raise ValueError("Record application limits and budgets in a constraints object.")
-    require_refs(brief.get("priorities"), asks, "Employer priorities")
+    require_refs(brief.get("priorities"), asks, "brief.priorities", source="asks.md")
     pillars = brief.get("pillars", {})
     for key in PILLARS:
         p = pillars.get(key, {})
@@ -355,10 +361,35 @@ def validate_samples(samples, sources, available):
 
 def prepare(job, cv, data):
     job = paths.find_job(job)
+    data = copy.deepcopy(data)
+    old = load(job) or {}
+    old_options = {s["mode"]: s["definition"] for s in old.get("samples", [])}
+    custom = data.get("custom_modes", [])
+    slot = old.get("custom_slot") or next((s["mode"] for s in reversed(old.get("samples", [])) if s["mode"].startswith("personal-")), None)
+    replace = old.get("request", {}).get("replace_mode") or slot
+    keep_custom = data.get("keep_custom_modes", old.get("request", {}).get("keep_custom_modes", False))
+    if custom and replace in old_options and not keep_custom:
+        incoming = next((m for m in custom if m["id"] == data.get("preview_mode")), custom[-1])
+        incoming_id = incoming["id"]
+        previous = old_options[replace]
+        changed = {k:v for k,v in incoming.items() if k not in ("id", "version")} != {k:v for k,v in previous.items() if k not in ("id", "version")}
+        incoming["id"] = replace
+        latest = max([previous["version"]] + [m["version"] for m in modes() if m["id"] == replace])
+        incoming["version"] = latest + 1 if changed else previous["version"]
+        data["custom_modes"] = [m for m in custom if m is incoming or m["id"] != replace]
+        data["samples"] = [s for s in data.get("samples", []) if s["mode"] != replace or s["mode"] == incoming_id]
+        for sample in data["samples"]:
+            if sample["mode"] == incoming_id:
+                sample["mode"] = replace
+        data["preview_mode"] = replace
+        slot = replace
+    elif custom:
+        slot = data.get("preview_mode") or custom[-1]["id"]
     sources = source_record(cv, job)
     brief, samples = data.get("brief", {}), copy.deepcopy(data.get("samples"))
     validate_brief(brief, sources)
     available = {m["id"]: m for m in modes()}
+    available.update(old_options)
     for mode in data.get("custom_modes", []):
         validate_mode(mode)
         if not mode["id"].startswith("personal-"):
@@ -368,16 +399,25 @@ def prepare(job, cv, data):
     preview_mode = data.get("preview_mode")
     if preview_mode is not None and preview_mode not in {s["mode"] for s in samples}:
         raise ValueError("The preview mode must have samples in this comparison.")
-    old = load(job) or {}
     if old.get("phase") in ("rewrite_requested", "revision_requested") and not stale(old):
         raise ValueError("A rewrite request is pending. Publish its suggestions before preparing a different direction.")
+    if old.get("request", {}).get("action") == "preview" and old["request"].get("save_as") and preview_mode and preview_mode.startswith("personal-"):
+        save_mode(available[preview_mode])
     state = {"schema": 1, "job": job, "sources": sources, "brief": brief,
              "ad_files": sorted(key[3:] for key in sources if key.startswith("ad:")),
              "samples": samples, "phase": "choose", "selected": None,
              "preview_mode": preview_mode,
              "preview_base": old.get("request", {}).get("mode") if preview_mode else None,
+             "custom_slot": slot,
              "handled_requests": old.get("handled_requests", []),
              "previous": old.get("revision"), "batches": old.get("batches", [])}
+    # Exploration changes the offered direction, not the reviewed wording or its
+    # active round. Preserve decisions only against the same exact CV source.
+    for key in ("batch", "working_review", "review_seed"):
+        if key in old:
+            state[key] = copy.deepcopy(old[key])
+    if old.get("current_cv", {}).get("hash") == sources["cv"]["hash"]:
+        state["working_review"] = old.get("working_review", {})
     # The archived state retains every older sample and decision. Preparation never
     # changes the CV and never turns the default into the user's selection.
     return save(job, state)
@@ -420,14 +460,25 @@ def request(job, data):
     options = {s["mode"]: s for s in state["samples"]}
     if req.get("mode") not in options:
         raise ValueError("Choose a mode whose samples are on this application.")
+    definition = options[req["mode"]]["definition"]
+    for field, key in (("mode_name", "name"), ("mode_version", "version")):
+        if field in req and req[field] != definition[key]:
+            raise ValueError("The request's mode name or version does not match its prepared mode. Recreate the handoff from the current Studio so the displayed choice and recorded direction agree.")
+        # Older handoffs carry only the ID; resolve the label from the prepared
+        # snapshot, never from a newer global mode or an inferred display name.
+        req[field] = definition[key]
+    expected_source = state.get("current_cv", state["sources"]["cv"])
+    if req.get("source_hash") != expected_source["hash"]:
+        raise ValueError("The writing request must refer to the current CV shown in the Studio.")
+    memory.capture(state, data, expected_source["hash"])
+    if state.get("current_cv"):
+        state["sources"]["cv"] = copy.deepcopy(state.pop("current_cv"))
+    if action == "preview" and not req.get("keep_custom_modes", False):
+        req["replace_mode"] = req["mode"] if req["mode"].startswith("personal-") else state.get("custom_slot")
     if action == "revise" and not state.get("selected"):
         raise ValueError("Choose the writing direction before requesting a revision.")
     if action == "revise" and req["mode"] != state["selected"]["id"]:
         raise ValueError("Preview a different mode before asking it to replace the current direction.")
-    if action == "revise" and state.get("current_cv"):
-        if req.get("source_hash") != state["current_cv"]["hash"]:
-            raise ValueError("The revision request needs the current CV version shown in the Studio.")
-        state["sources"]["cv"] = copy.deepcopy(state.pop("current_cv"))
     if action in ("rewrite", "revise") and req.get("adjustments", "").strip() and action == "rewrite":
         raise ValueError("Preview your adjusted direction first so the full rewrite follows the samples you chose.")
     state["request"] = copy.deepcopy(req)
@@ -440,6 +491,17 @@ def request(job, data):
     state["phase"] = {"rewrite": "rewrite_requested", "preview": "preview_requested", "revise": "revision_requested"}[action]
     if action != "preview":
         state["selected"] = copy.deepcopy(options[req["mode"]]["definition"])
+    prior = batch_for(state)
+    state["transition"] = {"from_batch": prior["id"] if prior else None,
+                           "mode": definition["name"], "generation_required": action != "preview",
+                           "reused": False, "preserve_user_wording": True}
+    if action == "rewrite" and not req.get("force_regenerate"):
+        cached = memory.reusable(state, definition)
+        if cached:
+            state["batch"] = cached["id"]
+            state["phase"] = "review"
+            memory.seed(state, cached)
+            state["transition"].update(generation_required=False, reused=True)
     return save(job, state)
 
 
@@ -466,6 +528,18 @@ def publish(job, proposals, review):
     with open(proposals, encoding="utf-8-sig") as f:
         text = f.read()
     records = proposal_records.parse(text)
+    reuse = review.get("reuse_proposals", [])
+    if reuse:
+        prior_id = state.get("transition", {}).get("from_batch")
+        prior = next((b for b in state.get("batches", []) if b["id"] == prior_id), None)
+        if not prior or prior["source"]["hash"] != state["sources"]["cv"]["hash"]:
+            raise ValueError("Only reuse proposals from the previous round on this same source CV.")
+        by_uid = {r["uid"]:r for r in prior["records"]}
+        if not isinstance(reuse, list) or len(set(reuse)) != len(reuse) or any(uid not in by_uid for uid in reuse):
+            raise ValueError("reuse_proposals must list distinct suggestion UIDs from the previous round.")
+        records.extend(copy.deepcopy(by_uid[uid]) for uid in reuse)
+        for i, rec in enumerate(records, 1):
+            rec["p"] = "P%d" % i
     faults = proposal_records.validate(records, state["sources"]["cv"]["path"],
                                        state["sources"]["facts"]["path"],
                                        state["sources"]["asks"]["path"], strict=True)
@@ -482,6 +556,7 @@ def publish(job, proposals, review):
     state.setdefault("batches", []).append(batch)
     state["batch"] = batch["id"]
     state["phase"] = "review"
+    memory.seed(state, batch)
     return save(job, state)
 
 
@@ -489,7 +564,7 @@ def batch_for(state):
     return next((b for b in reversed(state.get("batches", [])) if b["id"] == state.get("batch")), None)
 
 
-def decision_faults(data, state, cv=None):
+def decision_faults(data, state, cv=None, partial=False):
     if stale(state):
         return ["The writing evidence changed. Reconsider the affected brief and suggestions before applying decisions."]
     stamp = data.get("writing")
@@ -502,7 +577,7 @@ def decision_faults(data, state, cv=None):
         return ["The CV changed after these suggestions were reviewed. Rebuild before applying the decisions."]
     if stamp.get("source_hash") != batch["source"]["hash"]:
         return ["These decisions refer to a different source CV version."]
-    if data.get("undecided"):
+    if data.get("undecided") and not partial:
         return ["Some suggestions are still undecided. Return to those suggestions before finishing the CV."]
     expected = {r["uid"]: r for r in batch["records"]}
     found = set()
@@ -517,7 +592,7 @@ def decision_faults(data, state, cv=None):
             found.add(uid)
         if rec.get("was") not in ("used", "kept", "edited", "removed", "answered", "nothing", "another"):
             faults.append("A suggestion has no recognised decision.")
-        if rec.get("was") in ("another", "answered"):
+        if rec.get("was") in ("another", "answered") and not partial:
             faults.append("A requested alternative is still waiting for its rewrite.")
         original = expected.get(uid, {})
         if rec.get("was") == "used":
@@ -537,7 +612,7 @@ def decision_faults(data, state, cv=None):
                     [x.get("text") for x in s.get("lines", [])] == [x.get("text") for x in original["section"]["lines"]]
                     for s in data.get("sections", [])):
                 faults.append("An accepted section is missing or has changed text.")
-    if found != set(expected):
+    if not partial and found != set(expected):
         faults.append("The handoff must account for every published suggestion, including rejected ones.")
     return faults
 
@@ -561,6 +636,7 @@ def finish(job, cv, review, decisions):
     if mismatch:
         raise ValueError("The assembled CV differs from the approved decisions: %s" % mismatch)
     batch_for(state)["decisions"] = copy.deepcopy(decisions)
+    batch_for(state)["working_decisions"] = copy.deepcopy(decisions)
     state["final_review"] = review
     state["current_cv"] = source_record(cv, job)["cv"]
     state["phase"] = "ready" if all(review[k]["status"] == "pass" for k in OBJECTIVES) else "review_required"
@@ -584,6 +660,11 @@ def page_data(job, cv=None):
     # Full history remains on disk. The page only needs the active round.
     batch = batch_for(state)
     out["active_batch"] = batch
+    if batch and batch["source"]["hash"] != out["sources"]["cv"]["hash"]:
+        out["active_batch"] = None
+    if out.get("review_seed", {}).get("source_hash") != file_hash(cv or state["sources"]["cv"]["path"]):
+        out.pop("review_seed", None)
+    out["history"] = memory.history(state)
     facts = state["sources"]["facts"]
     evidence_path = facts.get("snapshot", facts["path"])
     out["evidence"] = evidence_excerpts(evidence_path, evidence_dependencies(state)) if os.path.isfile(evidence_path) else {}
@@ -608,7 +689,7 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="command", required=True)
     sub.add_parser("modes")
     sm = sub.add_parser("save-mode"); sm.add_argument("file")
-    for command in ("prepare", "request", "publish", "finish", "context"):
+    for command in ("prepare", "request", "publish", "finish", "context", "history"):
         p = sub.add_parser(command); p.add_argument("--job", required=True)
         if command in ("prepare", "finish"):
             p.add_argument("--cv", required=True)
@@ -618,6 +699,8 @@ def main(argv=None):
             p.add_argument("--proposals", required=True)
         if command == "finish":
             p.add_argument("--decisions", required=True)
+        if command == "context":
+            p.add_argument("--batch", help="Read one saved round by ID instead of the current context")
     a = ap.parse_args(argv)
     try:
         if a.command == "modes":
@@ -625,7 +708,15 @@ def main(argv=None):
         elif a.command == "save-mode":
             result = {"saved": save_mode(read_json(a.file))}
         elif a.command == "context":
-            result = page_data(a.job)
+            state = load(a.job)
+            if a.batch:
+                result = next((b for b in (state or {}).get("batches", []) if b["id"] == a.batch), None)
+                if result is None:
+                    raise ValueError("That saved round does not exist in this job.")
+            else:
+                result = memory.context(state) if state else page_data(a.job)
+        elif a.command == "history":
+            result = memory.history(load(a.job) or {})
         elif a.command == "prepare":
             result = prepare(a.job, a.cv, read_json(a.input))
         elif a.command == "request":
@@ -634,6 +725,8 @@ def main(argv=None):
             result = publish(a.job, a.proposals, read_json(a.input))
         else:
             result = finish(a.job, a.cv, read_json(a.input), read_json(a.decisions))
+        if a.command in ("prepare", "request", "publish", "finish"):
+            result = memory.context(result)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (ValueError, KeyError, TypeError, OSError, paths.NoSuchJob) as exc:

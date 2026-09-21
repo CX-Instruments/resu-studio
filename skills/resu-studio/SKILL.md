@@ -415,6 +415,10 @@ named plainly with no softening.
 
 Import the selected mode and generation request using `writing.py request`, as described in `references/writing-engine.md`. Read its returned brief and source versions. Move the job to `Tailoring`, then plan the whole document before writing lines. Do not ask again whether to proceed.
 
+Name the recorded writing mode in the first progress update after importing the request and when handing over its suggestions, so the person can see their choice carried through. For example: "I'm rewriting your CV using 'Direct, warm and flowing'." Take the name from the imported selected definition, not from memory or card order. This acknowledgement does not add a permission step.
+
+On a mode switch, first check the returned `transition`: a restored saved round needs a Studio rebuild, not another generation. Preserve current manual wording and keep decisions while offering changed-mode alternatives as suggestions. Follow `writing-engine.md` for reusing unchanged proposals, compact history retrieval and updating an existing personal-mode option without losing its earlier versions.
+
 Write `proposals.md` in the job folder. Use `templates/proposals.md`: complete current/suggested text, a real line or addition target, reason, purpose, claim map and evidence. Requirement ids are necessary for relevance changes; clarity, voice and other useful changes do not need a fabricated requirement. Keep the page and bullet budget. Optional achievements must earn their space and need neither a fixed count nor multiple employers.
 
 Review all shared objectives and publish with `writing.py publish` before rebuilding. The Studio reads the published record; a loose proposals file cannot replace an approved version.

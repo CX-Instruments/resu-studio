@@ -1,7 +1,7 @@
 {
   "brief": {
     "target": "",
-    "priorities": [],
+    "priorities": ["<requirement-id-from-this-jobs-asks.md>"],
     "central_case": "",
     "pillars": {
       "passion": {"status": "absent", "statement": "", "facts": []},
@@ -24,5 +24,6 @@
     }
   ],
   "custom_modes": [],
-  "preview_mode": null
+  "preview_mode": null,
+  "keep_custom_modes": false
 }

@@ -315,6 +315,7 @@ button,input,select{font:inherit;color:inherit}
 #writing-content .writing-status,#writing-content .writing-handoff{border:1px solid var(--line);background:var(--panel2);padding:18px;border-radius:10px;margin-top:15px}
 #writing-content .writing-notice:not(:empty){color:var(--accent);margin:12px 0;font-size:13px}
 #writing-content .writing-handoff .cta{margin:10px 10px 0 0}
+#writing-content .writing-request-summary{margin:15px 0 5px;font-size:16px;font-weight:700;color:var(--accent)}
 #writing-content .writing-builder{border:1px solid var(--line);border-radius:12px;padding:24px;background:var(--panel2)}
 #writing-content .writing-builder h3{font-size:23px;letter-spacing:-.4px;margin:4px 0 7px}
 #writing-content .writing-builder-fields{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:32px;border:0;padding:0;margin:24px 0 0;min-width:0}
@@ -930,6 +931,12 @@ const LEGACY_STORE = "";
 const PROPOSED = {};
 const GAPS={tight:"5px",normal:"9px",airy:"15px"};
 
+// Kept sections survive even when the next mode has no proposal for them.
+((((WRITING.review_seed || {}).decisions || {}).sections)||[]).forEach(s=>{
+  const id=s.id || "proposed-"+s.slug;
+  EXTRA[id]={name:s.title,head:s.title,slug:s.slug,format:s.format||"bullets",kind:"lines"};
+});
+
 Object.values(PROPOSED).flat().filter(x=>x.kind==="section").forEach(x=>{
   const id="proposed-"+x.section.slug;
   EXTRA[id]={name:x.section.title,head:x.section.title,slug:x.section.slug,
@@ -1262,6 +1269,50 @@ if(S.v !== STATE_V){
 
 function save(){ try{ S.v=STATE_V; remember();
                       localStorage.setItem(STORE,JSON.stringify(S)); }catch(e){} }
+
+(function restoreWritingReview(){
+  const seed=WRITING.review_seed;
+  if(!seed || seed.source_hash!==SOURCE_HASH || S.writingReviewToken===seed.token) return;
+  const d=seed.decisions, sent=(S.writing||{}).handoffReview;
+  const baseline=sent && sent.source_hash===SOURCE_HASH ? sent.decisions : null;
+  if(RAW_STATE){try{localStorage.setItem(STORE+":review-before-"+seed.token,RAW_STATE);}catch(e){}}
+  const clone=x=>JSON.parse(JSON.stringify(x));
+  // Preserve edits made locally after the handoff, including deletions.
+  function merge(field, incoming, before){
+    const current=S[field]||{}, result=clone(incoming||{});
+    if(RAW_STATE){
+      const keys=new Set([...Object.keys(current),...Object.keys(before||{})]);
+      keys.forEach(key=>{
+        if(!baseline || JSON.stringify(current[key])!==JSON.stringify((before||{})[key])){
+          if(key in current) result[key]=clone(current[key]); else delete result[key];
+        }
+      });
+    }
+    S[field]=result;
+  }
+  ["marks","adds","checked","flags"].forEach(k=>merge(k,d[k],baseline&&baseline[k]));
+  merge("bOrder",d.order,baseline&&baseline.order);
+  const props={}, notes={};
+  (d.proposals||[]).forEach(r=>{props[r.uid]=r.was;if(r.note) notes[r.uid]=r.note;});
+  const beforeProps={}, beforeNotes={};
+  ((baseline||{}).proposals||[]).forEach(r=>{beforeProps[r.uid]=r.was;if(r.note) beforeNotes[r.uid]=r.note;});
+  merge("props",props,beforeProps);merge("propNotes",notes,beforeNotes);
+  if(!baseline || JSON.stringify(S.sectionOrder||[])===JSON.stringify(baseline.section_order||[])){
+    S.sectionOrder=clone(d.section_order||[]);
+    if(S.sectionOrder.length) S.order.sort((a,b)=>S.sectionOrder.indexOf(secDef(a.id).slug)-S.sectionOrder.indexOf(secDef(b.id).slug));
+  }
+  (d.sections||[]).forEach(s=>{
+    const id=s.id||"proposed-"+s.slug;
+    const localChanged=baseline && JSON.stringify(S.extra[id])!==JSON.stringify((sent.extra||{})[id]);
+    if(!localChanged) S.extra[id]={picks:null,lines:s.lines.map(x=>x.text)};
+    const orderChanged=baseline && JSON.stringify(S.order)!==JSON.stringify(sent.order);
+    if(!S.order.some(x=>x.id===id) && !orderChanged){
+      const at=s.after && s.after!=="^" ? S.order.findIndex(x=>secDef(x.id).slug===s.after)+1 : 0;
+      S.order.splice(at,0,{id,place:"main",show:true});
+    }
+  });
+  S.writingReviewToken=seed.token;save();
+})();
 
 /* If the AI drafted key achievements for this advertisement, the section has to be on
    the page for them to be seen at all. It used to sit behind an "add a section"
@@ -4259,7 +4310,8 @@ function propCard(id, x){
   now.className = x.kind==="add" ? "note" : "t was";
   now.textContent = x.kind==="add"
     ? "Not on your CV yet. It would print after the line above."
-    : (x.cur || (atomBy(id)||{}).text || "");
+    : ((x.kind==="edit" || x.kind==="remove") && S.marks[id]?.a==="edit"
+      ? S.marks[id].text : (x.cur || (atomBy(id)||{}).text || ""));
   box.appendChild(now);
 
   if(x.kind!=="remove"){
@@ -4567,7 +4619,7 @@ function decisionsFile(){
       if(rec.text!==wanted) rec.was=actual?"edited":"removed";
     }
     if(propNote(propKey(x.p))) rec.note=propNote(propKey(x.p));
-    if(m && m.a==="edit" && m.text && m.p===x.p.p) rec.text=m.text;
+    if(m && m.a==="edit" && m.text && (m.p===x.p.p || rec.was==="edited")) rec.text=m.text;
     rec.decision=PROPWORD[rec.was]||rec.was;
     return rec;
   });
@@ -4651,6 +4703,7 @@ document.querySelectorAll('.tabs button').forEach(b=>{
     document.getElementById(b.getAttribute("aria-controls")).classList.add("on");
     const score = b.id === "t-score";
     document.querySelector(".app").setAttribute("data-view", score ? "score" : b.id==="t-writing" ? "writing" : "design");
+    if(b.id==="t-writing" && S.drawer) openDrawer(null);
     if(!score) setTimeout(fit,60);
   });
 });

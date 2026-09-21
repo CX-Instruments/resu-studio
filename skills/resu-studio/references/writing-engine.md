@@ -12,7 +12,7 @@ Positioning is reconsidered for every advertisement. A reusable mode contributes
 
 ## Prepare the direction and examples
 
-After the source assessment, run `python3 scripts/writing.py modes`. Read the available definitions. Prepare an application-specific input using `templates/writing-input.json` as its shape, replacing the empty values with the actual evidence and samples.
+After the source assessment, run `python3 scripts/writing.py modes`. Read the available definitions. Prepare an application-specific input using `templates/writing-input.json` as its shape, replacing the empty values and placeholders with the actual IDs, evidence and samples.
 
 The brief contains:
 
@@ -22,6 +22,15 @@ The brief contains:
 - the section plan: what each section contributes and which evidence earns space;
 - voice and the person's preferences;
 - application limits, the existing page and bullet budget, and unresolved questions.
+
+`brief.priorities` is a non-empty array of **requirement ID strings from this job's `asks.md`**, for example `"priorities": ["a1", "a2"]` when those are the actual recorded IDs. Read the IDs from that file; do not substitute requirement descriptions, objects such as `{"id":"a1","facts":["f1"]}`, or candidate fact IDs. Priorities say what matters to the employer, not what the candidate has proved. An important requirement may remain a gap. Evidence mappings use a separate source:
+
+| Field | References |
+|---|---|
+| `brief.priorities` | Existing job-requirement IDs from this job's `asks.md` |
+| Supported `brief.pillars.*.facts` | Supporting candidate fact IDs from `facts.md` |
+| `brief.section_plan[].facts`, when supplied | Candidate fact IDs used by that section |
+| `samples[].profile.claims[].facts` and `samples[].bullet.claims[].facts` | Candidate fact IDs supporting the exact suggested claim |
 
 Use `positioning.md` for the evidence interpretation and `rewriting.md` for sentence execution. Choose evidence before polishing. A strong existing line can stay. Related clauses forming one accomplishment belong together. A profile can establish a capability that experience proves without repeating the same achievement.
 
@@ -46,6 +55,8 @@ python3 scripts/writing.py prepare --job <job id> --cv "<source CV.md>" --input 
 python3 scripts/build_studio.py --job <job id> --cv "<source CV.md>" --scorecard "<scorecard.md>" --asks-md "<asks.md>" --facts "<facts.md>"
 ```
 
+An agent-authored preparation format error is internal repair work. Correct it using the template and existing records, then continue building the Studio without asking the person to fix JSON or presenting it as a problem with their CV. Do not change the assessment or invent a mapping to make validation pass. Explain and seek input only when a missing fact, unresolved ambiguity or substantive blocker actually requires the person's involvement; if an internal failure cannot be resolved, report that limitation accurately.
+
 Open the Studio at its Writing tab and hand over Resu Desk. Explain the strongest supported pattern, the actual sample differences and the next action briefly in chat. The Writing view shows each original passage once; opening it reveals the mode versions together. The builder offers optional starting mode, emphasis, voice, rhythm, free-text direction and an explicit reusable-mode choice. Do not repeat those choices as a mandatory questionnaire in chat. The source score and writing samples belong to the same application experience.
 
 Scoring depth is separate from writing quality. Read the full ad either way; use relevant, supported responsibilities to inform writing, without presenting unassessed requirements as verified matches. Do not inflate coverage counts to reward a more appealing voice.
@@ -58,10 +69,17 @@ Save the entire handoff in the job folder and run:
 
 ```bash
 python3 scripts/writing.py request --job <job id> --input "<writing-request.json>"
-python3 scripts/writing.py context --job <job id>
 ```
 
+`request` already returns the current context. Do not immediately request the same context again; fetch a particular older batch only if it is needed.
+
 Read the returned brief, selected mode, request and source files. A successful rewrite request is permission to generate; do not ask "shall I proceed?" again. It is not acceptance of the resulting wording. Replaying the same request is idempotent. A stale request is refused because its inputs changed: refresh the samples and show the changed basis, preserving earlier decisions.
+
+Check `transition` first. If `reused` is true and `generation_required` is false, the matching saved round has already been restored: rebuild the Studio and report that reuse by mode name. Do not regenerate or republish it. Otherwise continue generation using the previous round and the captured `working_review` as context. Manual wording, explicit keeps and accepted changes stay on the page by default; mode-related alternatives are suggestions. Use the original source for the proposal contract's `Currently`, while considering the effective wording in the saved marks. The Studio displays that effective wording in the comparison with a new suggestion. Approvals on an identical suggestion with the same supporting evidence can carry forward; different wording never inherits an approval.
+
+The job's existing `.writing` history holds mode definitions, samples, full rewrite batches and partial decisions. No folder per mode is needed. `writing.py history --job <job id>` lists compact round summaries; `writing.py context --job <job id> --batch <batch id>` retrieves one earlier round when needed. Normal command output includes the active round and history summaries, not all historical prose. Reuse requires the same CV, guiding brief and mode definition, with unchanged relevant evidence and job pack. After a finished CV, the next request uses that current CV as its source. A deliberate request to generate a fresh alternative in an otherwise unchanged mode may use `force_regenerate: true`; normal switching should reuse matching work.
+
+In the first progress update after a successful import, name the recorded mode: for example, `I'm rewriting your CV using “Direct, warm and flowing”.` Use `selected.name` for rewrites/revisions and `request.mode_name` for a preview's starting mode. For previews, say that you are preparing samples based on that mode; do not imply a full rewrite has begun. State the mode name again when handing over the resulting suggestions. This is acknowledgement, not another approval question. The copied request starts with the human-readable choice, and its JSON includes `mode_name` and `mode_version` alongside the mode ID. The importer verifies those against the prepared snapshot and supplies them for older ID-only handoffs; do not infer the selection from card order or a generic workflow description.
 
 A chat instruction such as "use the warm version and rewrite it" is equally valid. Record a request with the same fields and exact current revision rather than making the person return to the page. The `id` is a fresh unique value; `mode` is a displayed mode id; `action` is `rewrite`, `preview` or `revise`; `source_hash` comes from the current source. This record captures their instruction, not a newly inferred permission.
 
@@ -69,9 +87,11 @@ A chat instruction such as "use the warm version and rewrite it" is equally vali
 
 A `preview` request asks for adjusted examples, not a full rewrite. Use the requested mode as a starting point and interpret the user's adjustments, including any emphasis, voice, rhythm, free-text direction and things to avoid. Their own words refine the broad controls; do not treat an omitted choice as a new constraint. Create a personal definition with `personal-` id, integer `version`, `name`, `impression`, `emphasis`, `voice`, `behaviour` and `boundaries`. Include a short `signature` for the comparison card. The shared engine always takes precedence over mode text. A literal poem or other conflicting request may be explored conversationally, but application samples must retain explicit facts, readable sentences and scanning requirements; explain the closest compatible expression.
 
-To keep an application-only exploratory definition, include it in the preparation input's `custom_modes` list. When the user explicitly names a reusable preference to save, write the definition in their private folder and run `writing.py save-mode <mode.json>`. Never save CV facts or employer-specific evidence into a reusable mode. Retain approved examples only when they are generic descriptions of the preference or the user's private examples, never in the shipped plugin.
+To keep an application-only exploratory definition, include it in the preparation input's `custom_modes` list. A further personal-mode request updates the existing personal option by default, retaining its stable ID and assigning a new version when the definition changes. `prepare` reconciles a newly invented personal ID back to that option. Supply the revised definition and its samples, with `preview_mode` pointing to it. Explain: "This updates your custom option; your earlier wording and decisions remain saved." Only use `keep_custom_modes: true` in the request/preparation when the user explicitly wants a separate additional option.
 
-Prepare refreshed samples on the current CV and rebuild the same Studio. Keep the starting mode and other useful choices in the comparison, and set the preparation input's `preview_mode` to the new personal mode id so the page opens on that result. This highlights a preview; it does not authorise the full rewrite. The user can compare it with the starting mode and then choose "Use this mode and rewrite my CV". A request that the existing modes sound too similar instead calls for a refreshed comparison under those existing definitions, not a new personal preference. Re-run the contrast and evidence checks above.
+For a recorded preview request with a nonempty `save_as`, `prepare` saves the resulting canonical definition in the private mode library after validation. Use the returned definition's ID and version; do not save a conflicting speculative version before preparation. Without that explicit reusable-preference intent, the changed definition stays in this job. `writing.py save-mode <mode.json>` remains available for a separately authorised library save. Never save CV facts or employer-specific evidence into a reusable mode. Retain approved examples only when they are generic descriptions of the preference or the user's private examples, never in the shipped plugin.
+
+Prepare refreshed samples on the current CV and rebuild the same Studio. Keep the built-in starting mode and other useful choices in the comparison; the revised personal option replaces its former card rather than adding a near-duplicate. Set `preview_mode` to the revised personal mode so the page opens on that result. This highlights a preview; it does not authorise the full rewrite. The user can compare it with other options and then choose "Use this mode and rewrite my CV". A request that the existing modes sound too similar instead calls for a refreshed comparison under those existing definitions, not a new personal preference. Re-run the contrast and evidence checks above.
 
 The previous state is retained in `.writing` history; the browser retains the personal-mode draft through a rebuild. Use the person's feedback, not a questionnaire. `save_as` is sent only when they explicitly choose to save a reusable mode and supply its name; otherwise the exploration stays in this application. A local instruction affects the named line; an application-wide adjustment changes this brief; a saved preference requires that separate intent. Do not silently turn "make this bullet warmer" into a permanent preference.
 
@@ -80,6 +100,8 @@ The previous state is retained in `.writing` history; the browser retains the pe
 Read the current brief on every generation or revision. Use its evidence and section plan, then draft only useful changes in page order. The source CV is not freely regenerated. `templates/proposals.md` defines the reviewable output. Each changed factual passage has a claim map; each change has a concrete purpose. Requirements are mandatory for a relevance change, not for every clarity or voice improvement.
 
 Carry the selected mode's emphasis, construction and rhythm from the chosen samples into the full document. During the human-engagement and coherence review, compare representative full-CV passages with the selected samples: explain how the chosen direction survived beyond the preview. Keep section purposes distinct and allow a strong source line to stay; do not force every bullet into a signature formula.
+
+For a changed mode, read the previous active round and current decisions rather than starting from a blank document. Redraft only the proposals that need different wording or evidence. To retain unchanged proposals without copying their text through generation, put their UIDs in `reuse_proposals` on the draft review JSON and write only the changed/new proposals to the proposals file. `publish` combines them and validates the full resulting set; do not reuse a proposal and submit another for the same slot. An empty proposals file is allowed when all proposals are explicitly reused. Reused text still needs to fit the chosen mode and the shared objectives in the whole-document review.
 
 Keep an unchanged line unchanged. Protect useful context and raw numbers. Additions cost space and need an explicit removal or a user-approved higher budget. A move is an `Order` proposal naming the list and original indices. For section ordering, use `Line: document/sections` and `Order` containing every existing heading slug exactly once. For a new section, follow the `Section` contract in `achievements.md`, using `^` for a new profile before the first section. An optional achievement section must earn its space and can draw from one role; never force six lines or a cross-employer claim. A new section is proposed explicitly before its contents are treated as approved.
 

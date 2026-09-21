@@ -47,10 +47,11 @@
   const notice = el("p", "", "writing-notice"); notice.setAttribute("role", "status");
   const handBox = el("section", undefined, "writing-handoff"); handBox.hidden = true;
   handBox.append(el("h3", "Continue in your AI chat"), el("p", "Copy this request into the same conversation. Your choices and current review decisions travel together.", "hint"));
+  const handSummary = el("p", "", "writing-request-summary"); handBox.append(handSummary);
   const handText = el("textarea"); handText.readOnly = true; handText.rows = 7;
   handText.setAttribute("aria-label", "Writing request to send to AI");
   handBox.append(handText, button("Copy request", async () => {
-    try { await navigator.clipboard.writeText(handText.value); notice.textContent = "Copied. Paste into your AI chat to continue."; }
+    try { await navigator.clipboard.writeText(handText.value); notice.textContent = "Copied: " + handSummary.textContent + " Paste into your AI chat to continue."; }
     catch (e) { handText.focus(); handText.select(); notice.textContent = "Select and copy the request, then paste it into your AI chat."; }
   }), button("Save request", () => {
     const match = handText.value.match(/```json\n([\s\S]*)\n```/);
@@ -64,25 +65,35 @@
       (draft.note || "").trim(), draft.avoid && "Avoid: " + draft.avoid.trim()].filter(Boolean).join("\n");
   }
   function handoff(action, adjustments = "", mode = w.mode, saveAs = "") {
-    if (locked || !samples.some(s => s.mode === mode)) return;
+    const sample = samples.find(s => s.mode === mode);
+    if (locked || !sample) return;
+    const definition = sample.definition, named = "“" + definition.name + "”";
     const intent = {schema:1, job:WRITING.job, revision:WRITING.revision, source_hash:SOURCE_HASH,
-      mode, action, adjustments, save_as:saveAs,
+      mode, mode_name:definition.name, mode_version:definition.version, action, adjustments, save_as:saveAs,
       scope:action === "revise" ? "lines" : action === "preview" && saveAs ? "preference" : "application"};
     const signature = JSON.stringify(intent);
     if (!w.sent || w.sent.signature !== signature) w.sent = {signature, id:Date.now().toString(36) + "-" + Math.random().toString(36).slice(2)};
     intent.id = w.sent.id;
     const payload = JSON.parse(decisionsFile()); payload.writing_request = intent;
-    const prompt = action === "rewrite"
-      ? "Use this selected mode and rewrite my CV. This is my request to begin; do not ask again whether to proceed."
-      : action === "revise" ? "Revise the requested lines using the current guiding brief. Preserve my other decisions."
-      : "Show adjusted writing samples for this application. Keep my CV and prior decisions intact.";
+    w.handoffReview = {source_hash:SOURCE_HASH, decisions:JSON.parse(decisionsFile()),
+      extra:JSON.parse(JSON.stringify(S.extra||{})), order:JSON.parse(JSON.stringify(S.order||[]))};
+    handSummary.textContent = action === "rewrite" ? "Rewrite my CV using " + named + "."
+      : action === "revise" ? "Revise the requested lines using " + named + "."
+      : saveAs ? "Preview my custom mode “" + saveAs + "”, starting from " + named + "."
+      : "Preview my adjustments to " + named + ".";
+    const prompt = handSummary.textContent + "\n" + (action === "rewrite"
+      ? "This is my request to begin; do not ask again whether to proceed."
+      : action === "revise" ? "Keep the current guiding brief and preserve my other decisions."
+      : "Show samples only. Keep my CV and prior decisions intact.")
+      + "\nAcknowledge the mode by name when you begin, using the mode recorded by the imported request.";
     handText.value = prompt + "\nSave this handoff in the application's folder and run writing.py request --job " + WRITING.job
       + " --input <saved handoff>. Read references/writing-engine.md and the saved writing context before continuing.\n\n```json\n"
       + JSON.stringify(payload, null, 2) + "\n```";
     handBox.hidden = false;
-    notice.textContent = "Request ready. Send it to your AI chat to " + (action === "preview" ? "generate the samples." : "continue the rewrite.");
-    save(); handBox.scrollIntoView({block:"nearest"}); handText.focus();
+    notice.textContent = "Request ready: " + handSummary.textContent;
+    save(); handBox.scrollIntoView({block:"nearest"}); handText.focus(); handText.setSelectionRange(0, 0); handText.scrollTop = 0;
   }
+  function clearHandoff() { handBox.hidden = true; handText.value = ""; handSummary.textContent = ""; notice.textContent = ""; }
   root.textContent = "";
   const hero = el("header", undefined, "writing-hero"), heading = el("div");
   heading.append(el("p", "YOUR CV, YOUR VOICE", "writing-eyebrow"), el("h2", "Find the way you want to sound"),
@@ -103,6 +114,12 @@
     ? "The source material has changed. Ask the AI to refresh these samples. Earlier work is retained."
     : pending ? "Your request is with the AI. Send the saved handoff if you have not already; refreshed samples or suggestions will appear after the Studio is rebuilt."
     : "Ask the AI to prepare examples from your CV and this advertisement.", "writing-status"));
+  if(WRITING.transition?.reused) root.append(el("p", "Restored the saved “"+WRITING.transition.mode+"” round. Your current wording and matching decisions are kept; no new generation was needed.", "writing-status"));
+  if((WRITING.history||[]).length){
+    const history=el("details",undefined,"writing-brief");history.append(el("summary","Saved writing rounds ("+WRITING.history.length+")"));
+    WRITING.history.forEach(r=>history.append(el("p",r.mode+" · version "+r.version+" · "+r.suggestions+" suggestions · "+r.decisions+" decisions"+(r.active?" · current":""))));
+    history.append(el("p","Earlier wording and decisions stay in this job. Choose an available mode to reuse its saved round when the CV, evidence and guiding brief still match.","hint"));root.append(history);
+  }
   const nav = el("div", undefined, "writing-workspace-nav");
   const compare = el("section"); compare.id = "writing-compare";
   const builder = el("section", undefined, "writing-builder"); builder.id = "writing-builder"; builder.hidden = true;
@@ -154,7 +171,7 @@
       box.style.setProperty("--mode-color", ["#337b88", "#ae682b", "#687844", "#8a67ad"][samples.indexOf(sample) % 4]);
       const label = el("label", undefined, "writing-mode-label"), radio = el("input");
       radio.type = "radio"; radio.name = "writing-mode-" + key; radio.value = sample.mode; radio.disabled = locked;
-      radio.addEventListener("change", () => {w.mode = sample.mode; w.viewMode = sample.mode; save(); syncSelection();});
+      radio.addEventListener("change", () => {w.mode = sample.mode; w.viewMode = sample.mode; clearHandoff(); save(); syncSelection();});
       label.append(radio, el("span", sample.definition.name));
       if (hasCustom) {
         const badgeRow = el("div", undefined, "writing-badge-row");
@@ -194,6 +211,7 @@
   const builderTitle = el("div"); builderTitle.append(el("p", "MAKE IT YOURS", "writing-eyebrow"), el("h3", "Build a direction, then hear it in your words"),
     el("p", "Start with a mode you like. Choose as much or as little as helps—your own description is enough.", "hint"));
   builder.append(builderTitle);
+  if(hasCustom) builder.append(el("p","Your next personal-mode preview updates the existing custom option. Its previous definition, samples and rewrite rounds stay saved in this job.","writing-status"));
   const form = el("fieldset", undefined, "writing-builder-fields"); form.disabled = locked;
   const fields = el("div", undefined, "writing-builder-controls"), preview = el("aside", undefined, "writing-direction-preview");
   form.append(fields, preview); builder.append(form);
@@ -242,6 +260,7 @@
     handoff("preview", directions(), draft.base, draft.reuse ? draft.name.trim() : "");
   }));
   function updateDraft() {
+    clearHandoff();
     const source = samples.find(s => s.mode === draft.base);
     previewBase.textContent = source ? "Starting with " + source.definition.name : "Your own direction";
     previewText.textContent = directions() || "Your choices will appear here. Keep what you like about the starting mode and tell us what to change.";
@@ -256,7 +275,7 @@
   if (phase === "review" || phase === "review_required") actionBar.append(button("Review suggested changes", () => {
     document.getElementById("t-skin").click(); S.turnView = "need"; openDrawer("turn");
   }));
-  if (WRITING.display_is_source !== false) actionBar.append(button("Use this mode and rewrite my CV", () => handoff("rewrite")));
+  actionBar.append(button("Use this mode and rewrite my CV", () => handoff("rewrite")));
   if (WRITING.selected) actionBar.append(button("Send my revision requests", () => handoff("revise", "", WRITING.selected.id), "cta ghost"));
   root.append(actionBar, notice, handBox);
   if (WRITING.final_review) Object.values(WRITING.final_review).forEach(item => {if (item.status !== "pass") root.append(el("p", item.notes));});

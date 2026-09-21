@@ -140,6 +140,128 @@ class WritingTests(unittest.TestCase):
         self.assertEqual(W.page_data(self.job,str(output))["phase"],"ready")
         self.assertGreater(len(list((self.folder/".writing").glob("*.json"))),3)
         self.assertTrue(Path(ready["sources"]["cv"]["snapshot"]).exists())
+        self.cv=str(output)
+        next_round=self.switch("warm-collaborative")
+        self.assertEqual(next_round["sources"]["cv"]["hash"],W.file_hash(output))
+        self.assertTrue(next_round["transition"]["generation_required"])
+
+    def test_handoff_mode_name_matches_prepared_snapshot(self):
+        definition=self.state["samples"][0]["definition"]
+        revision=self.state["revision"]
+        for fields in ({"mode_name":"A different mode"}, {"mode_version":definition["version"]+1}):
+            with self.subTest(fields=fields):
+                with self.assertRaisesRegex(ValueError,"does not match its prepared mode"):
+                    self.request(**fields)
+                self.assertEqual(W.load(self.job)["revision"],revision)
+        # Older ID-only handoffs resolve to the actual saved sample definition.
+        state=self.request()
+        self.assertEqual(state["request"]["mode_name"],definition["name"])
+        self.assertEqual(state["request"]["mode_version"],definition["version"])
+        self.assertEqual(state["selected"],definition)
+
+    def switch(self, mode, decisions=None, **extra):
+        req={"schema":1,"id":os.urandom(8).hex(),"job":self.job,"revision":W.load(self.job)["revision"],
+             "source_hash":W.file_hash(self.cv),"mode":mode,"action":"rewrite",**extra}
+        return W.request(self.job,dict(decisions or {},writing_request=req))
+
+    def test_mode_round_reuse_preserves_manual_wording_and_invalidates_changed_sources(self):
+        self.request();first=self.publish()
+        decisions=self.decisions(first)
+        manual="Wrote the venue incident procedure and trained 35 staff."
+        decisions["marks"]["experience/0/b0"].update(text=manual,from_="own")
+        decisions["proposals"][0].update(was="edited",text=manual)
+        decisions["checked"]={"experience/0/b1":True}
+        request=self.switch("warm-collaborative",decisions)
+        self.assertTrue(request["transition"]["generation_required"])
+        self.assertEqual(W.batch_for(request)["working_decisions"]["marks"]["experience/0/b0"]["text"],manual)
+        second=self.publish("Wrote the incident procedure used to train 35 staff.")
+        seed=second["review_seed"]["decisions"]
+        self.assertEqual(seed["marks"]["experience/0/b0"]["text"],manual)
+        self.assertTrue(seed["checked"]["experience/0/b1"])
+        self.assertEqual(len(seed["undecided"]),1)
+        back=self.switch("credible-conviction",seed)
+        self.assertEqual(back["batch"],first["batch"])
+        self.assertEqual(back["phase"],"review")
+        self.assertTrue(back["transition"]["reused"])
+        self.assertFalse(back["transition"]["generation_required"])
+        self.assertEqual(len(back["batches"]),2)
+        self.assertEqual(back["review_seed"]["decisions"]["marks"]["experience/0/b0"]["text"],manual)
+        self.assertEqual(back["review_seed"]["decisions"]["proposals"][0]["was"],"edited")
+        self.assertEqual(W.decision_faults(back["review_seed"]["decisions"],back,self.cv),[])
+        context=json.loads(run("scripts/writing.py","context","--job",self.job))
+        self.assertNotIn("batches",context)
+        self.assertEqual(len(context["history"]),2)
+        history=json.loads(run("scripts/writing.py","history","--job",self.job))
+        self.assertEqual(len(history),2)
+        retrieved=json.loads(run("scripts/writing.py","context","--job",self.job,"--batch",second["batch"]))
+        self.assertEqual(retrieved["mode"]["id"],"warm-collaborative")
+        facts=Path(paths.facts_file());facts.write_text(facts.read_text(encoding="utf-8")+"\n```\nid: other\ntext: Unrelated evidence.\n```\n",encoding="utf-8")
+        self.assertTrue(self.switch("credible-conviction")["transition"]["reused"])
+        facts.write_text(facts.read_text(encoding="utf-8").replace("trained 35","trained 30"),encoding="utf-8")
+        with self.assertRaisesRegex(ValueError,"changed"):
+            self.switch("credible-conviction")
+        facts.write_text(facts.read_text(encoding="utf-8").replace("trained 30","trained 35"),encoding="utf-8")
+        write(self.cv,CV.replace("English","French"))
+        W.prepare(self.job,self.cv,self.data)
+        self.assertTrue(self.switch("credible-conviction")["transition"]["generation_required"])
+
+    def test_unchanged_proposals_keep_decisions_without_redrafting(self):
+        self.request();first=self.publish();decisions=self.decisions(first)
+        self.switch("direct-impact",decisions)
+        review=dict(self.review,reuse_proposals=[W.batch_for(first)["records"][0]["uid"]])
+        second=W.publish(self.job,write(self.folder/"delta.md",""),review)
+        self.assertEqual(len(W.batch_for(second)["records"]),1)
+        self.assertEqual(second["review_seed"]["decisions"]["proposals"][0]["was"],"used")
+        self.assertEqual(W.decision_faults(second["review_seed"]["decisions"],second,self.cv),[])
+        self.assertEqual(second["review_seed"]["decisions"]["undecided"],[])
+
+    def test_custom_refinement_replaces_option_but_keeps_old_round(self):
+        data=copy.deepcopy(self.data)
+        mode=dict(W.modes()[0],id="personal-my-direction",name="My direction",version=1)
+        sample=copy.deepcopy(data["samples"][0]);sample["mode"]=mode["id"]
+        sample["profile"]["suggested"]="Writes incident procedures and trains staff."
+        sample["profile"]["claims"]=[{"text":sample["profile"]["suggested"],"facts":["f1"]}]
+        data["custom_modes"]=[mode];data["samples"].append(sample);data["preview_mode"]=mode["id"]
+        W.prepare(self.job,self.cv,data);self.switch(mode["id"]);first=self.publish()
+        req={"schema":1,"id":"refine","job":self.job,"revision":first["revision"],
+             "source_hash":W.file_hash(self.cv),"mode":mode["id"],"action":"preview","adjustments":"Warmer, but keep the concrete details."}
+        W.request(self.job,dict(self.decisions(first),writing_request=req))
+        updated=copy.deepcopy(data)
+        updated["custom_modes"]=[dict(mode,id="personal-host-invented-id",voice="Warm and practical")]
+        updated["samples"].append(dict(copy.deepcopy(sample),mode="personal-host-invented-id"))
+        updated["preview_mode"]="personal-host-invented-id"
+        state=W.prepare(self.job,self.cv,updated)
+        personal=[s for s in state["samples"] if s["mode"].startswith("personal-")]
+        self.assertEqual(len(personal),1)
+        self.assertEqual((personal[0]["mode"],personal[0]["definition"]["version"]),(mode["id"],2))
+        self.assertEqual(W.batch_for(state)["mode"]["version"],1)
+        self.assertEqual(W.batch_for(state)["working_decisions"]["proposals"][0]["was"],"used")
+        self.assertTrue(Path(self.folder/".writing"/(first["revision"]+".json")).exists())
+        requested=self.switch(mode["id"])
+        self.assertTrue(requested["transition"]["generation_required"])
+
+    def test_priorities_reference_job_requirements_not_candidate_evidence(self):
+        revision=W.load(self.job)["revision"]
+        for value in (None, [], "a1", ["Improve procedures and train the team."],
+                      ["f1"], ["a1", "missing"], [{"id":"a1","facts":["f1"]}]):
+            with self.subTest(priorities=value):
+                bad=copy.deepcopy(self.data);bad["brief"]["priorities"]=value
+                with self.assertRaisesRegex(ValueError,r"brief\.priorities.*requirement IDs.*asks\.md") as error:
+                    W.prepare(self.job,self.cv,bad)
+                self.assertIn('["a1"]',str(error.exception))
+                self.assertEqual(W.load(self.job)["revision"],revision)
+        # A job priority is valid even when the candidate has no evidence for it.
+        asks=Path(self.folder/"asks.md")
+        original=asks.read_text(encoding="utf-8")
+        asks.write_text(original+"\n```\nid: a2\ntext: A qualification the candidate does not hold.\nnecessity: must\n```\n",encoding="utf-8")
+        valid=copy.deepcopy(self.data);valid["brief"]["priorities"]=["a1","a2"]
+        state=W.prepare(self.job,self.cv,valid)
+        self.assertEqual(state["brief"]["priorities"],["a1","a2"])
+        self.assertEqual(state["samples"],self.state["samples"])
+        asks.write_text("No requirements recorded yet.\n",encoding="utf-8")
+        with self.assertRaisesRegex(ValueError,"none were found.*asks.md"):
+            W.prepare(self.job,self.cv,valid)
+        self.assertEqual(W.load(self.job)["revision"],state["revision"])
 
     def test_stale_ad_claim_map_and_custom_modes(self):
         facts=Path(paths.facts_file())
@@ -297,6 +419,9 @@ counts:
             handoff=page.get_by_label("Writing request to send to AI").input_value()
             req=json.loads(re.search(r'```json\n(.*)\n```',handoff,re.S)[1])
             self.assertEqual(req["writing_request"]["mode"],"credible-conviction")
+            self.assertEqual(req["writing_request"]["mode_name"],"Credible conviction")
+            self.assertTrue(handoff.startswith('Rewrite my CV using “Credible conviction”.'))
+            self.assertEqual(page.locator('.writing-request-summary').inner_text(),'Rewrite my CV using “Credible conviction”.')
             W.request(self.job,req); published=self.publish(); self.build()
             page.reload();page.wait_for_selector('#writing-content input[type="radio"]')
             page.get_by_role("button",name="Review suggested changes",exact=True).click()
@@ -316,6 +441,53 @@ counts:
             self.assertEqual(page.evaluate("Object.keys(S.marks).length"),0)
             self.assertEqual(errors,[])
             browser.close()
+
+    def test_browser_mode_transition_keeps_sent_and_later_manual_edits(self):
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            self.skipTest("Playwright is needed for the browser check")
+        self.request();first=self.publish();self.build()
+        with sync_playwright() as pw:
+            browser=pw.chromium.launch(**({"executable_path":os.environ["CV_BROWSER"]} if os.environ.get("CV_BROWSER") else {}))
+            page=browser.new_page();errors=[];page.on("pageerror",lambda e:errors.append(str(e)))
+            page.goto(self.html.as_uri())
+            page.get_by_role("button",name="Review suggested changes",exact=True).click()
+            page.get_by_role("button",name="Use this",exact=True).click()
+            manual="Wrote the incident procedure and trained the venue's 35 staff."
+            page.evaluate('(text)=>setMark("experience/0/b0","edit",{text,from:"own"})',manual)
+            page.evaluate('setChecked("experience/0/b1",true)')
+            page.locator('#t-writing').click()
+            page.locator('#writing-compare-profile input[value="warm-collaborative"]').check()
+            page.get_by_role("button",name="Use this mode and rewrite my CV",exact=True).click()
+            def handoff():
+                return json.loads(re.search(r'```json\n(.*)\n```',page.get_by_label("Writing request to send to AI").input_value(),re.S)[1])
+            sent=handoff();W.request(self.job,sent)
+            later="Wrote the venue incident procedure; trained 35 staff in it."
+            page.evaluate('(text)=>setMark("experience/0/b0","edit",{text,from:"own"})',later)
+            self.publish("Wrote the incident procedure used to train 35 staff.");self.build();page.reload()
+            self.assertEqual(page.evaluate('S.marks["experience/0/b0"].text'),later)
+            self.assertTrue(page.evaluate('S.checked["experience/0/b1"]'))
+            self.assertIn(later,page.evaluate('buildDoc()'))
+            page.get_by_role("button",name="Review suggested changes",exact=True).click()
+            self.assertIn(later,page.locator('.drawer').inner_text())
+            page.locator('#t-writing').click()
+            page.locator('#writing-compare-profile input[value="credible-conviction"]').check()
+            page.get_by_role("button",name="Use this mode and rewrite my CV",exact=True).click()
+            restored=W.request(self.job,handoff())
+            self.assertEqual(restored["batch"],first["batch"])
+            self.assertTrue(restored["transition"]["reused"])
+            self.build()
+            # A fresh browser restores the same content from disk, without relying
+            # on one browser's local storage or re-running the writing model.
+            fresh=browser.new_context();other=fresh.new_page();other.on("pageerror",lambda e:errors.append(str(e)))
+            other.goto(self.html.as_uri())
+            self.assertEqual(other.evaluate('S.marks["experience/0/b0"].text'),later)
+            self.assertTrue(other.evaluate('S.checked["experience/0/b1"]'))
+            self.assertIn("Restored the saved",other.locator('#writing-content').inner_text())
+            self.assertEqual(len(restored["batches"]),2)
+            self.assertEqual(errors,[])
+            fresh.close();browser.close()
 
     def test_browser_personal_mode_preview_and_responsive_comparison(self):
         try:
@@ -342,6 +514,8 @@ counts:
             local=handoff()["writing_request"]
             self.assertEqual((local["action"],local["scope"],local["save_as"]),("preview","application",""))
             self.assertEqual(local["mode"],"warm-collaborative")
+            self.assertEqual(local["mode_name"],"Warm and grounded")
+            self.assertTrue(page.get_by_label("Writing request to send to AI").input_value().startswith('Preview my adjustments to “Warm and grounded”.'))
             for text in ("People & collaboration","Playful","More flowing","A little flair.","Avoid: Slogans"):
                 self.assertIn(text,local["adjustments"])
             page.get_by_label("Save this as a reusable personal mode",exact=True).check()
@@ -358,6 +532,7 @@ counts:
             reusable=handoff()
             self.assertEqual(reusable["writing_request"]["scope"],"preference")
             self.assertEqual(reusable["writing_request"]["save_as"],"Practical with flair")
+            self.assertTrue(page.get_by_label("Writing request to send to AI").input_value().startswith('Preview my custom mode “Practical with flair”, starting from “Warm and grounded”.'))
             page.get_by_role("button",name="Preview my mode",exact=True).click()
             self.assertEqual(handoff()["writing_request"]["id"],reusable["writing_request"]["id"])
             W.request(self.job,reusable);self.build();page.reload()
@@ -383,6 +558,23 @@ counts:
                 self.assertIn("Practical with flair",panel.locator('.writing-mobile-switch button').first.inner_text())
                 self.assertEqual(panel.locator('.writing-mobile-switch button').first.locator('.writing-custom-badge').inner_text(),"Your custom mode")
             self.assertIsNone(state["selected"])
+            page.get_by_role("button",name="Use this mode and rewrite my CV",exact=True).click()
+            custom_text=page.get_by_label("Writing request to send to AI").input_value()
+            self.assertTrue(custom_text.startswith('Rewrite my CV using “Practical with flair”.'))
+            self.assertEqual(handoff()["writing_request"]["mode_name"],mode["name"])
+            self.assertEqual(handoff()["writing_request"]["mode_version"],mode["version"])
+            self.assertEqual(page.get_by_label("Writing request to send to AI").evaluate('(e)=>e.scrollTop'),0)
+            # Verify the copied text without changing the user's OS clipboard.
+            page.evaluate("Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText:async(text)=>{window.copiedWritingRequest=text}}})")
+            page.get_by_role("button",name="Copy request",exact=True).click()
+            self.assertEqual(page.evaluate('window.copiedWritingRequest'),custom_text)
+            with page.expect_download() as download:
+                page.get_by_role("button",name="Save request",exact=True).click()
+            downloaded=SCR/"named-writing-request.json";download.value.save_as(str(downloaded))
+            self.assertEqual(json.loads(downloaded.read_text(encoding="utf-8"))["writing_request"]["mode_name"],mode["name"])
+            page.locator('#writing-compare-profile input[value="direct-impact"]').check()
+            self.assertFalse(page.locator('.writing-handoff').is_visible())
+            page.locator('#writing-compare-profile input[value="personal-flair"]').check()
             # A chat-created mode may arrive without the optional preview hint.
             # Its personal identity still puts it first and labels it clearly.
             refreshed.pop("preview_mode")
@@ -407,6 +599,7 @@ counts:
             page.get_by_role("button",name="Use this mode and rewrite my CV",exact=True).click()
             req=handoff()["writing_request"]
             self.assertEqual((req["mode"],req["adjustments"],req["save_as"]),("direct-impact","",""))
+            self.assertEqual(req["mode_name"],"Direct and focused")
             W.request(self.job,req);self.build();page.reload()
             self.assertEqual(page.evaluate('S.writing.mode'),"direct-impact")
             # Editing the ad makes comparison read-only, without losing the draft.
